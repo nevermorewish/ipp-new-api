@@ -31,12 +31,13 @@ import {
   Settings,
   Ticket,
   User,
+  UserCog,
   Users,
   Wallet,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { type SidebarData } from '@/components/layout/types'
+import type { SidebarData } from '@/components/layout/types'
 import { ROLE } from '@/lib/roles'
 
 /**
@@ -107,6 +108,11 @@ export function useSidebarData(): SidebarData {
             title: t('Wallet'),
             url: '/wallet',
             icon: Wallet,
+          },
+          {
+            title: t('Enterprise Sub-account'),
+            url: '/sub-account',
+            icon: UserCog,
           },
           {
             title: t('Profile'),

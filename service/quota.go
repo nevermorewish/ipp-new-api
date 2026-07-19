@@ -90,7 +90,11 @@ func PreWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usag
 	if relayInfo.UsePrice {
 		return nil
 	}
-	userQuota, err := model.GetUserQuota(relayInfo.UserId, false)
+	billingUserId := relayInfo.BillingUserId
+	if billingUserId == 0 {
+		billingUserId = relayInfo.UserId
+	}
+	userQuota, err := model.GetUserQuota(billingUserId, false)
 	if err != nil {
 		return err
 	}
@@ -424,10 +428,14 @@ func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQu
 		}
 	} else {
 		// Wallet
+		billingUserId := relayInfo.BillingUserId
+		if billingUserId == 0 {
+			billingUserId = relayInfo.UserId
+		}
 		if quota > 0 {
-			err = model.DecreaseUserQuota(relayInfo.UserId, quota, false)
+			err = model.DecreaseUserQuota(billingUserId, quota, false)
 		} else {
-			err = model.IncreaseUserQuota(relayInfo.UserId, -quota, false)
+			err = model.IncreaseUserQuota(billingUserId, -quota, false)
 		}
 		if err != nil {
 			return err
@@ -456,7 +464,21 @@ func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQu
 
 func checkAndSendQuotaNotify(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQuota int) {
 	gopool.Go(func() {
-		userSetting := relayInfo.UserSetting
+		billingUserId := relayInfo.BillingUserId
+		if billingUserId == 0 {
+			billingUserId = relayInfo.UserId
+		}
+		userSetting := relayInfo.BillingUserSetting
+		userEmail := relayInfo.BillingUserEmail
+		if billingUserId == relayInfo.UserId {
+			userSetting = relayInfo.UserSetting
+			userEmail = relayInfo.UserEmail
+		} else if userEmail == "" {
+			if billingUser, err := model.GetUserCache(billingUserId); err == nil {
+				userSetting = billingUser.GetSetting()
+				userEmail = billingUser.Email
+			}
+		}
 		threshold := common.QuotaRemindThreshold
 		if userSetting.QuotaWarningThreshold != 0 {
 			threshold = int(userSetting.QuotaWarningThreshold)
@@ -494,9 +516,9 @@ func checkAndSendQuotaNotify(relayInfo *relaycommon.RelayInfo, quota int, preCon
 				values = []interface{}{prompt, logger.FormatQuota(relayInfo.UserQuota), topUpLink, topUpLink}
 			}
 
-			err := NotifyUser(relayInfo.UserId, relayInfo.UserEmail, relayInfo.UserSetting, dto.NewNotify(dto.NotifyTypeQuotaExceed, prompt, content, values))
+			err := NotifyUser(billingUserId, userEmail, userSetting, dto.NewNotify(dto.NotifyTypeQuotaExceed, prompt, content, values))
 			if err != nil {
-				common.SysError(fmt.Sprintf("failed to send quota notify to user %d: %s", relayInfo.UserId, err.Error()))
+				common.SysError(fmt.Sprintf("failed to send quota notify to user %d: %s", billingUserId, err.Error()))
 			}
 		}
 	})
@@ -511,7 +533,21 @@ func checkAndSendSubscriptionQuotaNotify(relayInfo *relaycommon.RelayInfo) {
 			return
 		}
 
-		userSetting := relayInfo.UserSetting
+		billingUserId := relayInfo.BillingUserId
+		if billingUserId == 0 {
+			billingUserId = relayInfo.UserId
+		}
+		userSetting := relayInfo.BillingUserSetting
+		userEmail := relayInfo.BillingUserEmail
+		if billingUserId == relayInfo.UserId {
+			userSetting = relayInfo.UserSetting
+			userEmail = relayInfo.UserEmail
+		} else if userEmail == "" {
+			if billingUser, err := model.GetUserCache(billingUserId); err == nil {
+				userSetting = billingUser.GetSetting()
+				userEmail = billingUser.Email
+			}
+		}
 		threshold := common.QuotaRemindThreshold
 		if userSetting.QuotaWarningThreshold != 0 {
 			threshold = int(userSetting.QuotaWarningThreshold)
@@ -544,8 +580,8 @@ func checkAndSendSubscriptionQuotaNotify(relayInfo *relaycommon.RelayInfo) {
 			values = []interface{}{prompt, logger.FormatQuota(int(remaining)), topUpLink, topUpLink}
 		}
 
-		if err := NotifyUser(relayInfo.UserId, relayInfo.UserEmail, relayInfo.UserSetting, dto.NewNotify(dto.NotifyTypeQuotaExceed, prompt, content, values)); err != nil {
-			common.SysError(fmt.Sprintf("failed to send subscription quota notify to user %d: %s", relayInfo.UserId, err.Error()))
+		if err := NotifyUser(billingUserId, userEmail, userSetting, dto.NewNotify(dto.NotifyTypeQuotaExceed, prompt, content, values)); err != nil {
+			common.SysError(fmt.Sprintf("failed to send subscription quota notify to user %d: %s", billingUserId, err.Error()))
 		}
 	})
 }

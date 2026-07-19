@@ -196,6 +196,67 @@ func RootAuth() func(c *gin.Context) {
 	}
 }
 
+// NoSubAccount blocks sub-accounts from endpoints that must be operated by a primary account.
+// It must run after UserAuth has populated the current user id.
+func NoSubAccount() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		userId := c.GetInt("id")
+		if userId == 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": common.TranslateMessage(c, i18n.MsgAuthNotLoggedIn),
+			})
+			c.Abort()
+			return
+		}
+		user, err := model.GetUserById(userId, false)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": common.TranslateMessage(c, i18n.MsgAuthUserInfoInvalid),
+			})
+			c.Abort()
+			return
+		}
+		if user.Type >= 2 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "子账号无权进行此操作",
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+func EnterpriseAdmin() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		userId := c.GetInt("id")
+		user, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			c.Abort()
+			return
+		}
+		enabled, err := model.IsEnterpriseAdminEnabled(user)
+		if err != nil {
+			common.ApiError(c, err)
+			c.Abort()
+			return
+		}
+		if !enabled {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"message": "enterprise admin permission required",
+			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
 func RequirePermission(permission authz.Permission) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		role := c.GetInt("role")

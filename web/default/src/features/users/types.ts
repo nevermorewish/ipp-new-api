@@ -59,6 +59,9 @@ export const userSchema = z.object({
   last_login_at: z.number().optional(),
   DeletedAt: z.any().nullable().optional(),
   remark: z.string().optional(),
+  enterprise_name: z.string().optional(),
+  type: z.number().optional(),
+  topid: z.number().optional(),
   admin_permissions: z
     .record(z.string(), z.record(z.string(), z.boolean()))
     .optional(),
@@ -131,6 +134,8 @@ export interface UserFormData {
 export type ManageUserAction =
   | 'promote'
   | 'demote'
+  | 'promote_enterprise'
+  | 'demote_enterprise'
   | 'enable'
   | 'disable'
   | 'delete'

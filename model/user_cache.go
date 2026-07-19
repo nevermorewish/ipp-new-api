@@ -15,13 +15,17 @@ import (
 
 // UserBase struct remains the same as it represents the cached data structure
 type UserBase struct {
-	Id       int    `json:"id"`
-	Group    string `json:"group"`
-	Email    string `json:"email"`
-	Quota    int    `json:"quota"`
-	Status   int    `json:"status"`
-	Username string `json:"username"`
-	Setting  string `json:"setting"`
+	Id            int    `json:"id"`
+	Group         string `json:"group"`
+	Email         string `json:"email"`
+	Quota         int    `json:"quota"`
+	Status        int    `json:"status"`
+	Username      string `json:"username"`
+	Setting       string `json:"setting"`
+	Type          int    `json:"type"`
+	Topid         int    `json:"topid"`
+	EnterpriseId  int    `json:"enterprise_id"`
+	BillingUserId int    `json:"billing_user_id"`
 }
 
 func (user *UserBase) WriteContext(c *gin.Context) {
@@ -31,6 +35,9 @@ func (user *UserBase) WriteContext(c *gin.Context) {
 	common.SetContextKey(c, constant.ContextKeyUserEmail, user.Email)
 	common.SetContextKey(c, constant.ContextKeyUserName, user.Username)
 	common.SetContextKey(c, constant.ContextKeyUserSetting, user.GetSetting())
+	common.SetContextKey(c, constant.ContextKeyUserType, user.Type)
+	common.SetContextKey(c, constant.ContextKeyUserTopId, user.Topid)
+	common.SetContextKey(c, constant.ContextKeyBillingUserId, user.BillingUserId)
 }
 
 func (user *UserBase) GetSetting() dto.UserSetting {
@@ -115,7 +122,12 @@ func GetUserCache(userId int) (userCache *UserBase, err error) {
 	// Try getting from Redis first
 	userCache, err = cacheGetUserBase(userId)
 	if err == nil {
-		return userCache, nil
+		if userCache.BillingUserId != 0 {
+			return userCache, nil
+		}
+		if refreshErr := invalidateUserCache(userId); refreshErr != nil {
+			common.SysLog("failed to invalidate legacy user cache: " + refreshErr.Error())
+		}
 	}
 
 	// If Redis fails, get from DB
@@ -126,15 +138,7 @@ func GetUserCache(userId int) (userCache *UserBase, err error) {
 	}
 
 	// Create cache object from user data
-	userCache = &UserBase{
-		Id:       user.Id,
-		Group:    user.Group,
-		Quota:    user.Quota,
-		Status:   user.Status,
-		Username: user.Username,
-		Setting:  user.Setting,
-		Email:    user.Email,
-	}
+	userCache = user.ToBaseUser()
 
 	return userCache, nil
 }

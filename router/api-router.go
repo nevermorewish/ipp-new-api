@@ -92,20 +92,20 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.POST("/passkey/verify/begin", controller.PasskeyVerifyBegin)
 				selfRoute.POST("/passkey/verify/finish", controller.PasskeyVerifyFinish)
 				selfRoute.DELETE("/passkey", controller.PasskeyDelete)
-				selfRoute.GET("/aff", controller.GetAffCode)
+				selfRoute.GET("/aff", middleware.NoSubAccount(), controller.GetAffCode)
 				selfRoute.GET("/topup/info", controller.GetTopUpInfo)
 				selfRoute.GET("/topup/self", controller.GetUserTopUps)
-				selfRoute.POST("/topup", middleware.CriticalRateLimit(), controller.TopUp)
-				selfRoute.POST("/pay", middleware.CriticalRateLimit(), controller.RequestEpay)
-				selfRoute.POST("/amount", controller.RequestAmount)
-				selfRoute.POST("/stripe/pay", middleware.CriticalRateLimit(), controller.RequestStripePay)
-				selfRoute.POST("/stripe/amount", controller.RequestStripeAmount)
-				selfRoute.POST("/creem/pay", middleware.CriticalRateLimit(), controller.RequestCreemPay)
-				selfRoute.POST("/waffo/amount", controller.RequestWaffoAmount)
-				selfRoute.POST("/waffo/pay", middleware.CriticalRateLimit(), controller.RequestWaffoPay)
-				selfRoute.POST("/waffo-pancake/amount", controller.RequestWaffoPancakeAmount)
-				selfRoute.POST("/waffo-pancake/pay", middleware.CriticalRateLimit(), controller.RequestWaffoPancakePay)
-				selfRoute.POST("/aff_transfer", controller.TransferAffQuota)
+				selfRoute.POST("/topup", middleware.NoSubAccount(), middleware.CriticalRateLimit(), controller.TopUp)
+				selfRoute.POST("/pay", middleware.NoSubAccount(), middleware.CriticalRateLimit(), controller.RequestEpay)
+				selfRoute.POST("/amount", middleware.NoSubAccount(), controller.RequestAmount)
+				selfRoute.POST("/stripe/pay", middleware.NoSubAccount(), middleware.CriticalRateLimit(), controller.RequestStripePay)
+				selfRoute.POST("/stripe/amount", middleware.NoSubAccount(), controller.RequestStripeAmount)
+				selfRoute.POST("/creem/pay", middleware.NoSubAccount(), middleware.CriticalRateLimit(), controller.RequestCreemPay)
+				selfRoute.POST("/waffo/amount", middleware.NoSubAccount(), controller.RequestWaffoAmount)
+				selfRoute.POST("/waffo/pay", middleware.NoSubAccount(), middleware.CriticalRateLimit(), controller.RequestWaffoPay)
+				selfRoute.POST("/waffo-pancake/amount", middleware.NoSubAccount(), controller.RequestWaffoPancakeAmount)
+				selfRoute.POST("/waffo-pancake/pay", middleware.NoSubAccount(), middleware.CriticalRateLimit(), controller.RequestWaffoPancakePay)
+				selfRoute.POST("/aff_transfer", middleware.NoSubAccount(), controller.TransferAffQuota)
 				selfRoute.PUT("/setting", controller.UpdateUserSetting)
 
 				// 2FA routes
@@ -122,6 +122,12 @@ func SetApiRouter(router *gin.Engine) {
 				// Custom OAuth bindings
 				selfRoute.GET("/oauth/bindings", controller.GetUserOAuthBindings)
 				selfRoute.DELETE("/oauth/bindings/:provider_id", controller.UnbindCustomOAuth)
+
+				// Sub-account management
+				selfRoute.GET("/son", middleware.EnterpriseAdmin(), controller.GetSonUsers)
+				selfRoute.GET("/son/:id/tokens", middleware.EnterpriseAdmin(), controller.GetSonTokens)
+				selfRoute.POST("/createSon", middleware.EnterpriseAdmin(), controller.CreateSonUser)
+				selfRoute.POST("/sonStatus", middleware.EnterpriseAdmin(), controller.SonManageStatus)
 			}
 
 			adminRoute := userRoute.Group("/")
@@ -271,6 +277,8 @@ func SetApiRouter(router *gin.Engine) {
 		logRoute.DELETE("/", middleware.RootAuth(), controller.DeleteHistoryLogs)
 		logRoute.GET("/stat", middleware.AdminAuth(), controller.GetLogsStat)
 		logRoute.GET("/self/stat", middleware.UserAuth(), controller.GetLogsSelfStat)
+		logRoute.GET("/team", middleware.UserAuth(), middleware.EnterpriseAdmin(), controller.GetTeamLogs)
+		logRoute.GET("/team/stat", middleware.UserAuth(), middleware.EnterpriseAdmin(), controller.GetTeamLogsStat)
 		logRoute.GET("/channel_affinity_usage_cache", middleware.AdminAuth(), controller.GetChannelAffinityUsageCacheStats)
 		logRoute.GET("/search", middleware.AdminAuth(), controller.SearchAllLogs)
 		logRoute.GET("/self", middleware.UserAuth(), controller.GetUserLogs)
@@ -296,6 +304,7 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/", middleware.AdminAuth(), controller.GetAllQuotaDates)
 		dataRoute.GET("/users", middleware.AdminAuth(), controller.GetQuotaDatesByUser)
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
+		dataRoute.GET("/team", middleware.UserAuth(), middleware.EnterpriseAdmin(), controller.GetTeamQuotaDates)
 		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
 

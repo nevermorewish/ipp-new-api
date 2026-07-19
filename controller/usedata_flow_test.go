@@ -133,3 +133,22 @@ func TestGetUserFlowQuotaDatesRejectsInvalidTimeRange(t *testing.T) {
 	require.False(t, payload.Success)
 	require.Equal(t, "invalid start_timestamp", payload.Message)
 }
+
+func TestGetTeamQuotaDatesIncludesOwnerAndChildren(t *testing.T) {
+	setupFlowControllerTestDB(t)
+	require.NoError(t, model.DB.AutoMigrate(&model.Enterprise{}))
+	require.NoError(t, model.DB.Create(&model.User{Id: 10, Username: "owner", AffCode: "owner-aff", Type: 1, EnterpriseId: 10, Status: common.UserStatusEnabled}).Error)
+	require.NoError(t, model.DB.Create(&model.User{Id: 11, Username: "child", AffCode: "child-aff", Type: 2, Topid: 10, EnterpriseId: 10, Status: common.UserStatusEnabled}).Error)
+	require.NoError(t, model.DB.Create(&model.Enterprise{Id: 10, Name: "team", OwnerUserId: 10, Status: model.EnterpriseStatusEnabled}).Error)
+	require.NoError(t, model.DB.Create(&model.QuotaData{UserID: 10, Username: "owner", ModelName: "gpt-a", CreatedAt: 1100, Count: 1, Quota: 10}).Error)
+	require.NoError(t, model.DB.Create(&model.QuotaData{UserID: 11, Username: "child", ModelName: "gpt-b", CreatedAt: 1200, Count: 1, Quota: 20}).Error)
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Set("id", 10)
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/data/team?start_timestamp=1000&end_timestamp=2000", nil)
+	GetTeamQuotaDates(ctx)
+
+	payload := decodeFlowQuotaResponse(t, recorder)
+	require.Len(t, payload.Data, 2)
+}

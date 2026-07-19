@@ -108,18 +108,76 @@ type User struct {
 	StripeCustomer   string                     `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
 	CreatedAt        int64                      `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt      int64                      `json:"last_login_at" gorm:"default:0;column:last_login_at"`
+	Phone            string                     `json:"phone" gorm:"type:varchar(20);index" validate:"max=20"`
+	Type             int                        `json:"type" gorm:"type:int;default:0;column:type"`   // 0=normal, 1=enterprise admin, 2=sub-account
+	Topid            int                        `json:"topid" gorm:"type:int;default:0;column:topid"` // parent account ID for sub-accounts
+	EnterpriseId     int                        `json:"enterprise_id,omitempty" gorm:"type:int;default:0;column:enterprise_id;index"`
+	EnterpriseName   string                     `json:"enterprise_name,omitempty" gorm:"type:varchar(100);column:enterprise_name" validate:"max=100"`
 	AdminPermissions map[string]map[string]bool `json:"admin_permissions,omitempty" gorm:"-:all"`
 }
 
+// SonUserResponse is the sanitized user payload returned by sub-account APIs.
+type SonUserResponse struct {
+	Id             int    `json:"id"`
+	Username       string `json:"username"`
+	DisplayName    string `json:"display_name"`
+	Status         int    `json:"status"`
+	UsedQuota      int    `json:"used_quota"`
+	RequestCount   int    `json:"request_count"`
+	Group          string `json:"group"`
+	CreatedAt      int64  `json:"created_at,omitempty"`
+	EnterpriseName string `json:"enterprise_name,omitempty"`
+}
+
+func ToSonUserResponses(users []*User) []SonUserResponse {
+	responses := make([]SonUserResponse, 0, len(users))
+	for _, user := range users {
+		responses = append(responses, SonUserResponse{
+			Id:             user.Id,
+			Username:       user.Username,
+			DisplayName:    user.DisplayName,
+			Status:         user.Status,
+			UsedQuota:      user.UsedQuota,
+			RequestCount:   user.RequestCount,
+			Group:          user.Group,
+			CreatedAt:      user.CreatedAt,
+			EnterpriseName: user.EnterpriseName,
+		})
+	}
+	return responses
+}
+
+func ResolveBillingUserId(userId int) int {
+	if userId <= 0 || DB == nil {
+		return userId
+	}
+	var user User
+	if err := DB.Unscoped().Select("id", "type", "topid").First(&user, "id = ?", userId).Error; err != nil {
+		return userId
+	}
+	if user.Type >= 2 && user.Topid > 0 {
+		return user.Topid
+	}
+	return userId
+}
+
 func (user *User) ToBaseUser() *UserBase {
+	billingUserId := user.Id
+	if user.Type >= 2 && user.Topid > 0 {
+		billingUserId = user.Topid
+	}
 	cache := &UserBase{
-		Id:       user.Id,
-		Group:    user.Group,
-		Quota:    user.Quota,
-		Status:   user.Status,
-		Username: user.Username,
-		Setting:  user.Setting,
-		Email:    user.Email,
+		Id:            user.Id,
+		Group:         user.Group,
+		Quota:         user.Quota,
+		Status:        user.Status,
+		Username:      user.Username,
+		Setting:       user.Setting,
+		Email:         user.Email,
+		Type:          user.Type,
+		Topid:         user.Topid,
+		EnterpriseId:  user.EnterpriseId,
+		BillingUserId: billingUserId,
 	}
 	return cache
 }
@@ -193,9 +251,10 @@ func generateDefaultSidebarConfigForRole(userRole int) string {
 
 	// 个人中心区域 - 所有用户都可以访问
 	defaultConfig["personal"] = map[string]interface{}{
-		"enabled":  true,
-		"topup":    true,
-		"personal": true,
+		"enabled":    true,
+		"topup":      true,
+		"personal":   true,
+		"subaccount": true,
 	}
 
 	// 管理员区域 - 根据角色决定
@@ -375,6 +434,63 @@ func GetAllUsers(pageInfo *common.PageInfo, sortOptions ...UserSortOptions) (use
 	}
 
 	return users, total, nil
+}
+
+func GetSonUsers(pageInfo *common.PageInfo, topId int) ([]*User, int64, error) {
+	var users []*User
+	var total int64
+
+	tx := DB.Begin()
+	if tx.Error != nil {
+		return nil, 0, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var topUser User
+	if err := tx.Select("id", "enterprise_id").First(&topUser, "id = ?", topId).Error; err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	query := tx.Model(&User{}).Where("type = ? AND topid = ?", 2, topId)
+	if topUser.EnterpriseId > 0 {
+		query = tx.Model(&User{}).Where("type = ? AND enterprise_id = ?", 2, topUser.EnterpriseId)
+	}
+	if err := query.Count(&total).Error; err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	if err := query.Order("id desc").Limit(pageInfo.GetPageSize()).Offset(pageInfo.GetStartIdx()).Omit("password", "access_token").Find(&users).Error; err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+func GetEnterpriseChildUserIds(topId int) ([]int, error) {
+	var topUser User
+	if err := DB.Select("id", "enterprise_id").First(&topUser, "id = ?", topId).Error; err != nil {
+		return nil, err
+	}
+	query := DB.Model(&User{}).Where("type = ? AND topid = ?", 2, topId)
+	if topUser.EnterpriseId > 0 {
+		query = DB.Model(&User{}).Where("type = ? AND enterprise_id = ?", 2, topUser.EnterpriseId)
+	}
+	var ids []int
+	if err := query.Pluck("id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
 }
 
 func SearchUsers(keyword string, group string, role *int, status *int, startIdx int, num int, sortOptions ...UserSortOptions) ([]*User, int64, error) {
@@ -590,7 +706,11 @@ func (user *User) Insert(inviterId int) error {
 			if err := user.prepareForInsert(tx); err != nil {
 				return err
 			}
-			user.Quota = common.QuotaForNewUser
+			if user.Type >= 2 {
+				user.Quota = 0
+			} else {
+				user.Quota = common.QuotaForNewUser
+			}
 			user.AffCode = common.GetRandomString(4)
 
 			// 初始化用户设置，包括默认的边栏配置
@@ -600,6 +720,9 @@ func (user *User) Insert(inviterId int) error {
 				user.SetSetting(defaultSetting)
 			}
 
+			if user.Phone == "" {
+				return tx.Omit("phone").Create(user).Error
+			}
 			return tx.Create(user).Error
 		})
 	}); err != nil {
@@ -626,7 +749,7 @@ func (user *User) finishInsert(inviterId int) {
 		}
 	}
 
-	if common.QuotaForNewUser > 0 {
+	if user.Type < 2 && common.QuotaForNewUser > 0 {
 		RecordLog(user.Id, LogTypeSystem, fmt.Sprintf("新用户注册赠送 %s", logger.LogQuota(common.QuotaForNewUser)))
 	}
 	if inviterId != 0 && operation_setting.IsPaymentComplianceConfirmed() {
@@ -663,6 +786,9 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 			user.SetSetting(defaultSetting)
 		}
 
+		if user.Phone == "" {
+			return tx.Omit("phone").Create(user).Error
+		}
 		return tx.Create(user).Error
 	})
 }
@@ -796,6 +922,9 @@ func (user *User) Delete() error {
 	if user.Id == 0 {
 		return errors.New("id 为空！")
 	}
+	if err := DisableEnterpriseForOwner(user.Id); err != nil {
+		return err
+	}
 	if err := DB.Delete(user).Error; err != nil {
 		return err
 	}
@@ -807,6 +936,9 @@ func (user *User) Delete() error {
 func (user *User) HardDelete() error {
 	if user.Id == 0 {
 		return errors.New("id 为空！")
+	}
+	if err := DisableEnterpriseForOwner(user.Id); err != nil {
+		return err
 	}
 	var tokens []Token
 	err := DB.Transaction(func(tx *gorm.DB) error {
@@ -944,6 +1076,10 @@ func (user *User) FillUserByTelegramId() error {
 func IsEmailAlreadyTaken(email string) bool {
 	count, err := CountUsersByEmail(email)
 	return err == nil && count > 0
+}
+
+func IsPhoneAlreadyTaken(phone string) bool {
+	return DB.Unscoped().Where("phone = ?", phone).Find(&User{}).RowsAffected == 1
 }
 
 func GetUniqueUserByEmail(email string) (*User, error) {

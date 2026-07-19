@@ -23,6 +23,7 @@ import {
   serializeHeaderNavModules,
   serializeSidebarModulesAdmin,
 } from '../maintenance/config'
+import { EnterpriseSubAccountSection } from '../maintenance/enterprise-sub-account-section'
 import { HeaderNavigationSection } from '../maintenance/header-navigation-section'
 import { NoticeSection } from '../maintenance/notice-section'
 import { SidebarModulesSection } from '../maintenance/sidebar-modules-section'
@@ -89,6 +90,15 @@ const SITE_SECTIONS = [
         />
       )
     },
+  },
+  {
+    id: 'enterprise-sub-account',
+    titleKey: 'Enterprise Sub-account',
+    build: (settings: SiteSettings) => (
+      <EnterpriseSubAccountSection
+        defaultValue={settings.EnterpriseSubAccountUrl}
+      />
+    ),
   },
 ] as const
 

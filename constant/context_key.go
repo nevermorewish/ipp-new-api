@@ -43,14 +43,17 @@ const (
 	ContextKeyAutoGroupRetryIndex ContextKey = "auto_group_retry_index"
 
 	/* user related keys */
-	ContextKeyUserId      ContextKey = "id"
-	ContextKeyUserSetting ContextKey = "user_setting"
-	ContextKeyUserQuota   ContextKey = "user_quota"
-	ContextKeyUserStatus  ContextKey = "user_status"
-	ContextKeyUserEmail   ContextKey = "user_email"
-	ContextKeyUserGroup   ContextKey = "user_group"
-	ContextKeyUsingGroup  ContextKey = "group"
-	ContextKeyUserName    ContextKey = "username"
+	ContextKeyUserId        ContextKey = "id"
+	ContextKeyUserSetting   ContextKey = "user_setting"
+	ContextKeyUserQuota     ContextKey = "user_quota"
+	ContextKeyUserStatus    ContextKey = "user_status"
+	ContextKeyUserEmail     ContextKey = "user_email"
+	ContextKeyUserGroup     ContextKey = "user_group"
+	ContextKeyUsingGroup    ContextKey = "group"
+	ContextKeyUserName      ContextKey = "username"
+	ContextKeyUserType      ContextKey = "user_type"
+	ContextKeyUserTopId     ContextKey = "user_topid"
+	ContextKeyBillingUserId ContextKey = "billing_user_id"
 
 	ContextKeyLocalCountTokens ContextKey = "local_count_tokens"
 

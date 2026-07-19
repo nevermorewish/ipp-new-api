@@ -102,6 +102,7 @@ type TaskPrivateData struct {
 	ResultURL      string `json:"result_url,omitempty"`       // 任务成功后的结果 URL（视频地址等）
 	// 计费上下文：用于异步退款/差额结算（轮询阶段读取）
 	BillingSource  string              `json:"billing_source,omitempty"`  // "wallet" 或 "subscription"
+	BillingUserId  int                 `json:"billing_user_id,omitempty"` // 钱包付款账号 ID；旧任务回退到任务所属用户
 	SubscriptionId int                 `json:"subscription_id,omitempty"` // 订阅 ID，用于订阅退款
 	TokenId        int                 `json:"token_id,omitempty"`        // 令牌 ID，用于令牌额度退款
 	NodeName       string              `json:"node_name,omitempty"`       // 发起任务的节点名，轮询结算阶段据此归属日志而非最后查询节点
@@ -134,6 +135,13 @@ func (t *Task) GetResultURL() string {
 		return t.PrivateData.ResultURL
 	}
 	return t.FailReason
+}
+
+func (t *Task) GetBillingUserId() int {
+	if t.PrivateData.BillingUserId > 0 {
+		return t.PrivateData.BillingUserId
+	}
+	return ResolveBillingUserId(t.UserId)
 }
 
 // GenerateTaskID 生成对外暴露的 task_xxxx 格式 ID
@@ -172,7 +180,10 @@ type SyncTaskQueryParams struct {
 
 func InitTask(platform constant.TaskPlatform, relayInfo *commonRelay.RelayInfo) *Task {
 	properties := Properties{}
-	privateData := TaskPrivateData{}
+	privateData := TaskPrivateData{BillingUserId: relayInfo.BillingUserId}
+	if privateData.BillingUserId == 0 {
+		privateData.BillingUserId = relayInfo.UserId
+	}
 	if relayInfo != nil && relayInfo.ChannelMeta != nil {
 		if relayInfo.ChannelMeta.ChannelType == constant.ChannelTypeGemini ||
 			relayInfo.ChannelMeta.ChannelType == constant.ChannelTypeVertexAi {

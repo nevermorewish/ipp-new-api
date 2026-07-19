@@ -19,6 +19,14 @@ For commercial licensing, please contact support@quantumnous.com
 // Static translation keys that don't get picked up by the t('...') regex.
 // These cover dynamic labels (e.g. constants, configs) that are passed into t at runtime.
 export const STATIC_I18N_KEYS = [
+  // Enterprise sub-account feature points
+  'Centralized enterprise account management',
+  'Create and manage independent employee sub-accounts under one enterprise account, making team access clearer and easier to audit.',
+  'Shared enterprise billing',
+  'All sub-account usage is charged directly to the enterprise administrator account for centralized billing.',
+  'Safer permission boundaries',
+  'Keep API access, usage records, and account lifecycle management separated across team members while retaining enterprise-level control.',
+
   // Header navigation
   'Home',
   'Console',

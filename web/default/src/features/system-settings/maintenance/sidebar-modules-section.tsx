@@ -124,6 +124,10 @@ export function SidebarModulesSection({
         title: t('Wallet'),
         description: t('Top up balance and view billing history.'),
       },
+      subaccount: {
+        title: t('Enterprise Sub-account'),
+        description: t('Create and manage sub-accounts under a parent account.'),
+      },
       personal: {
         title: t('Profile'),
         description: t('Personal settings and profile management.'),

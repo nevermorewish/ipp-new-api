@@ -280,6 +280,20 @@ func getLastLog(t *testing.T) *model.Log {
 	return &log
 }
 
+func TestTaskAdjustFundingUsesPersistedBillingUser(t *testing.T) {
+	truncate(t)
+	require.NoError(t, model.DB.Create(&model.User{Id: 101, Username: "billing-owner", AffCode: "billing-owner-aff", Quota: 1000, Status: common.UserStatusEnabled}).Error)
+	require.NoError(t, model.DB.Create(&model.User{Id: 202, Username: "billing-child", AffCode: "billing-child-aff", Quota: 100, Status: common.UserStatusEnabled, Type: 2, Topid: 101}).Error)
+	task := makeTask(202, 0, 0, 0, BillingSourceWallet, 0)
+
+	require.NoError(t, taskAdjustFunding(task, 250))
+	require.Equal(t, 750, getUserQuota(t, 101))
+	require.Equal(t, 100, getUserQuota(t, 202))
+	require.NoError(t, taskAdjustFunding(task, -50))
+	require.Equal(t, 800, getUserQuota(t, 101))
+	require.Equal(t, 100, getUserQuota(t, 202))
+}
+
 func countLogs(t *testing.T) int64 {
 	t.Helper()
 	var count int64

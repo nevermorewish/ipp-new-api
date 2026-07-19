@@ -159,12 +159,16 @@ func setupLogin(user *model.User, c *gin.Context) {
 		"message": "",
 		"success": true,
 		"data": map[string]any{
-			"id":           user.Id,
-			"username":     user.Username,
-			"display_name": user.DisplayName,
-			"role":         user.Role,
-			"status":       user.Status,
-			"group":        user.Group,
+			"id":              user.Id,
+			"username":        user.Username,
+			"display_name":    user.DisplayName,
+			"role":            user.Role,
+			"status":          user.Status,
+			"group":           user.Group,
+			"type":            user.Type,
+			"topid":           user.Topid,
+			"enterprise_id":   user.EnterpriseId,
+			"enterprise_name": user.EnterpriseName,
 		},
 	})
 }
@@ -304,6 +308,29 @@ func Register(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+func GenerateDefaultTokenForUser(userId int, username string) error {
+	key, err := common.GenerateKey()
+	if err != nil {
+		common.SysLog("failed to generate token key: " + err.Error())
+		return err
+	}
+	token := model.Token{
+		UserId:             userId,
+		Name:               username + "的初始令牌",
+		Key:                key,
+		CreatedTime:        common.GetTimestamp(),
+		AccessedTime:       common.GetTimestamp(),
+		ExpiredTime:        -1,
+		RemainQuota:        500000,
+		UnlimitedQuota:     true,
+		ModelLimitsEnabled: false,
+	}
+	if setting.DefaultUseAutoGroup {
+		token.Group = "auto"
+	}
+	return token.Insert()
 }
 
 func GetAllUsers(c *gin.Context) {
@@ -487,6 +514,13 @@ func GetSelf(c *gin.Context) {
 	userSetting := user.GetSetting()
 
 	// 构建响应数据，包含用户信息和权限
+	parentUsername := ""
+	if user.Type >= 2 && user.Topid > 0 {
+		if parent, err := model.GetUserById(user.Topid, false); err == nil {
+			parentUsername = parent.Username
+		}
+	}
+
 	responseData := map[string]interface{}{
 		"id":                user.Id,
 		"username":          user.Username,
@@ -500,6 +534,11 @@ func GetSelf(c *gin.Context) {
 		"wechat_id":         user.WeChatId,
 		"telegram_id":       user.TelegramId,
 		"group":             user.Group,
+		"type":              user.Type,
+		"topid":             user.Topid,
+		"enterprise_id":     user.EnterpriseId,
+		"enterprise_name":   user.EnterpriseName,
+		"parent_username":   parentUsername,
 		"quota":             user.Quota,
 		"used_quota":        user.UsedQuota,
 		"request_count":     user.RequestCount,
@@ -717,6 +756,32 @@ func UpdateUser(c *gin.Context) {
 	}
 	if err := model.InvalidateUserCache(updatedUser.Id); err != nil {
 		common.SysLog(fmt.Sprintf("failed to invalidate user cache for user %d: %s", updatedUser.Id, err.Error()))
+	}
+	if updatedUser.Type == 1 || originUser.Type == 1 {
+		enterpriseUser, err := model.GetUserById(updatedUser.Id, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if enterpriseUser.Type == 1 {
+			enterprise, err := model.EnsureEnterpriseForUser(enterpriseUser)
+			if err != nil {
+				common.ApiError(c, err)
+				return
+			}
+			if enterprise != nil {
+				if err := model.DB.Model(&model.User{}).
+					Where("type = ? AND topid = ?", 2, enterpriseUser.Id).
+					Updates(map[string]interface{}{
+						"enterprise_id":   enterprise.Id,
+						"enterprise_name": enterprise.Name,
+					}).Error; err != nil {
+					common.ApiError(c, err)
+					return
+				}
+			}
+			_ = model.InvalidateUserCache(enterpriseUser.Id)
+		}
 	}
 	recordManageAuditFor(c, updatedUser.Id, "user.update", map[string]interface{}{
 		"username": originUser.Username,
@@ -1071,8 +1136,18 @@ func ManageUser(c *gin.Context) {
 			common.ApiErrorI18n(c, i18n.MsgUserCannotDisableRootUser)
 			return
 		}
+		if err := model.DisableEnterpriseForOwner(user.Id); err != nil {
+			common.ApiError(c, err)
+			return
+		}
 	case "enable":
 		user.Status = common.UserStatusEnabled
+		if user.Type == 1 {
+			if _, err := model.EnsureEnterpriseForUser(&user); err != nil {
+				common.ApiError(c, err)
+				return
+			}
+		}
 	case "delete":
 		if user.Role == common.RoleRootUser {
 			common.ApiErrorI18n(c, i18n.MsgUserCannotDeleteRootUser)
@@ -1110,6 +1185,54 @@ func ManageUser(c *gin.Context) {
 			return
 		}
 		user.Role = common.RoleCommonUser
+	case "promote_enterprise":
+		if myRole != common.RoleRootUser {
+			common.ApiErrorI18n(c, i18n.MsgUserAdminCannotPromote)
+			return
+		}
+		if user.Type >= 2 {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "子账号不能提升为企业管理员"})
+			return
+		}
+		if user.Type == 1 {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "该用户已是企业管理员"})
+			return
+		}
+		user.Type = 1
+		if _, err := model.EnsureEnterpriseForUser(&user); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("type", 1).Error; err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		_ = model.InvalidateUserCache(user.Id)
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
+		return
+	case "demote_enterprise":
+		if myRole != common.RoleRootUser {
+			common.ApiErrorI18n(c, i18n.MsgUserAdminCannotPromote)
+			return
+		}
+		if user.Type != 1 {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "该用户不是企业管理员"})
+			return
+		}
+		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Updates(map[string]interface{}{
+			"type":          0,
+			"enterprise_id": 0,
+		}).Error; err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		if err := model.DisableEnterpriseForOwner(user.Id); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		_ = model.InvalidateUserCache(user.Id)
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
+		return
 	case "add_quota":
 		switch req.Mode {
 		case "add":
@@ -1485,4 +1608,233 @@ func UpdateUserSetting(c *gin.Context) {
 	}
 
 	common.ApiSuccessI18n(c, i18n.MsgSettingSaved, nil)
+}
+
+func GetSonUsers(c *gin.Context) {
+	topUserId := c.GetInt("id")
+	pageInfo := common.GetPageQuery(c)
+	users, total, err := model.GetSonUsers(pageInfo, topUserId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	pageInfo.SetTotal(int(total))
+	pageInfo.SetItems(model.ToSonUserResponses(users))
+	common.ApiSuccess(c, pageInfo)
+}
+
+type SonTokenResponse struct {
+	Id                 int    `json:"id"`
+	Name               string `json:"name"`
+	Key                string `json:"key"`
+	Status             int    `json:"status"`
+	Group              string `json:"group"`
+	CreatedTime        int64  `json:"created_time"`
+	AccessedTime       int64  `json:"accessed_time"`
+	ExpiredTime        int64  `json:"expired_time"`
+	RemainQuota        int    `json:"remain_quota"`
+	UsedQuota          int    `json:"used_quota"`
+	UnlimitedQuota     bool   `json:"unlimited_quota"`
+	ModelLimitsEnabled bool   `json:"model_limits_enabled"`
+	ModelLimits        string `json:"model_limits"`
+	CrossGroupRetry    bool   `json:"cross_group_retry"`
+}
+
+func GetSonTokens(c *gin.Context) {
+	topUserId := c.GetInt("id")
+	sonId, err := strconv.Atoi(c.Param("id"))
+	if err != nil || sonId <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	topUser, err := model.GetUserById(topUserId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	query := model.DB.Where("type = ? AND topid = ? AND id = ?", 2, topUserId, sonId)
+	if topUser.EnterpriseId > 0 {
+		query = model.DB.Where("type = ? AND enterprise_id = ? AND id = ?", 2, topUser.EnterpriseId, sonId)
+	}
+	var sonUser model.User
+	if err := query.First(&sonUser).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "非直属子账号，无权操作"})
+		return
+	}
+	tokens, err := model.GetAllUserTokens(sonId, 0, 1000)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	items := make([]SonTokenResponse, 0, len(tokens))
+	for _, token := range tokens {
+		items = append(items, SonTokenResponse{
+			Id:                 token.Id,
+			Name:               token.Name,
+			Key:                token.GetFullKey(),
+			Status:             token.Status,
+			Group:              token.Group,
+			CreatedTime:        token.CreatedTime,
+			AccessedTime:       token.AccessedTime,
+			ExpiredTime:        token.ExpiredTime,
+			RemainQuota:        token.RemainQuota,
+			UsedQuota:          token.UsedQuota,
+			UnlimitedQuota:     token.UnlimitedQuota,
+			ModelLimitsEnabled: token.ModelLimitsEnabled,
+			ModelLimits:        token.ModelLimits,
+			CrossGroupRetry:    token.CrossGroupRetry,
+		})
+	}
+	common.ApiSuccess(c, gin.H{"items": items})
+}
+
+type CreateSonRequest struct {
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	DisplayName string `json:"display_name"`
+	Phone       string `json:"phone"`
+}
+
+func CreateSonUser(c *gin.Context) {
+	topUserId := c.GetInt("id")
+	topUser, err := model.GetUserById(topUserId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if topUser.Type >= 2 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "子账号不能创建子账号"})
+		return
+	}
+
+	var req CreateSonRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	req.DisplayName = strings.TrimSpace(req.DisplayName)
+	req.Phone = strings.TrimSpace(req.Phone)
+	if req.Username == "" || req.Password == "" {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	if len(req.Password) < 8 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "密码长度不能少于8位"})
+		return
+	}
+
+	exist, err := model.CheckUserExistOrDeleted(req.Username, "")
+	if err != nil {
+		common.ApiErrorI18n(c, i18n.MsgDatabaseError)
+		return
+	}
+	if exist {
+		common.ApiErrorI18n(c, i18n.MsgUserExists)
+		return
+	}
+
+	if req.Phone != "" {
+		if len(req.Phone) > 20 {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "手机号长度不能超过20位"})
+			return
+		}
+		if model.IsPhoneAlreadyTaken(req.Phone) {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "手机号已被占用"})
+			return
+		}
+	}
+
+	displayName := req.DisplayName
+	if displayName == "" {
+		displayName = req.Username
+	}
+	enterprise, err := model.EnsureEnterpriseForUser(topUser)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	enterpriseId := topUser.EnterpriseId
+	enterpriseName := topUser.EnterpriseName
+	if enterprise != nil {
+		enterpriseId = enterprise.Id
+		enterpriseName = enterprise.Name
+	}
+
+	cleanUser := model.User{
+		Username:       req.Username,
+		Password:       req.Password,
+		DisplayName:    displayName,
+		Role:           common.RoleCommonUser,
+		Type:           2,
+		Topid:          topUserId,
+		EnterpriseId:   enterpriseId,
+		Phone:          req.Phone,
+		Group:          topUser.Group,
+		EnterpriseName: enterpriseName,
+	}
+	if err := cleanUser.Insert(0); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	if constant.GenerateDefaultToken {
+		if err := GenerateDefaultTokenForUser(cleanUser.Id, cleanUser.Username); err != nil {
+			common.SysLog("failed to generate default token for sub-account: " + err.Error())
+		}
+	}
+
+	model.RecordLog(topUserId, model.LogTypeManage, fmt.Sprintf("创建子账号 %s", req.Username))
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
+}
+
+type SonStatusRequest struct {
+	Id     int    `json:"id"`
+	Action string `json:"action"`
+}
+
+func SonManageStatus(c *gin.Context) {
+	topUserId := c.GetInt("id")
+	var req SonStatusRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	topUser, err := model.GetUserById(topUserId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	query := model.DB.Where("type = ? AND topid = ? AND id = ?", 2, topUserId, req.Id)
+	if topUser.EnterpriseId > 0 {
+		query = model.DB.Where("type = ? AND enterprise_id = ? AND id = ?", 2, topUser.EnterpriseId, req.Id)
+	}
+	var sonUser model.User
+	if err := query.First(&sonUser).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "非直属子账号，无权操作"})
+		return
+	}
+	if sonUser.Role == common.RoleRootUser {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "无法操作超级管理员"})
+		return
+	}
+
+	switch req.Action {
+	case "disable":
+		sonUser.Status = common.UserStatusDisabled
+	case "enable":
+		sonUser.Status = common.UserStatusEnabled
+	default:
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	if err := sonUser.Update(false); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	model.RecordLog(topUserId, model.LogTypeManage, fmt.Sprintf("子账号 %s 状态变更为 %s", sonUser.Username, req.Action))
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
 }

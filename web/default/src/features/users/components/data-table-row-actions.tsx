@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   Link2,
   CreditCard,
+  Building2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -134,6 +135,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const isDisabled = user.status === USER_STATUS.DISABLED
   const isAdmin = user.role >= USER_ROLE.ADMIN
   const isRoot = user.role === USER_ROLE.ROOT
+  const isEnterpriseAdmin = user.type === 1
+  const isSubAccount = (user.type ?? 0) >= 2
 
   if (isUserDeleted(user)) {
     return null
@@ -197,6 +200,27 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             </DropdownMenuShortcut>
           </DropdownMenuItem>
         )}
+
+        {!isSubAccount &&
+          (isEnterpriseAdmin ? (
+            <DropdownMenuItem
+              onClick={() => handleManage('demote_enterprise')}
+            >
+              {t('Revoke Enterprise Admin')}
+              <DropdownMenuShortcut>
+                <Building2 size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              onClick={() => handleManage('promote_enterprise')}
+            >
+              {t('Set as Enterprise Admin')}
+              <DropdownMenuShortcut>
+                <Building2 size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          ))}
 
         <DropdownMenuItem
           onSelect={(event) => {

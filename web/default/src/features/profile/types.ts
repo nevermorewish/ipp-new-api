@@ -45,6 +45,16 @@ export interface UserProfile {
   email?: string
   /** User group */
   group: string
+  /** User type (0=normal, 1=enterprise admin, 2=sub-account) */
+  type?: number
+  /** Parent account ID for sub-accounts */
+  topid?: number
+  /** Enterprise ID */
+  enterprise_id?: number
+  /** Enterprise name */
+  enterprise_name?: string
+  /** Parent account username for sub-accounts */
+  parent_username?: string
   /** Current quota balance */
   quota: number
   /** Total used quota */
