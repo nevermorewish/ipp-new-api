@@ -153,6 +153,12 @@ func initConstantEnv() {
 	constant.NotificationLimitDurationMinute = GetEnvOrDefault("NOTIFICATION_LIMIT_DURATION_MINUTE", 10)
 	// GenerateDefaultToken 是否生成初始令牌，默认关闭。
 	constant.GenerateDefaultToken = GetEnvOrDefaultBool("GENERATE_DEFAULT_TOKEN", false)
+	// SubaccountDefaultTokenQuota is the finite per-token cap used when an
+	// enterprise creates a sub-account without explicitly supplying a quota.
+	constant.SubaccountDefaultTokenQuota = GetEnvOrDefault("SUBACCOUNT_DEFAULT_TOKEN_QUOTA", 500000)
+	if constant.SubaccountDefaultTokenQuota <= 0 {
+		constant.SubaccountDefaultTokenQuota = 500000
+	}
 	// 是否启用错误日志
 	constant.ErrorLogEnabled = GetEnvOrDefaultBool("ERROR_LOG_ENABLED", false)
 	// 任务轮询时查询的最大数量

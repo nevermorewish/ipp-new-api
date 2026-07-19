@@ -64,7 +64,7 @@ func OpenaiTTSHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 			return usage
 		}
 
-		// 写入响应到客户端
+		// 写入响应到终端
 		c.Writer.WriteHeaderNow()
 		_, err = c.Writer.Write(bodyBytes)
 		if err != nil {

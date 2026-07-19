@@ -1615,7 +1615,7 @@ func GetSonUsers(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 	users, total, err := model.GetSonUsers(pageInfo, topUserId)
 	if err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonInternalError(c, "list sub-accounts")
 		return
 	}
 	pageInfo.SetTotal(int(total))
@@ -1626,7 +1626,7 @@ func GetSonUsers(c *gin.Context) {
 type SonTokenResponse struct {
 	Id                 int    `json:"id"`
 	Name               string `json:"name"`
-	Key                string `json:"key"`
+	Key                string `json:"key,omitempty"`
 	Status             int    `json:"status"`
 	Group              string `json:"group"`
 	CreatedTime        int64  `json:"created_time"`
@@ -1640,6 +1640,88 @@ type SonTokenResponse struct {
 	CrossGroupRetry    bool   `json:"cross_group_retry"`
 }
 
+var errEnterpriseSonForbidden = errors.New("sub-account is not owned by this enterprise")
+
+func getEnterpriseSonUser(adminId int, sonId int) (*model.User, error) {
+	if adminId <= 0 || sonId <= 0 {
+		return nil, errEnterpriseSonForbidden
+	}
+	admin, err := model.GetUserById(adminId, false)
+	if err != nil {
+		return nil, err
+	}
+	enabled, err := model.IsEnterpriseAdminEnabled(admin)
+	if err != nil {
+		return nil, err
+	}
+	if !enabled {
+		return nil, errEnterpriseSonForbidden
+	}
+
+	var son model.User
+	err = model.DB.Where("id = ? AND type = ? AND enterprise_id = ?", sonId, 2, admin.EnterpriseId).First(&son).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errEnterpriseSonForbidden
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &son, nil
+}
+
+func getEnterpriseSonToken(adminId int, sonId int, tokenId int) (*model.User, *model.Token, error) {
+	son, err := getEnterpriseSonUser(adminId, sonId)
+	if err != nil {
+		return nil, nil, err
+	}
+	if tokenId <= 0 {
+		return nil, nil, errEnterpriseSonForbidden
+	}
+	token, err := model.GetTokenByIds(tokenId, son.Id)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil, errEnterpriseSonForbidden
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	return son, token, nil
+}
+
+func handleEnterpriseSonError(c *gin.Context, err error) {
+	if errors.Is(err, errEnterpriseSonForbidden) {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "message": "sub-account is not owned by this enterprise"})
+		return
+	}
+	handleEnterpriseSonInternalError(c, "authorize sub-account ownership")
+}
+
+func handleEnterpriseSonInternalError(c *gin.Context, operation string) {
+	common.SysLog("enterprise sub-account operation failed: " + operation)
+	common.ApiErrorI18n(c, i18n.MsgDatabaseError)
+}
+
+func buildSonTokenResponse(token *model.Token, revealKey bool) SonTokenResponse {
+	response := SonTokenResponse{
+		Id:                 token.Id,
+		Name:               token.Name,
+		Status:             token.Status,
+		Group:              token.Group,
+		CreatedTime:        token.CreatedTime,
+		AccessedTime:       token.AccessedTime,
+		ExpiredTime:        token.ExpiredTime,
+		RemainQuota:        token.RemainQuota,
+		UsedQuota:          token.UsedQuota,
+		UnlimitedQuota:     token.UnlimitedQuota,
+		ModelLimitsEnabled: token.ModelLimitsEnabled,
+		ModelLimits:        token.ModelLimits,
+		CrossGroupRetry:    token.CrossGroupRetry,
+	}
+	if revealKey {
+		response.Key = token.GetFullKey()
+	}
+	return response
+}
+
 func GetSonTokens(c *gin.Context) {
 	topUserId := c.GetInt("id")
 	sonId, err := strconv.Atoi(c.Param("id"))
@@ -1647,59 +1729,204 @@ func GetSonTokens(c *gin.Context) {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
 	}
-	topUser, err := model.GetUserById(topUserId, false)
+	sonUser, err := getEnterpriseSonUser(topUserId, sonId)
 	if err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonError(c, err)
 		return
 	}
-	query := model.DB.Where("type = ? AND topid = ? AND id = ?", 2, topUserId, sonId)
-	if topUser.EnterpriseId > 0 {
-		query = model.DB.Where("type = ? AND enterprise_id = ? AND id = ?", 2, topUser.EnterpriseId, sonId)
-	}
-	var sonUser model.User
-	if err := query.First(&sonUser).Error; err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "非直属子账号，无权操作"})
-		return
-	}
-	tokens, err := model.GetAllUserTokens(sonId, 0, 1000)
+	tokens, err := model.GetAllUserTokens(sonUser.Id, 0, 1000)
 	if err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonInternalError(c, "list sub-account tokens")
 		return
 	}
 	items := make([]SonTokenResponse, 0, len(tokens))
 	for _, token := range tokens {
-		items = append(items, SonTokenResponse{
-			Id:                 token.Id,
-			Name:               token.Name,
-			Key:                token.GetFullKey(),
-			Status:             token.Status,
-			Group:              token.Group,
-			CreatedTime:        token.CreatedTime,
-			AccessedTime:       token.AccessedTime,
-			ExpiredTime:        token.ExpiredTime,
-			RemainQuota:        token.RemainQuota,
-			UsedQuota:          token.UsedQuota,
-			UnlimitedQuota:     token.UnlimitedQuota,
-			ModelLimitsEnabled: token.ModelLimitsEnabled,
-			ModelLimits:        token.ModelLimits,
-			CrossGroupRetry:    token.CrossGroupRetry,
-		})
+		items = append(items, buildSonTokenResponse(token, false))
 	}
 	common.ApiSuccess(c, gin.H{"items": items})
 }
 
+type tokenModelLimitsInput struct {
+	Set   bool
+	Value string
+}
+
+func (input *tokenModelLimitsInput) UnmarshalJSON(data []byte) error {
+	input.Set = true
+	if string(data) == "null" {
+		input.Value = ""
+		return nil
+	}
+
+	var raw string
+	if err := common.Unmarshal(data, &raw); err == nil {
+		value, err := normalizeTokenModelLimits(strings.Split(raw, ","))
+		if err != nil {
+			return err
+		}
+		input.Value = value
+		return nil
+	}
+
+	var models []string
+	if err := common.Unmarshal(data, &models); err != nil {
+		return errors.New("model limits must be a comma-separated string or a string array")
+	}
+	value, err := normalizeTokenModelLimits(models)
+	if err != nil {
+		return err
+	}
+	input.Value = value
+	return nil
+}
+
+func normalizeTokenModelLimits(models []string) (string, error) {
+	normalized := make([]string, 0, len(models))
+	seen := make(map[string]struct{}, len(models))
+	for _, item := range models {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if len(item) > 200 || strings.ContainsAny(item, "\r\n,") {
+			return "", errors.New("invalid model limit")
+		}
+		if _, exists := seen[item]; exists {
+			continue
+		}
+		seen[item] = struct{}{}
+		normalized = append(normalized, item)
+	}
+	if len(normalized) > 100 {
+		return "", errors.New("too many model limits")
+	}
+	value := strings.Join(normalized, ",")
+	if len(value) > 4096 {
+		return "", errors.New("model limits are too long")
+	}
+	return value, nil
+}
+
+func defaultSubaccountTokenQuota() int {
+	if constant.SubaccountDefaultTokenQuota > 0 {
+		return constant.SubaccountDefaultTokenQuota
+	}
+	return 500000
+}
+
+const maxEnterpriseTokenQuota = 2147483647
+
+func resolveTokenModelLimits(currentEnabled bool, currentValue string, limits tokenModelLimitsInput, enabled *bool) (bool, string, error) {
+	if enabled == nil && !limits.Set {
+		return currentEnabled, currentValue, nil
+	}
+	if enabled == nil {
+		return limits.Value != "", limits.Value, nil
+	}
+	if !*enabled && limits.Set && limits.Value != "" {
+		return false, "", errors.New("model limits cannot be provided when model limit enforcement is disabled")
+	}
+	if !*enabled {
+		return false, "", nil
+	}
+	if limits.Set {
+		return true, limits.Value, nil
+	}
+	return true, currentValue, nil
+}
+
+func buildEnterpriseSonToken(son *model.User, name string, quota *int, unlimited *bool, expiredTime *int64, limits tokenModelLimitsInput, limitsEnabled *bool) (*model.Token, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = son.Username + "的初始令牌"
+	}
+	if len(name) > 50 {
+		return nil, errors.New("token name is too long")
+	}
+
+	remaining := defaultSubaccountTokenQuota()
+	if quota != nil {
+		remaining = *quota
+	}
+	isUnlimited := false
+	if unlimited != nil {
+		isUnlimited = *unlimited
+	}
+	if remaining < 0 || remaining > maxEnterpriseTokenQuota {
+		return nil, errors.New("token quota is outside the valid range")
+	}
+	if !isUnlimited && remaining == 0 {
+		return nil, errors.New("a finite token quota must be greater than zero")
+	}
+
+	expiresAt := int64(-1)
+	if expiredTime != nil {
+		expiresAt = *expiredTime
+	}
+	if expiresAt != -1 && expiresAt <= common.GetTimestamp() {
+		return nil, errors.New("token expiry must be in the future or -1")
+	}
+	modelLimitsEnabled, modelLimits, err := resolveTokenModelLimits(false, "", limits, limitsEnabled)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := common.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	now := common.GetTimestamp()
+	token := &model.Token{
+		UserId:             son.Id,
+		Name:               name,
+		Key:                key,
+		Status:             common.TokenStatusEnabled,
+		CreatedTime:        now,
+		AccessedTime:       now,
+		ExpiredTime:        expiresAt,
+		RemainQuota:        remaining,
+		UnlimitedQuota:     isUnlimited,
+		ModelLimitsEnabled: modelLimitsEnabled,
+		ModelLimits:        modelLimits,
+		Group:              son.Group,
+	}
+	if setting.DefaultUseAutoGroup {
+		token.Group = "auto"
+	}
+	return token, nil
+}
+
 type CreateSonRequest struct {
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	DisplayName string `json:"display_name"`
-	Phone       string `json:"phone"`
+	Username                string                `json:"username"`
+	Password                string                `json:"password"`
+	DisplayName             string                `json:"display_name"`
+	Phone                   string                `json:"phone"`
+	TokenName               string                `json:"token_name"`
+	TokenQuota              *int                  `json:"token_quota"`
+	TokenUnlimited          *bool                 `json:"token_unlimited"`
+	TokenModelLimits        tokenModelLimitsInput `json:"token_model_limits"`
+	TokenModelLimitsEnabled *bool                 `json:"token_model_limits_enabled"`
+}
+
+func validateCreateSonInitialTokenRequest(req CreateSonRequest) error {
+	if req.TokenUnlimited != nil && *req.TokenUnlimited {
+		return errors.New("unlimited initial tokens are not allowed")
+	}
+	if len(strings.TrimSpace(req.TokenName)) > 50 {
+		return errors.New("token name is too long")
+	}
+	if req.TokenQuota != nil && (*req.TokenQuota <= 0 || *req.TokenQuota > maxEnterpriseTokenQuota) {
+		return errors.New("token quota is outside the valid range")
+	}
+	return nil
 }
 
 func CreateSonUser(c *gin.Context) {
+	common.SetNoStoreHeaders(c)
 	topUserId := c.GetInt("id")
 	topUser, err := model.GetUserById(topUserId, false)
 	if err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonInternalError(c, "load enterprise owner")
 		return
 	}
 	if topUser.Type >= 2 {
@@ -1715,6 +1942,10 @@ func CreateSonUser(c *gin.Context) {
 	req.Username = strings.TrimSpace(req.Username)
 	req.DisplayName = strings.TrimSpace(req.DisplayName)
 	req.Phone = strings.TrimSpace(req.Phone)
+	if err := validateCreateSonInitialTokenRequest(req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
 	if req.Username == "" || req.Password == "" {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
@@ -1749,9 +1980,18 @@ func CreateSonUser(c *gin.Context) {
 	if displayName == "" {
 		displayName = req.Username
 	}
+	if err := common.Validate.Struct(&model.User{
+		Username:    req.Username,
+		Password:    req.Password,
+		DisplayName: displayName,
+		Phone:       req.Phone,
+	}); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidInput)
+		return
+	}
 	enterprise, err := model.EnsureEnterpriseForUser(topUser)
 	if err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonInternalError(c, "load enterprise")
 		return
 	}
 	enterpriseId := topUser.EnterpriseId
@@ -1773,18 +2013,280 @@ func CreateSonUser(c *gin.Context) {
 		Group:          topUser.Group,
 		EnterpriseName: enterpriseName,
 	}
-	if err := cleanUser.Insert(0); err != nil {
-		common.ApiError(c, err)
+	var createdToken *model.Token
+	err = model.DB.Transaction(func(tx *gorm.DB) error {
+		if err := cleanUser.InsertWithTx(tx, 0); err != nil {
+			return err
+		}
+		// InsertWithTx is shared with normal registration. Sub-accounts never
+		// own the billing wallet, so keep their user quota at zero.
+		cleanUser.Quota = 0
+		if err := tx.Model(&cleanUser).Update("quota", 0).Error; err != nil {
+			return err
+		}
+		createdToken, err = buildEnterpriseSonToken(
+			&cleanUser,
+			req.TokenName,
+			req.TokenQuota,
+			req.TokenUnlimited,
+			nil,
+			req.TokenModelLimits,
+			req.TokenModelLimitsEnabled,
+		)
+		if err != nil {
+			return err
+		}
+		return tx.Create(createdToken).Error
+	})
+	if err != nil {
+		handleEnterpriseSonInternalError(c, "create sub-account and initial token")
+		return
+	}
+	cleanUser.FinishInsert(0)
+
+	model.RecordLog(topUserId, model.LogTypeManage, fmt.Sprintf("创建子账号 %s", req.Username))
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"user_id": cleanUser.Id,
+			"token":   buildSonTokenResponse(createdToken, true),
+		},
+	})
+}
+
+type CreateSonTokenRequest struct {
+	Name               string                `json:"name"`
+	RemainQuota        *int                  `json:"remain_quota"`
+	UnlimitedQuota     *bool                 `json:"unlimited_quota"`
+	ExpiredTime        *int64                `json:"expired_time"`
+	ModelLimits        tokenModelLimitsInput `json:"model_limits"`
+	ModelLimitsEnabled *bool                 `json:"model_limits_enabled"`
+}
+
+func CreateSonToken(c *gin.Context) {
+	common.SetNoStoreHeaders(c)
+	adminId := c.GetInt("id")
+	sonId, err := strconv.Atoi(c.Param("id"))
+	if err != nil || sonId <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	son, err := getEnterpriseSonUser(adminId, sonId)
+	if err != nil {
+		handleEnterpriseSonError(c, err)
 		return
 	}
 
-	if constant.GenerateDefaultToken {
-		if err := GenerateDefaultTokenForUser(cleanUser.Id, cleanUser.Username); err != nil {
-			common.SysLog("failed to generate default token for sub-account: " + err.Error())
+	var req CreateSonTokenRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	count, err := model.CountUserTokens(son.Id)
+	if err != nil {
+		handleEnterpriseSonInternalError(c, "count sub-account tokens")
+		return
+	}
+	if int(count) >= operation_setting.GetMaxUserTokens() {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "sub-account token limit reached"})
+		return
+	}
+
+	token, err := buildEnterpriseSonToken(son, req.Name, req.RemainQuota, req.UnlimitedQuota, req.ExpiredTime, req.ModelLimits, req.ModelLimitsEnabled)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if err := token.Insert(); err != nil {
+		handleEnterpriseSonInternalError(c, "create sub-account token")
+		return
+	}
+	model.RecordLog(adminId, model.LogTypeManage, fmt.Sprintf("created sub-account token user_id=%d token_id=%d", son.Id, token.Id))
+	common.ApiSuccess(c, buildSonTokenResponse(token, true))
+}
+
+type UpdateSonTokenRequest struct {
+	Status             *int                  `json:"status"`
+	RemainQuota        *int                  `json:"remain_quota"`
+	UnlimitedQuota     *bool                 `json:"unlimited_quota"`
+	ExpiredTime        *int64                `json:"expired_time"`
+	ModelLimits        tokenModelLimitsInput `json:"model_limits"`
+	ModelLimitsEnabled *bool                 `json:"model_limits_enabled"`
+}
+
+func UpdateSonToken(c *gin.Context) {
+	adminId := c.GetInt("id")
+	sonId, sonErr := strconv.Atoi(c.Param("id"))
+	tokenId, tokenErr := strconv.Atoi(c.Param("token_id"))
+	if sonErr != nil || tokenErr != nil || sonId <= 0 || tokenId <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	son, token, err := getEnterpriseSonToken(adminId, sonId, tokenId)
+	if err != nil {
+		handleEnterpriseSonError(c, err)
+		return
+	}
+
+	var req UpdateSonTokenRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	if req.Status == nil && req.RemainQuota == nil && req.UnlimitedQuota == nil && req.ExpiredTime == nil && !req.ModelLimits.Set && req.ModelLimitsEnabled == nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	nextStatus := token.Status
+	nextRemainQuota := token.RemainQuota
+	nextUnlimitedQuota := token.UnlimitedQuota
+	nextExpiredTime := token.ExpiredTime
+	updates := make(map[string]interface{})
+	if req.Status != nil {
+		if *req.Status != common.TokenStatusEnabled && *req.Status != common.TokenStatusDisabled {
+			common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+			return
+		}
+		nextStatus = *req.Status
+		updates["status"] = *req.Status
+	}
+	if req.RemainQuota != nil {
+		if *req.RemainQuota < 0 || *req.RemainQuota > maxEnterpriseTokenQuota {
+			common.ApiError(c, errors.New("token quota is outside the valid range"))
+			return
+		}
+		nextRemainQuota = *req.RemainQuota
+		updates["remain_quota"] = *req.RemainQuota
+	}
+	if req.UnlimitedQuota != nil {
+		nextUnlimitedQuota = *req.UnlimitedQuota
+		updates["unlimited_quota"] = *req.UnlimitedQuota
+	}
+	if req.ExpiredTime != nil {
+		if *req.ExpiredTime != -1 && *req.ExpiredTime <= common.GetTimestamp() {
+			common.ApiError(c, errors.New("token expiry must be in the future or -1"))
+			return
+		}
+		nextExpiredTime = *req.ExpiredTime
+		updates["expired_time"] = *req.ExpiredTime
+	}
+	if req.ModelLimits.Set || req.ModelLimitsEnabled != nil {
+		modelLimitsEnabled, modelLimits, limitErr := resolveTokenModelLimits(
+			token.ModelLimitsEnabled,
+			token.ModelLimits,
+			req.ModelLimits,
+			req.ModelLimitsEnabled,
+		)
+		if limitErr != nil {
+			common.ApiError(c, limitErr)
+			return
+		}
+		updates["model_limits"] = modelLimits
+		updates["model_limits_enabled"] = modelLimitsEnabled
+	}
+
+	if nextStatus == common.TokenStatusEnabled {
+		if nextExpiredTime != -1 && nextExpiredTime <= common.GetTimestamp() {
+			common.ApiError(c, errors.New("an expired token cannot be enabled"))
+			return
+		}
+		if !nextUnlimitedQuota && nextRemainQuota <= 0 {
+			if req.Status != nil {
+				common.ApiError(c, errors.New("an exhausted token cannot be enabled"))
+				return
+			}
+			nextStatus = common.TokenStatusExhausted
+			updates["status"] = nextStatus
 		}
 	}
 
-	model.RecordLog(topUserId, model.LogTypeManage, fmt.Sprintf("创建子账号 %s", req.Username))
+	query := model.DB.Model(&model.Token{}).Where("id = ? AND user_id = ?", token.Id, son.Id)
+	if req.Status != nil && nextStatus == common.TokenStatusEnabled {
+		if !nextUnlimitedQuota && req.RemainQuota == nil {
+			query = query.Where("unlimited_quota = ? OR remain_quota > 0", true)
+		}
+		if req.ExpiredTime == nil {
+			query = query.Where("expired_time = -1 OR expired_time > ?", common.GetTimestamp())
+		}
+	}
+	result := query.Updates(updates)
+	if result.Error != nil {
+		handleEnterpriseSonInternalError(c, "update sub-account token")
+		return
+	}
+	if result.RowsAffected == 0 {
+		current, currentErr := model.GetTokenByIds(token.Id, son.Id)
+		if currentErr != nil || !sonTokenUpdateAlreadyApplied(current, req) {
+			common.ApiError(c, errors.New("token changed concurrently or cannot be enabled"))
+			return
+		}
+		token = current
+	}
+	if err := model.InvalidateUserTokensCache(son.Id); err != nil {
+		handleEnterpriseSonInternalError(c, "invalidate sub-account token cache")
+		return
+	}
+	if result.RowsAffected > 0 {
+		token, err = model.GetTokenByIds(token.Id, son.Id)
+		if err != nil {
+			handleEnterpriseSonInternalError(c, "reload sub-account token")
+			return
+		}
+	}
+	model.RecordLog(adminId, model.LogTypeManage, fmt.Sprintf("updated sub-account token user_id=%d token_id=%d", son.Id, token.Id))
+	common.ApiSuccess(c, buildSonTokenResponse(token, false))
+}
+
+func sonTokenUpdateAlreadyApplied(token *model.Token, req UpdateSonTokenRequest) bool {
+	if token == nil {
+		return false
+	}
+	if req.Status != nil && token.Status != *req.Status {
+		return false
+	}
+	if req.RemainQuota != nil && token.RemainQuota != *req.RemainQuota {
+		return false
+	}
+	if req.UnlimitedQuota != nil && token.UnlimitedQuota != *req.UnlimitedQuota {
+		return false
+	}
+	if req.ExpiredTime != nil && token.ExpiredTime != *req.ExpiredTime {
+		return false
+	}
+	if req.ModelLimits.Set || req.ModelLimitsEnabled != nil {
+		modelLimitsEnabled, modelLimits, err := resolveTokenModelLimits(
+			token.ModelLimitsEnabled,
+			token.ModelLimits,
+			req.ModelLimits,
+			req.ModelLimitsEnabled,
+		)
+		if err != nil || token.ModelLimits != modelLimits || token.ModelLimitsEnabled != modelLimitsEnabled {
+			return false
+		}
+	}
+	return true
+}
+
+func DeleteSonToken(c *gin.Context) {
+	adminId := c.GetInt("id")
+	sonId, sonErr := strconv.Atoi(c.Param("id"))
+	tokenId, tokenErr := strconv.Atoi(c.Param("token_id"))
+	if sonErr != nil || tokenErr != nil || sonId <= 0 || tokenId <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	son, token, err := getEnterpriseSonToken(adminId, sonId, tokenId)
+	if err != nil {
+		handleEnterpriseSonError(c, err)
+		return
+	}
+	if err := token.Delete(); err != nil {
+		handleEnterpriseSonInternalError(c, "revoke sub-account token")
+		return
+	}
+	model.RecordLog(adminId, model.LogTypeManage, fmt.Sprintf("revoked sub-account token user_id=%d token_id=%d", son.Id, token.Id))
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
 }
 
@@ -1803,7 +2305,7 @@ func SonManageStatus(c *gin.Context) {
 
 	topUser, err := model.GetUserById(topUserId, false)
 	if err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonInternalError(c, "load enterprise owner for status update")
 		return
 	}
 	query := model.DB.Where("type = ? AND topid = ? AND id = ?", 2, topUserId, req.Id)
@@ -1831,7 +2333,7 @@ func SonManageStatus(c *gin.Context) {
 	}
 
 	if err := sonUser.Update(false); err != nil {
-		common.ApiError(c, err)
+		handleEnterpriseSonInternalError(c, "update sub-account status")
 		return
 	}
 

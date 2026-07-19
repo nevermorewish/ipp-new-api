@@ -481,7 +481,7 @@ type GeminiModelsResponse struct {
 func FetchGeminiModels(baseURL, apiKey, proxyURL string) ([]string, error) {
 	client, err := service.GetHttpClientWithProxy(proxyURL)
 	if err != nil {
-		return nil, fmt.Errorf("创建HTTP客户端失败: %v", err)
+		return nil, fmt.Errorf("创建HTTP终端失败: %v", err)
 	}
 
 	allModels := make([]string, 0)

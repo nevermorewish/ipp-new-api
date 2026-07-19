@@ -19,6 +19,8 @@ import (
 
 const UserNameMaxLength = 20
 
+var ErrInsufficientUserQuota = errors.New("user quota is insufficient")
+
 var userSortColumns = map[string]string{
 	"id":            "id",
 	"username":      "username",
@@ -1299,17 +1301,26 @@ func DecreaseUserQuota(id int, quota int, db bool) (err error) {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
-	gopool.Go(func() {
-		err := cacheDecrUserQuota(id, int64(quota))
-		if err != nil {
-			common.SysLog("failed to decrease user quota: " + err.Error())
-		}
-	})
-	if !db && common.BatchUpdateEnabled {
-		addNewRecord(BatchUpdateTypeUserQuota, id, -quota)
+	if quota == 0 {
 		return nil
 	}
-	return decreaseUserQuota(id, quota)
+	result := DB.Model(&User{}).
+		Where("id = ? AND quota >= ?", id, quota).
+		Update("quota", gorm.Expr("quota - ?", quota))
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrInsufficientUserQuota
+	}
+	if common.RedisEnabled && quota > 0 {
+		gopool.Go(func() {
+			if cacheErr := cacheDecrUserQuota(id, int64(quota)); cacheErr != nil {
+				common.SysLog("failed to decrease user quota: " + cacheErr.Error())
+			}
+		})
+	}
+	return nil
 }
 
 func decreaseUserQuota(id int, quota int) (err error) {

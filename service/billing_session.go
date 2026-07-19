@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -36,8 +37,9 @@ type BillingSession struct {
 }
 
 // Settle 根据实际消耗额度进行结算。
-// 资金来源和令牌额度分两步提交：若资金来源已提交但令牌调整失败，
-// 会标记 fundingSettled 防止 Refund 对已提交的资金来源执行退款。
+// 钱包来源通过同一数据库事务同时调整钱包和令牌额度。
+// 订阅来源仍分两步提交；若订阅已提交但令牌调整失败，
+// 会标记 fundingSettled 防止 Refund 对已提交的订阅执行退款。
 func (s *BillingSession) Settle(actualQuota int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -46,6 +48,14 @@ func (s *BillingSession) Settle(actualQuota int) error {
 	}
 	delta := actualQuota - s.preConsumedQuota
 	if delta == 0 {
+		s.settled = true
+		return nil
+	}
+	if _, ok := s.funding.(*WalletFunding); ok && !s.relayInfo.IsPlayground {
+		if err := s.adjustWalletAndToken(delta); err != nil {
+			return err
+		}
+		s.fundingSettled = true
 		s.settled = true
 		return nil
 	}
@@ -104,6 +114,12 @@ func (s *BillingSession) Refund(c *gin.Context) {
 	funding := s.funding
 
 	gopool.Go(func() {
+		if wallet, ok := funding.(*WalletFunding); ok && tokenConsumed > 0 && !isPlayground {
+			if err := model.IncreaseUserAndTokenQuota(wallet.userId, tokenId, tokenKey, tokenConsumed); err != nil {
+				common.SysLog("error atomically refunding wallet and token quota: " + err.Error())
+			}
+			return
+		}
 		// 1) 退还资金来源
 		if err := funding.Refund(); err != nil {
 			common.SysLog("error refunding billing source: " + err.Error())
@@ -161,6 +177,16 @@ func (s *BillingSession) Reserve(targetQuota int) error {
 	if delta <= 0 {
 		return nil
 	}
+	if _, ok := s.funding.(*WalletFunding); ok && !s.relayInfo.IsPlayground {
+		if err := s.adjustWalletAndToken(delta); err != nil {
+			return err
+		}
+		s.preConsumedQuota += delta
+		s.tokenConsumed += delta
+		s.extraReserved += delta
+		s.syncRelayInfo()
+		return nil
+	}
 
 	if err := s.reserveFunding(delta); err != nil {
 		return err
@@ -194,6 +220,20 @@ func (s *BillingSession) preConsume(c *gin.Context, quota int) *types.NewAPIErro
 	} else if effectiveQuota > 0 {
 		logger.LogInfo(c, fmt.Sprintf("用户 %d 需要预扣费 %s (funding=%s)", s.relayInfo.UserId, logger.FormatQuota(effectiveQuota), s.funding.Source()))
 	}
+	if effectiveQuota > 0 {
+		if _, ok := s.funding.(*WalletFunding); ok && !s.relayInfo.IsPlayground {
+			if err := s.adjustWalletAndToken(effectiveQuota); err != nil {
+				if errors.Is(err, model.ErrInsufficientTokenQuota) {
+					return types.NewErrorWithStatusCode(err, types.ErrorCodePreConsumeTokenQuotaFailed, http.StatusForbidden, types.ErrOptionWithSkipRetry(), types.ErrOptionWithNoRecordErrorLog())
+				}
+				return types.NewError(err, types.ErrorCodeUpdateDataError, types.ErrOptionWithSkipRetry())
+			}
+			s.tokenConsumed = effectiveQuota
+			s.preConsumedQuota = effectiveQuota
+			s.syncRelayInfo()
+			return nil
+		}
+	}
 
 	// ---- 1) 预扣令牌额度 ----
 	if effectiveQuota > 0 {
@@ -226,6 +266,24 @@ func (s *BillingSession) preConsume(c *gin.Context, quota int) *types.NewAPIErro
 	// ---- 同步 RelayInfo 兼容字段 ----
 	s.syncRelayInfo()
 
+	return nil
+}
+
+func (s *BillingSession) adjustWalletAndToken(delta int) error {
+	wallet, ok := s.funding.(*WalletFunding)
+	if !ok {
+		return errors.New("wallet funding is required for atomic quota adjustment")
+	}
+	if delta > 0 {
+		if err := model.DecreaseUserAndTokenQuota(wallet.userId, s.relayInfo.TokenId, s.relayInfo.TokenKey, delta); err != nil {
+			return err
+		}
+	} else if delta < 0 {
+		if err := model.IncreaseUserAndTokenQuota(wallet.userId, s.relayInfo.TokenId, s.relayInfo.TokenKey, -delta); err != nil {
+			return err
+		}
+	}
+	wallet.consumed += delta
 	return nil
 }
 

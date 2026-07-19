@@ -409,6 +409,9 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 		logModel = "gpt-4o-gizmo-*"
 		extraContent = append(extraContent, fmt.Sprintf("模型 %s", summary.ModelName))
 	}
+	if relayInfo.RequestedModelName != "" {
+		logModel = relayInfo.RequestedModelName
+	}
 
 	logContent := strings.Join(extraContent, ", ")
 	var other map[string]interface{}

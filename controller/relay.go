@@ -382,6 +382,7 @@ func processChannelError(c *gin.Context, channelError types.ChannelError, err *t
 		other["channel_id"] = channelId
 		other["channel_name"] = c.GetString("channel_name")
 		other["channel_type"] = c.GetInt("channel_type")
+		modelName = enterpriseModelLogName(c, modelName, other)
 		adminInfo := make(map[string]interface{})
 		adminInfo["use_channel"] = c.GetStringSlice("use_channel")
 		isMultiKey := common.GetContextKeyBool(c, constant.ContextKeyChannelIsMultiKey)
@@ -399,6 +400,18 @@ func processChannelError(c *gin.Context, channelError types.ChannelError, err *t
 		model.RecordErrorLog(c, userId, channelId, modelName, tokenName, err.MaskSensitiveErrorWithStatusCode(), tokenId, useTimeSeconds, common.GetContextKeyBool(c, constant.ContextKeyIsStream), userGroup, other)
 	}
 
+}
+
+func enterpriseModelLogName(c *gin.Context, billingModel string, other map[string]interface{}) string {
+	requestedModel := common.GetContextKeyString(c, constant.ContextKeyRequestedModel)
+	if requestedModel == "" {
+		return billingModel
+	}
+	if other != nil {
+		other["requested_model_name"] = requestedModel
+		other["billing_model_name"] = billingModel
+	}
+	return requestedModel
 }
 
 func RelayMidjourney(c *gin.Context) {

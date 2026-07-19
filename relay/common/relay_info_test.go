@@ -38,3 +38,17 @@ func TestRelayInfoGetFinalRequestRelayFormatNilReceiver(t *testing.T) {
 	var info *RelayInfo
 	require.Equal(t, types.RelayFormat(""), info.GetFinalRequestRelayFormat())
 }
+
+func TestRelayInfoLogModelNamePreservesEnterpriseAlias(t *testing.T) {
+	info := &RelayInfo{
+		OriginModelName:    "canonical-model",
+		RequestedModelName: "corp-chat",
+	}
+	require.Equal(t, "corp-chat", info.LogModelName())
+
+	info.RequestedModelName = ""
+	require.Equal(t, "canonical-model", info.LogModelName())
+
+	var nilInfo *RelayInfo
+	require.Empty(t, nilInfo.LogModelName())
+}

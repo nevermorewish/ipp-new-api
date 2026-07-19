@@ -193,7 +193,7 @@ docker run --name new-api -d --restart always \
 - ✅ Internal top-up and quota allocation for lawful authorized scenarios (EPay, Stripe)
 - ✅ Organization-level per-request, usage-based, and cache-hit cost accounting
 - ✅ Cache billing statistics for OpenAI, Azure, DeepSeek, Claude, Qwen, and supported models
-- ✅ Flexible billing policies for internal management or authorized enterprise customers
+- ✅ Flexible billing policies for internal management or authorized enterprise teams
 
 ### 🔐 Authorization and Security
 

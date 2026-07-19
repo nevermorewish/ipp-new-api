@@ -201,8 +201,6 @@ func RelaySwapFace(c *gin.Context, info *relaycommon.RelayInfo) *dto.MidjourneyR
 	if swapFaceRequest.SourceBase64 == "" || swapFaceRequest.TargetBase64 == "" {
 		return service.MidjourneyErrorWrapper(constant.MjRequestError, "sour_base64_and_target_base64_is_required")
 	}
-	modelName := service.CovertMjpActionToModelName(constant.MjActionSwapFace)
-
 	priceData, err := helper.ModelPriceHelperPerCall(c, info)
 	if err != nil {
 		return &dto.MidjourneyResponse{
@@ -244,7 +242,7 @@ func RelaySwapFace(c *gin.Context, info *relaycommon.RelayInfo) *dto.MidjourneyR
 			other := service.GenerateMjOtherInfo(info, priceData)
 			model.RecordConsumeLog(c, info.UserId, model.RecordConsumeLogParams{
 				ChannelId: info.ChannelId,
-				ModelName: modelName,
+				ModelName: info.LogModelName(),
 				TokenName: tokenName,
 				Quota:     priceData.Quota,
 				Content:   logContent,
@@ -509,8 +507,6 @@ func RelayMidjourneySubmit(c *gin.Context, relayInfo *relaycommon.RelayInfo) *dt
 
 	fullRequestURL := fmt.Sprintf("%s%s", baseURL, requestURL)
 
-	modelName := service.CovertMjpActionToModelName(midjRequest.Action)
-
 	priceData, err := helper.ModelPriceHelperPerCall(c, relayInfo)
 	if err != nil {
 		return &dto.MidjourneyResponse{
@@ -551,7 +547,7 @@ func RelayMidjourneySubmit(c *gin.Context, relayInfo *relaycommon.RelayInfo) *dt
 			other := service.GenerateMjOtherInfo(relayInfo, priceData)
 			model.RecordConsumeLog(c, relayInfo.UserId, model.RecordConsumeLogParams{
 				ChannelId: relayInfo.ChannelId,
-				ModelName: modelName,
+				ModelName: relayInfo.LogModelName(),
 				TokenName: tokenName,
 				Quota:     priceData.Quota,
 				Content:   logContent,

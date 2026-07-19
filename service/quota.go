@@ -237,6 +237,9 @@ func PostWssConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, mod
 	}
 
 	logModel := modelName
+	if relayInfo.RequestedModelName != "" {
+		logModel = relayInfo.RequestedModelName
+	}
 	if extraContent != "" {
 		logContent += ", " + extraContent
 	}
@@ -359,7 +362,7 @@ func PostAudioConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, u
 		logger.LogError(ctx, "error settling billing: "+err.Error())
 	}
 
-	logModel := relayInfo.OriginModelName
+	logModel := relayInfo.LogModelName()
 	if extraContent != "" {
 		logContent += ", " + extraContent
 	}
@@ -413,6 +416,25 @@ func PreConsumeTokenQuota(relayInfo *relaycommon.RelayInfo, quota int) error {
 }
 
 func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQuota int, sendEmail bool) (err error) {
+	billingUserId := relayInfo.BillingUserId
+	if billingUserId == 0 {
+		billingUserId = relayInfo.UserId
+	}
+
+	if relayInfo.BillingSource != BillingSourceSubscription && !relayInfo.IsPlayground {
+		if quota > 0 {
+			err = model.DecreaseUserAndTokenQuota(billingUserId, relayInfo.TokenId, relayInfo.TokenKey, quota)
+		} else {
+			err = model.IncreaseUserAndTokenQuota(billingUserId, relayInfo.TokenId, relayInfo.TokenKey, -quota)
+		}
+		if err != nil {
+			return err
+		}
+		if sendEmail && (quota+preConsumedQuota) != 0 {
+			checkAndSendQuotaNotify(relayInfo, quota, preConsumedQuota)
+		}
+		return nil
+	}
 
 	// 1) Consume from wallet quota OR subscription item
 	if relayInfo != nil && relayInfo.BillingSource == BillingSourceSubscription {
@@ -428,10 +450,6 @@ func PostConsumeQuota(relayInfo *relaycommon.RelayInfo, quota int, preConsumedQu
 		}
 	} else {
 		// Wallet
-		billingUserId := relayInfo.BillingUserId
-		if billingUserId == 0 {
-			billingUserId = relayInfo.UserId
-		}
 		if quota > 0 {
 			err = model.DecreaseUserQuota(billingUserId, quota, false)
 		} else {

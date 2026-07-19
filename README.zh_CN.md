@@ -198,7 +198,7 @@ docker run --name new-api -d --restart always \
 - ✅ 合法授权场景下的内部充值与额度分配（易支付、Stripe）
 - ✅ 组织内按次、按量或缓存命中成本核算
 - ✅ 支持 OpenAI、Azure、DeepSeek、Claude、Qwen 等模型的缓存计费统计
-- ✅ 面向内部管理或企业客户的灵活计费策略配置
+- ✅ 面向内部管理或企业团队的灵活计费策略配置
 
 ### 🔐 授权与安全
 

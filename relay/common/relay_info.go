@@ -106,6 +106,7 @@ type RelayInfo struct {
 	UsePrice               bool
 	RelayMode              int
 	OriginModelName        string
+	RequestedModelName     string
 	RequestURLPath         string
 	RequestHeaders         map[string]string
 	ShouldIncludeUsage     bool
@@ -480,7 +481,8 @@ func genBaseRelayInfo(c *gin.Context, request dto.Request) *RelayInfo {
 		UserQuota:     common.GetContextKeyInt(c, constant.ContextKeyUserQuota),
 		UserEmail:     common.GetContextKeyString(c, constant.ContextKeyUserEmail),
 
-		OriginModelName: common.GetContextKeyString(c, constant.ContextKeyOriginalModel),
+		OriginModelName:    common.GetContextKeyString(c, constant.ContextKeyOriginalModel),
+		RequestedModelName: common.GetContextKeyString(c, constant.ContextKeyRequestedModel),
 
 		TokenId:        common.GetContextKeyInt(c, constant.ContextKeyTokenId),
 		TokenKey:       common.GetContextKeyString(c, constant.ContextKeyTokenKey),
@@ -647,6 +649,18 @@ func (info *RelayInfo) GetFinalRequestRelayFormat() types.RelayFormat {
 	return info.RelayFormat
 }
 
+// LogModelName returns the client-facing enterprise alias when one was
+// resolved, while OriginModelName remains canonical for routing and billing.
+func (info *RelayInfo) LogModelName() string {
+	if info == nil {
+		return ""
+	}
+	if info.RequestedModelName != "" {
+		return info.RequestedModelName
+	}
+	return info.OriginModelName
+}
+
 func GenRelayInfoResponsesCompaction(c *gin.Context, request *dto.OpenAIResponsesCompactionRequest) *RelayInfo {
 	info := genBaseRelayInfo(c, request)
 	if info.RelayMode == relayconstant.RelayModeUnknown {
@@ -683,7 +697,7 @@ type TaskRelayInfo struct {
 	Action       string
 	OriginTaskID string
 	// PublicTaskID 是提交时预生成的 task_xxxx 格式公开 ID，
-	// 供 DoResponse 在返回给客户端时使用（避免暴露上游真实 ID）。
+	// 供 DoResponse 在返回给终端时使用（避免暴露上游真实 ID）。
 	PublicTaskID string
 
 	ConsumeQuota bool

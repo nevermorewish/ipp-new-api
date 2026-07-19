@@ -86,6 +86,10 @@ func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, m
 		other["is_model_mapped"] = true
 		other["upstream_model_name"] = relayInfo.UpstreamModelName
 	}
+	if relayInfo.RequestedModelName != "" {
+		other["requested_model_name"] = relayInfo.RequestedModelName
+		other["billing_model_name"] = relayInfo.OriginModelName
+	}
 
 	isSystemPromptOverwritten := common.GetContextKeyBool(ctx, constant.ContextKeySystemPromptOverride)
 	if isSystemPromptOverwritten {
@@ -297,6 +301,10 @@ func GenerateMjOtherInfo(relayInfo *relaycommon.RelayInfo, priceData types.Price
 		other["user_group_ratio"] = priceData.GroupRatioInfo.GroupSpecialRatio
 	}
 	appendRequestPath(nil, relayInfo, other)
+	if relayInfo != nil && relayInfo.RequestedModelName != "" {
+		other["requested_model_name"] = relayInfo.RequestedModelName
+		other["billing_model_name"] = relayInfo.OriginModelName
+	}
 	return other
 }
 

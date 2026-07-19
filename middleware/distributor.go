@@ -38,6 +38,15 @@ func Distribute() func(c *gin.Context) {
 			abortWithOpenAiMessage(c, http.StatusBadRequest, i18n.T(c, i18n.MsgDistributorInvalidRequest, map[string]any{"Error": err.Error()}))
 			return
 		}
+		if err := resolveEnterpriseModelRequest(c, modelRequest); err != nil {
+			if errors.Is(err, errEnterpriseModelAliasInactive) {
+				abortWithOpenAiMessage(c, http.StatusForbidden, "enterprise model is no longer available", types.ErrorCodeModelNotFound)
+				return
+			}
+			common.SysLog("resolve enterprise model alias: " + err.Error())
+			abortWithOpenAiMessage(c, http.StatusInternalServerError, common.TranslateMessage(c, i18n.MsgDatabaseError))
+			return
+		}
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
@@ -69,9 +78,10 @@ func Distribute() func(c *gin.Context) {
 				if !ok {
 					tokenModelLimit = map[string]bool{}
 				}
-				matchName := ratio_setting.FormatMatchingModelName(modelRequest.Model) // match gpts & thinking-*
-				if _, ok := tokenModelLimit[matchName]; !ok {
-					abortWithOpenAiMessage(c, http.StatusForbidden, i18n.T(c, i18n.MsgDistributorTokenModelForbidden, map[string]any{"Model": modelRequest.Model}))
+				requestedModel := common.GetContextKeyString(c, constant.ContextKeyRequestedModel)
+				allowed, displayModel := tokenModelLimitAllows(tokenModelLimit, modelRequest.Model, requestedModel)
+				if !allowed {
+					abortWithOpenAiMessage(c, http.StatusForbidden, i18n.T(c, i18n.MsgDistributorTokenModelForbidden, map[string]any{"Model": displayModel}))
 					return
 				}
 			}

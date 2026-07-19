@@ -91,7 +91,7 @@ func GetHttpClient() *http.Client {
 	return httpClient
 }
 
-// GetSSRFProtectedHTTPClient 返回带拨号时 SSRF 校验的客户端。
+// GetSSRFProtectedHTTPClient 返回带拨号时 SSRF 校验的终端。
 // ssrfProtectedHTTPClient 由 InitHttpClient 在启动时初始化，运行期只读。
 func GetSSRFProtectedHTTPClient() *http.Client {
 	if fetchSetting := system_setting.GetFetchSetting(); fetchSetting != nil && !fetchSetting.EnableSSRFProtection {
@@ -108,7 +108,7 @@ func GetHttpClientWithProxy(proxyURL string) (*http.Client, error) {
 	return NewProxyHttpClient(proxyURL)
 }
 
-// ResetProxyClientCache 清空代理客户端缓存，确保下次使用时重新初始化
+// ResetProxyClientCache 清空代理终端缓存，确保下次使用时重新初始化
 func ResetProxyClientCache() {
 	proxyClientLock.Lock()
 	defer proxyClientLock.Unlock()
@@ -120,7 +120,7 @@ func ResetProxyClientCache() {
 	proxyClients = make(map[string]*http.Client)
 }
 
-// NewProxyHttpClient 创建支持代理的 HTTP 客户端
+// NewProxyHttpClient 创建支持代理的 HTTP 终端
 func NewProxyHttpClient(proxyURL string) (*http.Client, error) {
 	if proxyURL == "" {
 		if client := GetHttpClient(); client != nil {

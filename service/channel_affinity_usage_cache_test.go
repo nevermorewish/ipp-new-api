@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/QuantumNous/new-api/dto"
@@ -10,6 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
+
+var channelAffinityUsageCacheTestSequence uint64
+
+func channelAffinityUsageCacheTestKeys(t *testing.T) (string, string) {
+	t.Helper()
+	id := atomic.AddUint64(&channelAffinityUsageCacheTestSequence, 1)
+	return fmt.Sprintf("rule_%s_%d", t.Name(), id), fmt.Sprintf("fp_%s_%d", t.Name(), id)
+}
 
 func buildChannelAffinityStatsContextForTest(ruleName, usingGroup, keyFP string) *gin.Context {
 	rec := httptest.NewRecorder()
@@ -25,9 +34,8 @@ func buildChannelAffinityStatsContextForTest(ruleName, usingGroup, keyFP string)
 }
 
 func TestObserveChannelAffinityUsageCacheByRelayFormat_ClaudeMode(t *testing.T) {
-	ruleName := t.Name()
+	ruleName, keyFP := channelAffinityUsageCacheTestKeys(t)
 	usingGroup := "default"
-	keyFP := t.Name() + "_key"
 	ctx := buildChannelAffinityStatsContextForTest(ruleName, usingGroup, keyFP)
 
 	usage := &dto.Usage{
@@ -52,9 +60,8 @@ func TestObserveChannelAffinityUsageCacheByRelayFormat_ClaudeMode(t *testing.T) 
 }
 
 func TestObserveChannelAffinityUsageCacheByRelayFormat_MixedMode(t *testing.T) {
-	ruleName := t.Name()
+	ruleName, keyFP := channelAffinityUsageCacheTestKeys(t)
 	usingGroup := "default"
-	keyFP := t.Name() + "_key"
 	ctx := buildChannelAffinityStatsContextForTest(ruleName, usingGroup, keyFP)
 
 	openAIUsage := &dto.Usage{
@@ -82,9 +89,8 @@ func TestObserveChannelAffinityUsageCacheByRelayFormat_MixedMode(t *testing.T) {
 }
 
 func TestObserveChannelAffinityUsageCacheByRelayFormat_UnsupportedModeKeepsEmpty(t *testing.T) {
-	ruleName := t.Name()
+	ruleName, keyFP := channelAffinityUsageCacheTestKeys(t)
 	usingGroup := "default"
-	keyFP := t.Name() + "_key"
 	ctx := buildChannelAffinityStatsContextForTest(ruleName, usingGroup, keyFP)
 
 	usage := &dto.Usage{

@@ -84,7 +84,7 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/self", controller.GetSelf)
 				selfRoute.GET("/models", controller.GetUserModels)
 				selfRoute.PUT("/self", middleware.CriticalRateLimit(), controller.UpdateSelf)
-				selfRoute.DELETE("/self", controller.DeleteSelf)
+				selfRoute.DELETE("/self", middleware.NoSubAccount(), controller.DeleteSelf)
 				selfRoute.GET("/token", controller.GenerateAccessToken)
 				selfRoute.GET("/passkey", controller.PasskeyStatus)
 				selfRoute.POST("/passkey/register/begin", controller.PasskeyRegisterBegin)
@@ -125,9 +125,15 @@ func SetApiRouter(router *gin.Engine) {
 
 				// Sub-account management
 				selfRoute.GET("/son", middleware.EnterpriseAdmin(), controller.GetSonUsers)
-				selfRoute.GET("/son/:id/tokens", middleware.EnterpriseAdmin(), controller.GetSonTokens)
-				selfRoute.POST("/createSon", middleware.EnterpriseAdmin(), controller.CreateSonUser)
+				selfRoute.GET("/son/:id/tokens", middleware.EnterpriseAdmin(), middleware.CriticalRateLimit(), middleware.DisableCache(), controller.GetSonTokens)
+				selfRoute.POST("/son/:id/tokens", middleware.EnterpriseAdmin(), middleware.DisableCache(), controller.CreateSonToken)
+				selfRoute.PATCH("/son/:id/tokens/:token_id", middleware.EnterpriseAdmin(), controller.UpdateSonToken)
+				selfRoute.DELETE("/son/:id/tokens/:token_id", middleware.EnterpriseAdmin(), controller.DeleteSonToken)
+				selfRoute.POST("/createSon", middleware.EnterpriseAdmin(), middleware.DisableCache(), controller.CreateSonUser)
 				selfRoute.POST("/sonStatus", middleware.EnterpriseAdmin(), controller.SonManageStatus)
+				selfRoute.GET("/workbuddy/model-aliases/:source_id", middleware.EnterpriseAdmin(), middleware.CriticalRateLimit(), controller.GetEnterpriseModelAlias)
+				selfRoute.PUT("/workbuddy/model-aliases/:source_id", middleware.EnterpriseAdmin(), middleware.CriticalRateLimit(), controller.UpsertEnterpriseModelAlias)
+				selfRoute.DELETE("/workbuddy/model-aliases/:source_id", middleware.EnterpriseAdmin(), middleware.CriticalRateLimit(), controller.DeleteEnterpriseModelAlias)
 			}
 
 			adminRoute := userRoute.Group("/")
@@ -236,7 +242,7 @@ func SetApiRouter(router *gin.Engine) {
 		registerChannelRoutes(apiRouter)
 		registerAuthzRoutes(apiRouter)
 		tokenRoute := apiRouter.Group("/token")
-		tokenRoute.Use(middleware.UserAuth())
+		tokenRoute.Use(middleware.UserAuth(), middleware.NoSubAccount())
 		{
 			tokenRoute.GET("/", controller.GetAllTokens)
 			tokenRoute.GET("/search", middleware.SearchRateLimit(), controller.SearchTokens)

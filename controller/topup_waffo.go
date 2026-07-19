@@ -165,7 +165,7 @@ func RequestWaffoPay(c *gin.Context) {
 		return
 	}
 
-	// 从服务端配置查找支付方式，客户端只传索引或旧字段
+	// 从服务端配置查找支付方式，终端只传索引或旧字段
 	var resolvedPayMethodType, resolvedPayMethodName string
 	methods := setting.GetWaffoPayMethods()
 	if req.PayMethodIndex != nil {
@@ -179,7 +179,7 @@ func RequestWaffoPay(c *gin.Context) {
 		resolvedPayMethodType = methods[idx].PayMethodType
 		resolvedPayMethodName = methods[idx].PayMethodName
 	} else if req.PayMethodType != "" {
-		// 兼容旧前端：验证客户端传的值在服务端列表中
+		// 兼容旧前端：验证终端传的值在服务端列表中
 		valid := false
 		for _, m := range methods {
 			if m.PayMethodType == req.PayMethodType && m.PayMethodName == req.PayMethodName {

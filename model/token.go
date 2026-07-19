@@ -31,6 +31,8 @@ type Token struct {
 	DeletedAt          gorm.DeletedAt `gorm:"index"`
 }
 
+var ErrInsufficientTokenQuota = errors.New("token quota is insufficient")
+
 func (token *Token) Clean() {
 	token.Key = ""
 }
@@ -413,7 +415,23 @@ func DecreaseTokenQuota(id int, key string, quota int) (err error) {
 	if quota < 0 {
 		return errors.New("quota 不能为负数！")
 	}
-	if common.RedisEnabled {
+	if quota == 0 {
+		return nil
+	}
+	result := DB.Model(&Token{}).
+		Where("id = ? AND (unlimited_quota = ? OR remain_quota >= ?)", id, true, quota).
+		Updates(map[string]interface{}{
+			"remain_quota":  gorm.Expr("remain_quota - ?", quota),
+			"used_quota":    gorm.Expr("used_quota + ?", quota),
+			"accessed_time": common.GetTimestamp(),
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrInsufficientTokenQuota
+	}
+	if common.RedisEnabled && quota > 0 {
 		gopool.Go(func() {
 			err := cacheDecrTokenQuota(key, int64(quota))
 			if err != nil {
@@ -421,11 +439,7 @@ func DecreaseTokenQuota(id int, key string, quota int) (err error) {
 			}
 		})
 	}
-	if common.BatchUpdateEnabled {
-		addNewRecord(BatchUpdateTypeTokenQuota, id, -quota)
-		return nil
-	}
-	return decreaseTokenQuota(id, quota)
+	return nil
 }
 
 func decreaseTokenQuota(id int, quota int) (err error) {
