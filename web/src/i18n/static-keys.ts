@@ -51,6 +51,8 @@ export const STATIC_I18N_KEYS = [
   'Master instances run scheduled background tasks.',
   'Worker instances do not run master-only background tasks.',
   'Drawing task polling',
+  'Invalid model pricing import file',
+  'Import file does not contain model pricing data',
 
   // Pricing constants
   'Name',

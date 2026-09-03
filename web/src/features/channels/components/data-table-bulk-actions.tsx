@@ -17,8 +17,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQueryClient } from '@tanstack/react-query'
-import { type Table } from '@tanstack/react-table'
-import { Power, PowerOff, Tag, Trash2 } from 'lucide-react'
+import type { Table } from '@tanstack/react-table'
+import { Download, Power, PowerOff, Tag, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -45,6 +45,7 @@ import {
   handleBatchDisable,
   handleBatchEnable,
   handleBatchSetTag,
+  handleExportSelectedChannels,
 } from '../lib'
 import type { Channel } from '../types'
 
@@ -109,6 +110,40 @@ export function DataTableBulkActions<TData>({
   return (
     <>
       <BulkActionsToolbar table={table} entityName='channel'>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant='outline'
+                size='icon'
+                onClick={() => {
+                  if (canEditSensitive) {
+                    void handleExportSelectedChannels(selectedIds)
+                  }
+                }}
+                disabled={!canEditSensitive}
+                className='size-8'
+                aria-label={t('Export selected channels')}
+                title={
+                  canEditSensitive
+                    ? t('Export selected channels')
+                    : t('No permission to perform this action')
+                }
+              />
+            }
+          >
+            <Download />
+            <span className='sr-only'>{t('Export selected channels')}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {canEditSensitive
+                ? t('Export selected channels')
+                : t('No permission to perform this action')}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger
             render={

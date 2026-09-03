@@ -233,6 +233,12 @@ func SetApiRouter(router *gin.Engine) {
 			ratioSyncRoute.GET("/channels", controller.GetSyncableChannels)
 			ratioSyncRoute.POST("/fetch", controller.FetchUpstreamRatios)
 		}
+		analyticsRoute := apiRouter.Group("/admin")
+		analyticsRoute.Use(middleware.AdminAuth())
+		{
+			analyticsRoute.GET("/user-analytics", controller.GetUserAnalytics)
+			analyticsRoute.GET("/user-analytics/export", controller.ExportUserAnalytics)
+		}
 		taskPluginRoute := apiRouter.Group("/plugin/task")
 		taskPluginRoute.Use(middleware.RootAuth())
 		{

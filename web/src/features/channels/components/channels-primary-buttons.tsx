@@ -29,9 +29,12 @@ import {
   SortAsc,
   RefreshCw,
   ArrowUpFromLine,
+  Download,
+  Upload,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
@@ -63,7 +66,10 @@ import {
   handleFixAbilities,
   handleTestAllChannels,
   handleUpdateAllBalances,
+  handleExportChannels,
+  handleImportChannels,
 } from '../lib'
+import type { ChannelExportData } from '../types'
 import { useChannels } from './channels-provider'
 
 export function ChannelsPrimaryButtons() {
@@ -83,6 +89,7 @@ export function ChannelsPrimaryButtons() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showConsistencyDialog, setShowConsistencyDialog] = useState(false)
   const [isRepairingConsistency, setIsRepairingConsistency] = useState(false)
+  const [importData, setImportData] = useState<ChannelExportData | null>(null)
   const currentUser = useAuthStore((s) => s.auth.user)
   const canEditSensitive = hasPermission(
     currentUser,
@@ -102,6 +109,24 @@ export function ChannelsPrimaryButtons() {
 
   const handleBatchModeToggle = (checked: boolean) => {
     setBatchMode(checked)
+  }
+
+  const handleImportFile = (file: File | undefined) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.addEventListener('load', (event) => {
+      try {
+        const parsed = JSON.parse(
+          String(event.target?.result || '')
+        ) as ChannelExportData
+        if (!Array.isArray(parsed?.channels)) throw new Error('invalid')
+        setImportData(parsed)
+      } catch {
+        setImportData(null)
+        toast.error(t('Invalid channel import file'))
+      }
+    })
+    reader.readAsText(file)
   }
 
   return (
@@ -232,6 +257,40 @@ export function ChannelsPrimaryButtons() {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
+              onClick={() => {
+                if (canEditSensitive) void handleExportChannels()
+              }}
+              disabled={!canEditSensitive}
+            >
+              {t('Export Channels')}
+              <DropdownMenuShortcut>
+                <Download className='h-4 w-4' />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={!canEditSensitive}
+              onSelect={(event) => {
+                event.preventDefault()
+                if (!canEditSensitive) return
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = 'application/json,.json'
+                input.addEventListener('change', () => {
+                  handleImportFile(input.files?.[0])
+                  input.value = ''
+                })
+                input.click()
+              }}
+            >
+              {t('Import Channels')}
+              <DropdownMenuShortcut>
+                <Upload className='h-4 w-4' />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
               onClick={() => upstream.detectAllUpdates()}
               disabled={upstream.detectAllLoading}
             >
@@ -284,6 +343,23 @@ export function ChannelsPrimaryButtons() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <ConfirmDialog
+        open={!!importData}
+        onOpenChange={(open) => {
+          if (!open) setImportData(null)
+        }}
+        title={t('Import Channels?')}
+        desc={t('This will import {{count}} channel(s). Continue?', {
+          count: importData?.channels?.length || 0,
+        })}
+        confirmText={t('Import')}
+        handleConfirm={() => {
+          if (!importData || !canEditSensitive) return
+          void handleImportChannels(importData, queryClient)
+          setImportData(null)
+        }}
+      />
 
       <ConfirmDialog
         open={showDeleteDialog}

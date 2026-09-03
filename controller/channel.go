@@ -922,6 +922,104 @@ type ChannelBatch struct {
 	Tag *string `json:"tag"`
 }
 
+func resetChannelExportFields(channels []*model.Channel) {
+	for _, channel := range channels {
+		channel.Id = 0
+		channel.CreatedTime = 0
+		channel.TestTime = 0
+		channel.ResponseTime = 0
+		channel.Balance = 0
+		channel.BalanceUpdatedTime = 0
+		channel.UsedQuota = 0
+	}
+}
+
+// ExportChannels exports all channels for GET requests and selected channels for POST requests.
+func ExportChannels(c *gin.Context) {
+	var channels []*model.Channel
+	var err error
+
+	if c.Request.Method == http.MethodGet {
+		channels, err = model.GetAllChannels(0, 0, true, false)
+	} else {
+		request := ChannelBatch{}
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "invalid parameters"})
+			return
+		}
+		if len(request.Ids) == 0 {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "please select channels to export"})
+			return
+		}
+		channels, err = model.GetChannelsByIds(request.Ids)
+	}
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if len(channels) == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "no channels available for export"})
+		return
+	}
+
+	resetChannelExportFields(channels)
+	exportData := gin.H{
+		"version":     1,
+		"export_time": time.Now().Format(time.RFC3339),
+		"count":       len(channels),
+		"channels":    channels,
+	}
+	jsonBytes, err := common.Marshal(exportData)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	c.Header("Content-Disposition", "attachment; filename=channels-export.json")
+	c.Data(http.StatusOK, "application/json", jsonBytes)
+}
+
+// ImportChannels imports channels from a JSON backup payload.
+func ImportChannels(c *gin.Context) {
+	var request struct {
+		Channels []model.Channel `json:"channels"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if len(request.Channels) == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "no channel data"})
+		return
+	}
+
+	now := common.GetTimestamp()
+	for i := range request.Channels {
+		channel := &request.Channels[i]
+		channel.Id = 0
+		channel.CreatedTime = now
+		channel.TestTime = 0
+		channel.ResponseTime = 0
+		channel.Balance = 0
+		channel.BalanceUpdatedTime = 0
+		channel.UsedQuota = 0
+		if err := validateChannel(channel, true); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": fmt.Sprintf("channel #%d validation failed: %s", i+1, err.Error()),
+			})
+			return
+		}
+	}
+
+	if err := model.BatchInsertChannels(request.Channels); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	model.InitChannelCache()
+	common.ApiSuccess(c, gin.H{"count": len(request.Channels)})
+}
+
 func DeleteChannelBatch(c *gin.Context) {
 	channelBatch := ChannelBatch{}
 	err := c.ShouldBindJSON(&channelBatch)

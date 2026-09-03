@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
-import { Code2, Eye, RotateCcw, Save } from 'lucide-react'
+import { Code2, Download, Eye, RotateCcw, Save, Upload } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -46,6 +46,7 @@ import {
   ModelRatioVisualEditor,
   type ModelRatioVisualEditorHandle,
 } from './model-ratio-visual-editor'
+import { formatJsonForTextarea } from './utils'
 
 type ModelFormValues = {
   ModelPrice: string
@@ -132,6 +133,81 @@ const modelJsonFields: Array<{
   },
 ]
 
+const MODEL_PRICING_FIELDS = [
+  'ModelPrice',
+  'ModelRatio',
+  'CacheRatio',
+  'CreateCacheRatio',
+  'CompletionRatio',
+  'ImageRatio',
+  'AudioRatio',
+  'AudioCompletionRatio',
+  'BillingMode',
+  'BillingExpr',
+] as const satisfies ReadonlyArray<keyof ModelFormValues>
+
+type ModelPricingField = (typeof MODEL_PRICING_FIELDS)[number]
+
+type ModelPricingExport = {
+  type: 'new-api-model-pricing'
+  version: 1
+  exported_at: string
+  data: Record<ModelPricingField, unknown>
+}
+
+function parseJsonValue(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return {}
+  return JSON.parse(trimmed)
+}
+
+function stringifyImportedJsonValue(value: unknown): string {
+  if (typeof value === 'string') {
+    return formatJsonForTextarea(value)
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return JSON.stringify(value, null, 2)
+  }
+  return JSON.stringify(value ?? {}, null, 2)
+}
+
+function getImportedPricingData(
+  parsed: unknown
+): Partial<Record<ModelPricingField, unknown>> {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Invalid model pricing import file')
+  }
+
+  const record = parsed as Record<string, unknown>
+  const nested = record.data ?? record.pricing ?? record.model_pricing
+  const source =
+    nested && typeof nested === 'object' && !Array.isArray(nested)
+      ? (nested as Record<string, unknown>)
+      : record
+  const result: Partial<Record<ModelPricingField, unknown>> = {}
+
+  for (const field of MODEL_PRICING_FIELDS) {
+    if (Object.hasOwn(source, field)) {
+      result[field] = source[field]
+      continue
+    }
+    let legacyKey: string | undefined
+    if (field === 'BillingMode') {
+      legacyKey = 'billing_setting.billing_mode'
+    } else if (field === 'BillingExpr') {
+      legacyKey = 'billing_setting.billing_expr'
+    }
+    if (legacyKey && Object.hasOwn(source, legacyKey)) {
+      result[field] = source[legacyKey]
+    }
+  }
+
+  if (Object.keys(result).length === 0) {
+    throw new Error('Import file does not contain model pricing data')
+  }
+  return result
+}
+
 function ModelJsonTextareaField(props: {
   form: UseFormReturn<ModelFormValues>
   name: ModelJsonFieldName
@@ -177,6 +253,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   const isUnsetVariant = variant === 'unset'
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
   const visualEditorRef = useRef<ModelRatioVisualEditorHandle>(null)
+  const importInputRef = useRef<HTMLInputElement | null>(null)
 
   const enabledModelsQuery = useQuery({
     queryKey: ['enabled-models'],
@@ -210,6 +287,67 @@ export const ModelRatioForm = memo(function ModelRatioForm({
     setEditMode((prev) => (prev === 'visual' ? 'json' : 'visual'))
   }, [])
 
+  const handleExportModelPricing = useCallback(() => {
+    try {
+      const data = Object.fromEntries(
+        MODEL_PRICING_FIELDS.map((field) => [
+          field,
+          parseJsonValue(form.getValues(field)),
+        ])
+      ) as Record<ModelPricingField, unknown>
+      const payload: ModelPricingExport = {
+        type: 'new-api-model-pricing',
+        version: 1,
+        exported_at: new Date().toISOString(),
+        data,
+      }
+      const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
+        type: 'application/json',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `model-pricing-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.success(t('Model pricing exported successfully'))
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? t(error.message)
+          : t('Failed to export model pricing')
+      )
+    }
+  }, [form, t])
+
+  const handleImportModelPricing = useCallback(
+    async (file: File) => {
+      try {
+        const imported = getImportedPricingData(JSON.parse(await file.text()))
+        for (const field of MODEL_PRICING_FIELDS) {
+          if (!Object.hasOwn(imported, field)) continue
+          const value = imported[field]
+          form.setValue(field, stringifyImportedJsonValue(value), {
+            shouldDirty: true,
+            shouldValidate: true,
+          })
+        }
+        toast.success(t('Model pricing imported into the draft'))
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? t(error.message)
+            : t('Failed to import model pricing')
+        )
+      } finally {
+        if (importInputRef.current) importInputRef.current.value = ''
+      }
+    },
+    [form, t]
+  )
+
   const handleSave = useCallback(async () => {
     if (editMode === 'visual') {
       const committed = await visualEditorRef.current?.commitOpenEditor()
@@ -223,6 +361,34 @@ export const ModelRatioForm = memo(function ModelRatioForm({
     <div className='space-y-6'>
       {!isUnsetVariant && (
         <div className='flex flex-wrap justify-end gap-2'>
+          <input
+            ref={importInputRef}
+            type='file'
+            accept='application/json,.json'
+            className='hidden'
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) void handleImportModelPricing(file)
+            }}
+          />
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={() => importInputRef.current?.click()}
+          >
+            <Upload data-icon='inline-start' />
+            {t('Import model pricing')}
+          </Button>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={handleExportModelPricing}
+          >
+            <Download data-icon='inline-start' />
+            {t('Export model pricing')}
+          </Button>
           <Button
             type='button'
             variant='destructive'

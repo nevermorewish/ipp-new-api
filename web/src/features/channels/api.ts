@@ -33,6 +33,7 @@ import type {
   GetChannelResponse,
   GetChannelsParams,
   GetChannelsResponse,
+  ImportChannelsResponse,
   MultiKeyManageParams,
   MultiKeyStatusResponse,
   SearchChannelsParams,
@@ -297,6 +298,43 @@ export async function deleteDisabledChannels(): Promise<{
   data?: number
 }> {
   const res = await api.delete('/api/channel/disabled', channelActionConfig())
+  return res.data
+}
+
+/** Export all channels as a JSON backup file. */
+export async function exportAllChannels(): Promise<Blob> {
+  const res = await api.get(
+    '/api/channel/export',
+    channelActionConfig({
+      responseType: 'blob',
+      disableDuplicate: true,
+    })
+  )
+  return res.data
+}
+
+/** Export selected channels as a JSON backup file. */
+export async function exportSelectedChannels(ids: number[]): Promise<Blob> {
+  const res = await api.post(
+    '/api/channel/export',
+    { ids },
+    channelActionConfig({
+      responseType: 'blob',
+      disableDuplicate: true,
+    })
+  )
+  return res.data
+}
+
+/** Import channels from a JSON backup payload. */
+export async function importChannels(
+  channels: Channel[]
+): Promise<ImportChannelsResponse> {
+  const res = await api.post(
+    '/api/channel/import',
+    { channels },
+    channelActionConfig()
+  )
   return res.data
 }
 
