@@ -51,6 +51,7 @@ import { formatJsonForTextarea } from './utils'
 type ModelFormValues = {
   ModelPrice: string
   ModelRatio: string
+  OriginalModelPrice?: string
   CacheRatio: string
   CreateCacheRatio: string
   CompletionRatio: string
@@ -63,9 +64,9 @@ type ModelFormValues = {
 }
 
 type ModelRatioFormProps = {
-  form: UseFormReturn<ModelFormValues>
-  savedValues: ModelFormValues
-  onSave: (values: ModelFormValues) => Promise<void>
+  form: UseFormReturn<any>
+  savedValues: any
+  onSave: (values: any) => Promise<void>
   onReset: () => void
   isSaving: boolean
   isResetting: boolean
@@ -75,6 +76,7 @@ type ModelRatioFormProps = {
 type ModelJsonFieldName =
   | 'ModelPrice'
   | 'ModelRatio'
+  | 'OriginalModelPrice'
   | 'CacheRatio'
   | 'CreateCacheRatio'
   | 'CompletionRatio'
@@ -97,6 +99,12 @@ const modelJsonFields: Array<{
     name: 'ModelRatio',
     labelKey: 'Model ratio',
     descriptionKey: 'JSON map of model → multiplier applied to quota billing.',
+  },
+  {
+    name: 'OriginalModelPrice',
+    labelKey: 'Original model prices',
+    descriptionKey:
+      'Optional direct USD prices per 1M tokens. Used only to display list prices and discounts.',
   },
   {
     name: 'CacheRatio',
@@ -136,6 +144,7 @@ const modelJsonFields: Array<{
 const MODEL_PRICING_FIELDS = [
   'ModelPrice',
   'ModelRatio',
+  'OriginalModelPrice',
   'CacheRatio',
   'CreateCacheRatio',
   'CompletionRatio',
@@ -223,7 +232,7 @@ function ModelJsonTextareaField(props: {
           <FormLabel>{props.label}</FormLabel>
           <FormControl>
             <JsonCodeEditor
-              value={field.value}
+              value={field.value ?? ''}
               onChange={(value) => field.onChange(value)}
               name={field.name}
               onBlur={field.onBlur}
@@ -334,7 +343,11 @@ export const ModelRatioForm = memo(function ModelRatioForm({
             shouldValidate: true,
           })
         }
-        toast.success(t('Model pricing imported into the draft'))
+        toast.success(
+          t(
+            'Model pricing imported. Review the changes, then click Save model prices to apply them.'
+          )
+        )
       } catch (error) {
         toast.error(
           error instanceof Error
@@ -399,17 +412,15 @@ export const ModelRatioForm = memo(function ModelRatioForm({
             <RotateCcw data-icon='inline-start' />
             {t('Reset prices')}
           </Button>
-          {editMode === 'json' && (
-            <Button
-              type='button'
-              size='sm'
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              <Save data-icon='inline-start' />
-              {isSaving ? t('Saving...') : t('Save model prices')}
-            </Button>
-          )}
+          <Button
+            type='button'
+            size='sm'
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            <Save data-icon='inline-start' />
+            {isSaving ? t('Saving...') : t('Save model prices')}
+          </Button>
           <Button variant='outline' size='sm' onClick={toggleEditMode}>
             {editMode === 'visual' ? (
               <>
@@ -433,6 +444,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               ref={visualEditorRef}
               savedModelPrice={savedValues.ModelPrice}
               savedModelRatio={savedValues.ModelRatio}
+              savedOriginalModelPrice={savedValues.OriginalModelPrice || '{}'}
               savedCacheRatio={savedValues.CacheRatio}
               savedCreateCacheRatio={savedValues.CreateCacheRatio}
               savedCompletionRatio={savedValues.CompletionRatio}
@@ -443,6 +455,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               savedBillingExpr={savedValues.BillingExpr}
               modelPrice={form.watch('ModelPrice')}
               modelRatio={form.watch('ModelRatio')}
+              originalModelPrice={form.watch('OriginalModelPrice') || '{}'}
               cacheRatio={form.watch('CacheRatio')}
               createCacheRatio={form.watch('CreateCacheRatio')}
               completionRatio={form.watch('CompletionRatio')}

@@ -73,6 +73,7 @@ import {
 type ModelRatioVisualEditorProps = {
   savedModelPrice: string
   savedModelRatio: string
+  savedOriginalModelPrice: string
   savedCacheRatio: string
   savedCreateCacheRatio: string
   savedCompletionRatio: string
@@ -83,6 +84,7 @@ type ModelRatioVisualEditorProps = {
   savedBillingExpr: string
   modelPrice: string
   modelRatio: string
+  originalModelPrice: string
   cacheRatio: string
   createCacheRatio: string
   completionRatio: string
@@ -112,6 +114,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
   {
     savedModelPrice,
     savedModelRatio,
+    savedOriginalModelPrice,
     savedCacheRatio,
     savedCreateCacheRatio,
     savedCompletionRatio,
@@ -122,6 +125,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     savedBillingExpr,
     modelPrice,
     modelRatio,
+    originalModelPrice,
     cacheRatio,
     createCacheRatio,
     completionRatio,
@@ -211,6 +215,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     const savedRows = buildModelSnapshots({
       modelPrice: savedModelPrice,
       modelRatio: savedModelRatio,
+      originalModelPrice: savedOriginalModelPrice,
       cacheRatio: savedCacheRatio,
       createCacheRatio: savedCreateCacheRatio,
       completionRatio: savedCompletionRatio,
@@ -223,6 +228,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     const draftRows = buildModelSnapshots({
       modelPrice,
       modelRatio,
+      originalModelPrice,
       cacheRatio,
       createCacheRatio,
       completionRatio,
@@ -371,6 +377,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
         fallback: {},
         silent: true,
       })
+      const originalMap = safeJsonParse<Record<string, Record<string, number>>>(
+        originalModelPrice,
+        { fallback: {}, silent: true }
+      )
       const cacheMap = safeJsonParse<Record<string, number>>(cacheRatio, {
         fallback: {},
         silent: true,
@@ -406,6 +416,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
       delete priceMap[name]
       delete ratioMap[name]
+      delete originalMap[name]
       delete cacheMap[name]
       delete createCacheMap[name]
       delete completionMap[name]
@@ -417,6 +428,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
       onChange('ModelPrice', JSON.stringify(priceMap, null, 2))
       onChange('ModelRatio', JSON.stringify(ratioMap, null, 2))
+      onChange('OriginalModelPrice', JSON.stringify(originalMap, null, 2))
       onChange('CacheRatio', JSON.stringify(cacheMap, null, 2))
       onChange('CreateCacheRatio', JSON.stringify(createCacheMap, null, 2))
       onChange('CompletionRatio', JSON.stringify(completionMap, null, 2))
@@ -444,6 +456,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     [
       modelPrice,
       modelRatio,
+      originalModelPrice,
       cacheRatio,
       createCacheRatio,
       completionRatio,
@@ -512,6 +525,10 @@ const ModelRatioVisualEditorComponent = forwardRef<
         fallback: {},
         silent: true,
       })
+      const originalMap = safeJsonParse<Record<string, Record<string, number>>>(
+        originalModelPrice,
+        { fallback: {}, silent: true }
+      )
       const cacheMap = safeJsonParse<Record<string, number>>(cacheRatio, {
         fallback: {},
         silent: true,
@@ -558,6 +575,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       targetNames.forEach((name) => {
         delete priceMap[name]
         delete ratioMap[name]
+        delete originalMap[name]
         delete cacheMap[name]
         delete createCacheMap[name]
         delete completionMap[name]
@@ -566,6 +584,18 @@ const ModelRatioVisualEditorComponent = forwardRef<
         delete audioCompletionMap[name]
         delete billingModeMap[name]
         delete billingExprMap[name]
+
+        const originalPrices: Record<string, number> = {}
+        const setOriginal = (key: string, value?: string) => {
+          if (!value) return
+          const parsed = Number(value)
+          if (Number.isFinite(parsed) && parsed > 0) originalPrices[key] = parsed
+        }
+        setOriginal('input', data.originalInputPrice)
+        setOriginal('output', data.originalOutputPrice)
+        setOriginal('cache_read', data.originalCacheReadPrice)
+        setOriginal('cache_write', data.originalCacheWritePrice)
+        if (Object.keys(originalPrices).length > 0) originalMap[name] = originalPrices
 
         if (data.billingMode === 'tiered_expr') {
           const combined = combineBillingExpr(
@@ -603,6 +633,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
       onChange('ModelPrice', JSON.stringify(priceMap, null, 2))
       onChange('ModelRatio', JSON.stringify(ratioMap, null, 2))
+      onChange('OriginalModelPrice', JSON.stringify(originalMap, null, 2))
       onChange('CacheRatio', JSON.stringify(cacheMap, null, 2))
       onChange('CreateCacheRatio', JSON.stringify(createCacheMap, null, 2))
       onChange('CompletionRatio', JSON.stringify(completionMap, null, 2))
@@ -624,6 +655,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
     [
       modelPrice,
       modelRatio,
+      originalModelPrice,
       cacheRatio,
       createCacheRatio,
       completionRatio,

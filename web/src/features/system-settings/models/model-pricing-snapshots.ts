@@ -24,6 +24,7 @@ import { formatPricingNumber } from './pricing-format'
 export type ModelPricingSnapshotInput = {
   modelPrice: string
   modelRatio: string
+  originalModelPrice: string
   cacheRatio: string
   createCacheRatio: string
   completionRatio: string
@@ -38,6 +39,10 @@ export type ModelPricingSnapshot = {
   name: string
   price?: string
   ratio?: string
+  originalInputPrice?: string
+  originalOutputPrice?: string
+  originalCacheReadPrice?: string
+  originalCacheWritePrice?: string
   cacheRatio?: string
   createCacheRatio?: string
   completionRatio?: string
@@ -166,6 +171,7 @@ export const getPriceDetail = (
 export const buildModelSnapshots = ({
   modelPrice,
   modelRatio,
+  originalModelPrice,
   cacheRatio,
   createCacheRatio,
   completionRatio,
@@ -182,6 +188,10 @@ export const buildModelSnapshots = ({
   const ratioMap = safeJsonParse<Record<string, number>>(modelRatio, {
     fallback: {},
     context: 'model ratios',
+  })
+  const originalMap = safeJsonParse<Record<string, { input?: number; output?: number; cache_read?: number; cache_write?: number }>>(originalModelPrice, {
+    fallback: {},
+    context: 'original model prices',
   })
   const cacheMap = safeJsonParse<Record<string, number>>(cacheRatio, {
     fallback: {},
@@ -219,6 +229,7 @@ export const buildModelSnapshots = ({
   const modelNames = new Set([
     ...Object.keys(priceMap),
     ...Object.keys(ratioMap),
+    ...Object.keys(originalMap),
     ...Object.keys(cacheMap),
     ...Object.keys(createCacheMap),
     ...Object.keys(completionMap),
@@ -232,6 +243,13 @@ export const buildModelSnapshots = ({
   return Array.from(modelNames).map((name) => {
     const price = priceMap[name]?.toString() || ''
     const ratio = ratioMap[name]?.toString() || ''
+    const original = originalMap[name] || {}
+    const originalValues = {
+      originalInputPrice: original.input?.toString() || '',
+      originalOutputPrice: original.output?.toString() || '',
+      originalCacheReadPrice: original.cache_read?.toString() || '',
+      originalCacheWritePrice: original.cache_write?.toString() || '',
+    }
     const cache = cacheMap[name]?.toString() || ''
     const createCache = createCacheMap[name]?.toString() || ''
     const completion = completionMap[name]?.toString() || ''
@@ -251,6 +269,7 @@ export const buildModelSnapshots = ({
         requestRuleExpr,
         price,
         ratio,
+        ...originalValues,
         cacheRatio: cache,
         createCacheRatio: createCache,
         completionRatio: completion,
@@ -265,6 +284,7 @@ export const buildModelSnapshots = ({
       name,
       price,
       ratio,
+      ...originalValues,
       cacheRatio: cache,
       createCacheRatio: createCache,
       completionRatio: completion,
@@ -290,6 +310,10 @@ export const getSnapshotSignature = (snapshot?: ModelPricingSnapshot) => {
   return JSON.stringify({
     price: snapshot.price || '',
     ratio: snapshot.ratio || '',
+    originalInputPrice: snapshot.originalInputPrice || '',
+    originalOutputPrice: snapshot.originalOutputPrice || '',
+    originalCacheReadPrice: snapshot.originalCacheReadPrice || '',
+    originalCacheWritePrice: snapshot.originalCacheWritePrice || '',
     cacheRatio: snapshot.cacheRatio || '',
     createCacheRatio: snapshot.createCacheRatio || '',
     completionRatio: snapshot.completionRatio || '',

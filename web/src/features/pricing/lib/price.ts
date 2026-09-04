@@ -22,6 +22,11 @@ import { QUOTA_TYPE_VALUES, TOKEN_UNIT_DIVISORS } from '../constants'
 import type { PricingModel, TokenUnit, PriceType } from '../types'
 import { getConfiguredGroupRatio, getDisplayGroupRatio } from './model-helpers'
 
+export function formatPriceDiscount(currentPrice: number, originalPrice: number): string | null {
+  if (!Number.isFinite(currentPrice) || !Number.isFinite(originalPrice) || currentPrice < 0 || originalPrice <= 0) return null
+  return Number(((currentPrice / originalPrice) * 10).toFixed(2)).toString()
+}
+
 // ----------------------------------------------------------------------------
 // Price Calculation Utilities
 // ----------------------------------------------------------------------------
@@ -100,6 +105,35 @@ function calculateTokenPrice(
 
 function hasRatio(value: number | null | undefined): boolean {
   return value !== undefined && value !== null && Number.isFinite(Number(value))
+}
+
+function getOriginalPrice(model: PricingModel, type: PriceType): number | undefined {
+  const original = model.original_model_price
+  if (!original) return undefined
+  const value = type === 'input' ? original.input : type === 'output' ? original.output : type === 'cache' ? original.cache_read : type === 'create_cache' ? original.cache_write : undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+export function formatOriginalPrice(model: PricingModel, type: PriceType, tokenUnit: TokenUnit, showWithRecharge = false, priceRate = 1, usdExchangeRate = 1): string | null {
+  if (model.quota_type === QUOTA_TYPE_VALUES.REQUEST) return null
+  const originalPrice = getOriginalPrice(model, type)
+  if (originalPrice === undefined) return null
+  const priceInUSD = applyRechargeRate(originalPrice, showWithRecharge, priceRate, usdExchangeRate)
+  return formatCurrencyFromUSD(priceInUSD / TOKEN_UNIT_DIVISORS[tokenUnit], { digitsLarge: 4, digitsSmall: 6, abbreviate: false })
+}
+
+export function getModelPriceDiscount(model: PricingModel): string | null {
+  if (model.quota_type === QUOTA_TYPE_VALUES.REQUEST) return null
+  const groupRatio = getDisplayGroupRatio(model, undefined)
+  for (const type of ['input', 'output', 'cache', 'create_cache'] as const) {
+    const original = getOriginalPrice(model, type)
+    if (original === undefined) continue
+    const current = calculateTokenPrice(model, type, groupRatio)
+    const discount = formatPriceDiscount(current, original)
+    if (discount !== null) return discount
+  }
+  return null
 }
 
 /**

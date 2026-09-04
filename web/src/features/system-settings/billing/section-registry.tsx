@@ -29,6 +29,7 @@ import { createSectionRegistry } from '../utils/section-registry'
 const getModelDefaults = (settings: BillingSettings) => ({
   ModelPrice: settings.ModelPrice,
   ModelRatio: settings.ModelRatio,
+  OriginalModelPrice: settings.OriginalModelPrice,
   CacheRatio: settings.CacheRatio,
   CreateCacheRatio: settings.CreateCacheRatio,
   CompletionRatio: settings.CompletionRatio,

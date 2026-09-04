@@ -175,6 +175,10 @@ export const ModelPricingEditorPanel = forwardRef<
       name: '',
       price: '',
       ratio: '',
+      originalInputPrice: '',
+      originalOutputPrice: '',
+      originalCacheReadPrice: '',
+      originalCacheWritePrice: '',
       cacheRatio: '',
       createCacheRatio: '',
       completionRatio: '',
@@ -230,6 +234,10 @@ export const ModelPricingEditorPanel = forwardRef<
         name: editData.name,
         price: editData.price || '',
         ratio: editData.ratio || '',
+        originalInputPrice: editData.originalInputPrice || '',
+        originalOutputPrice: editData.originalOutputPrice || '',
+        originalCacheReadPrice: editData.originalCacheReadPrice || '',
+        originalCacheWritePrice: editData.originalCacheWritePrice || '',
         cacheRatio: editData.cacheRatio || '',
         createCacheRatio: editData.createCacheRatio || '',
         completionRatio: editData.completionRatio || '',
@@ -251,6 +259,10 @@ export const ModelPricingEditorPanel = forwardRef<
         name: '',
         price: '',
         ratio: '',
+        originalInputPrice: '',
+        originalOutputPrice: '',
+        originalCacheReadPrice: '',
+        originalCacheWritePrice: '',
         cacheRatio: '',
         createCacheRatio: '',
         completionRatio: '',
@@ -507,6 +519,10 @@ export const ModelPricingEditorPanel = forwardRef<
         billingMode: pricingMode,
         price: values.price || '',
         ratio: values.ratio || '',
+        originalInputPrice: values.originalInputPrice || '',
+        originalOutputPrice: values.originalOutputPrice || '',
+        originalCacheReadPrice: values.originalCacheReadPrice || '',
+        originalCacheWritePrice: values.originalCacheWritePrice || '',
         cacheRatio: values.cacheRatio || '',
         createCacheRatio: values.createCacheRatio || '',
         completionRatio: values.completionRatio || '',
@@ -657,6 +673,51 @@ export const ModelPricingEditorPanel = forwardRef<
                           {t('USD price per 1M input tokens.')}
                         </FieldDescription>
                       </Field>
+
+                      <FieldGroup className='gap-3 rounded-lg border p-3'>
+                        <div>
+                          <FieldLabel>{t('Original prices')}</FieldLabel>
+                          <FieldDescription>
+                            {t(
+                              'Optional direct USD prices per 1M tokens. Used only to display list prices and discounts.'
+                            )}
+                          </FieldDescription>
+                        </div>
+                        <div className='grid gap-3 sm:grid-cols-2'>
+                          {([
+                            ['originalInputPrice', 'Original input price'],
+                            ['originalOutputPrice', 'Original output price'],
+                            ['originalCacheReadPrice', 'Original cache read price'],
+                            ['originalCacheWritePrice', 'Original cache write price'],
+                          ] as const).map(([name, label]) => (
+                            <FormField
+                              key={name}
+                              control={form.control}
+                              name={name}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>{t(label)}</FormLabel>
+                                  <FormControl>
+                                    <InputGroup>
+                                      <InputGroupAddon>$</InputGroupAddon>
+                                      <InputGroupInput
+                                        inputMode='decimal'
+                                        placeholder='0.00'
+                                        {...field}
+                                        onChange={(event) => {
+                                          const value = event.target.value
+                                          if (numericDraftRegex.test(value)) field.onChange(value)
+                                        }}
+                                      />
+                                    </InputGroup>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </FieldGroup>
 
                       <div className='grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(400px,1fr))]'>
                         {laneConfigs.map((lane) => {

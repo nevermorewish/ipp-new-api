@@ -26,6 +26,7 @@ import (
 var completionRatioMetaOptionKeys = []string{
 	"ModelPrice",
 	"ModelRatio",
+	"OriginalModelPrice",
 	"CompletionRatio",
 	"CacheRatio",
 	"CreateCacheRatio",

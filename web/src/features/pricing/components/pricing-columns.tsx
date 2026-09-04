@@ -39,11 +39,13 @@ import { parseTags } from '../lib/filters'
 import { isTokenBasedModel } from '../lib/model-helpers'
 import {
   formatPrice,
+  formatOriginalPrice,
   formatRequestPrice,
   stripTrailingZeros,
 } from '../lib/price'
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
+import { OriginalPriceRow } from './original-price-row'
 
 // ----------------------------------------------------------------------------
 // Pricing Table Columns
@@ -230,6 +232,22 @@ export function usePricingColumns(
               <div className='text-muted-foreground/50 text-[10px]'>
                 / {tokenUnitLabel} tokens
               </div>
+              <OriginalPriceRow
+                entries={(['input', 'output'] as const).flatMap((type) => {
+                  const value = formatOriginalPrice(
+                    model,
+                    type,
+                    tokenUnit,
+                    showRechargePrice,
+                    priceRate,
+                    usdExchangeRate
+                  )
+                  return value
+                    ? [{ key: type, label: type === 'input' ? t('Input') : t('Output'), price: stripTrailingZeros(value) }]
+                    : []
+                })}
+                tokenUnitLabel={tokenUnitLabel}
+              />
             </div>
           )
         }

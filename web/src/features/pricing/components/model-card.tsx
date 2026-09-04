@@ -35,9 +35,11 @@ import {
 import { getTaskNumberFields } from '../lib/task-expr'
 import { parseTags } from '../lib/filters'
 import { isTokenBasedModel } from '../lib/model-helpers'
-import { formatPrice, formatRequestPrice } from '../lib/price'
+import { formatOriginalPrice, formatPrice, formatRequestPrice } from '../lib/price'
 import type { PricingModel, TokenUnit } from '../types'
 import { ModelBillingModeBadge } from './model-billing-mode-badge'
+import { ModelDiscountBadge } from './model-discount-badge'
+import { OriginalPriceRow } from './original-price-row'
 import { ModelPerfBadge, type ModelPerfBadgeData } from './model-perf-badge'
 
 export interface ModelCardProps {
@@ -71,6 +73,10 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
     Boolean(props.model.billing_expr)
   const isUnconfiguredTaskUsage = isUnconfiguredTaskUsageModel(props.model)
   const hasCachedPrice = isTokenBased && props.model.cache_ratio != null
+  const originalPriceEntries = (['input', 'output'] as const).flatMap((type) => {
+    const price = formatOriginalPrice(props.model, type, tokenUnit, showRechargePrice, priceRate, usdExchangeRate)
+    return price ? [{ key: type, label: type === 'input' ? t('Input') : t('Output'), price }] : []
+  })
   const dynamicPriceOptions = {
     tokenUnit,
     showRechargePrice,
@@ -259,12 +265,16 @@ export const ModelCard = memo(function ModelCard(props: ModelCardProps) {
             )}
           </div>
           <div className='min-w-0'>
-            <h3 className='text-foreground truncate font-mono text-[15px] leading-tight font-bold'>
-              {props.model.model_name}
-            </h3>
+            <div className='flex min-w-0 items-center gap-1.5'>
+              <h3 className='text-foreground truncate font-mono text-[15px] leading-tight font-bold'>
+                {props.model.model_name}
+              </h3>
+              <ModelDiscountBadge model={props.model} />
+            </div>
             <div className='mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm sm:mt-1 sm:gap-x-3'>
               {priceSummary}
             </div>
+            {isTokenBased && <OriginalPriceRow entries={originalPriceEntries} tokenUnitLabel={tokenUnitLabel} />}
           </div>
         </div>
 

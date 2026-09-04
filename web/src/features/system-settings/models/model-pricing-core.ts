@@ -27,6 +27,10 @@ export const createModelPricingSchema = (t: (key: string) => string) =>
     name: z.string().min(1, t('Model name is required')),
     price: z.string().optional(),
     ratio: z.string().optional(),
+    originalInputPrice: z.string().optional(),
+    originalOutputPrice: z.string().optional(),
+    originalCacheReadPrice: z.string().optional(),
+    originalCacheWritePrice: z.string().optional(),
     cacheRatio: z.string().optional(),
     createCacheRatio: z.string().optional(),
     completionRatio: z.string().optional(),
@@ -53,6 +57,10 @@ export type ModelRatioData = {
   name: string
   price?: string
   ratio?: string
+  originalInputPrice?: string
+  originalOutputPrice?: string
+  originalCacheReadPrice?: string
+  originalCacheWritePrice?: string
   cacheRatio?: string
   createCacheRatio?: string
   completionRatio?: string

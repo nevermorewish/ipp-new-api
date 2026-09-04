@@ -54,6 +54,12 @@ export type PricingModel = {
   vendor_description?: string
   quota_type: number
   model_ratio: number
+  original_model_price?: {
+    input?: number
+    output?: number
+    cache_read?: number
+    cache_write?: number
+  }
   completion_ratio: number
   model_price?: number
   cache_ratio?: number | null
