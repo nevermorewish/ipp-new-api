@@ -9,7 +9,7 @@ export const meta = {
   },
   version: "1.0.1",
   author: { name: "QuantumNous" },
-  channelTypes: [54, 45], // VolcEngine-type channels serve Ark video models with the same wire format
+  channelTypes: [54, 45, 62], // VolcEngine and Seedance channels serve the same Ark video wire format
   models: [
     "doubao-seedance-1-0-pro-250528",
     "doubao-seedance-1-0-lite-t2v",
@@ -19,6 +19,10 @@ export const meta = {
     "doubao-seedance-2-0-fast-260128",
     "doubao-seedance-2-0-mini-260615",
     "doubao-seedance-2-5-260628",
+    "doubao-seedance-2.0",
+    "doubao-seedance-2.0-fast",
+    "doubao-seedance-2.0-mini",
+    "doubao-seedance-2.5",
   ],
   fetchMode: "per_task",
   usageSchema: {
@@ -57,6 +61,7 @@ export const meta = {
   ],
   routes: [
     { method: "POST", path: "/doubao/api/v3/contents/generations/tasks", type: "submit", decode: "createTask", render: "taskCreated" },
+    { method: "GET", path: "/doubao/api/v3/contents/generations/tasks", type: "dynamic", decode: "queryTask", render: "taskStatus" },
     { method: "GET", path: "/doubao/api/v3/contents/generations/tasks/:task_id", type: "query", render: "taskStatus" },
   ],
   protocols: [{ name: "openai_responses", supports: ["stream", "sync", "background"] }, "openai_video"],
@@ -117,10 +122,16 @@ function hasVideo(content) {
   return Array.isArray(content) && content.some((item) => item && (item.type === "video_url" || Object.prototype.hasOwnProperty.call(item, "video_url")));
 }
 
+const seedanceModelSpecs = {
+  "doubao-seedance-2.0": { resolutions: ["480p", "720p", "1080p", "4k"], tokens480p: 10044 },
+  "doubao-seedance-2.0-fast": { resolutions: ["480p", "720p"], tokens480p: 10044 },
+  "doubao-seedance-2.0-mini": { resolutions: ["480p", "720p"], tokens480p: 10044 },
+  "doubao-seedance-2.5": { resolutions: ["480p", "720p", "1080p"], tokens480p: 9607.5 },
+};
+
 // Max-pixel 16:9 dimensions per resolution tier. Used when ratio is absent or
 // adaptive so the submit-time estimate overestimates rather than underestimates.
 // Official Ark formula: tokens = seconds × width × height × 24 / 1024.
-// Video input duration is omitted; extractUsageOnComplete overlays the real bill.
 function resolutionMaxPixels(resolution) {
   if (resolution === "480p") return [854, 480];
   if (resolution === "1080p") return [1920, 1080];
@@ -128,25 +139,75 @@ function resolutionMaxPixels(resolution) {
   return [1280, 720];
 }
 
-function estimateTokens(seconds, resolution) {
+function estimateTokens(model, seconds, resolution) {
+  const spec = seedanceModelSpecs[model];
+  if (spec && resolution === "480p") return seconds * spec.tokens480p;
   const dims = resolutionMaxPixels(resolution);
   return (seconds * dims[0] * dims[1] * 24) / 1024;
+}
+
+function isVideoReference(value) {
+  const normalized = trimmed(value).toLowerCase();
+  return normalized.startsWith("data:video/") || [".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv"].some((extension) => normalized.includes(extension));
+}
+
+function inputVideoSeconds(metadata) {
+  const keys = ["input_video_seconds", "input_video_duration", "input_seconds", "input_duration", "video_seconds", "video_duration"];
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(metadata, key)) continue;
+    const value = Number(metadata[key]);
+    if (!Number.isInteger(value) || value < 0 || value > 3600) throw new Error("metadata." + key + " must be an integer between 0 and 3600");
+    return value;
+  }
+  return 0;
+}
+
+function seedanceRequestFacts(model, req, metadata) {
+  const spec = seedanceModelSpecs[model];
+  if (!spec) return null;
+  if (metadata === undefined) metadata = {};
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) throw new Error("metadata must be an object");
+
+  let seconds = 4;
+  if (Object.prototype.hasOwnProperty.call(req, "seconds")) {
+    seconds = Number(req.seconds);
+    if (!Number.isInteger(seconds) || seconds <= 0 || seconds > 3600) throw new Error("seconds must be an integer between 1 and 3600");
+  } else if (Object.prototype.hasOwnProperty.call(req, "duration")) {
+    seconds = Number(req.duration);
+    if (!Number.isInteger(seconds) || seconds < 0 || seconds > 3600) throw new Error("duration must be an integer between 0 and 3600");
+    if (seconds === 0) seconds = 4;
+  }
+
+  let resolution = trimmed(metadata.resolution || req.resolution).toLowerCase();
+  if (resolution === "2160p") resolution = "4k";
+  if (!resolution && trimmed(req.size)) resolution = normalizeResolution(req.size);
+  if (!resolution) resolution = "720p";
+  if (!spec.resolutions.includes(resolution)) throw new Error("resolution " + resolution + " is not supported by " + model);
+
+  inputVideoSeconds(metadata);
+  return { seconds: seconds, resolution: resolution };
+}
+
+function minimumInputVideoSeconds(model, outputSeconds) {
+  if (outputSeconds <= 1) return 0;
+  if ((model === "doubao-seedance-2.0" || model.startsWith("doubao-seedance-2-0-")) && outputSeconds >= 10) return outputSeconds - 3;
+  return outputSeconds - 1;
 }
 
 function videoInputRatio(model, resolution, content) {
   const video = hasVideo(content);
   const res = trimmed(resolution).toLowerCase();
-  if (model === "doubao-seedance-2-5-260628") {
+  if (model === "doubao-seedance-2-5-260628" || model === "doubao-seedance-2.5") {
     if (res === "1080p") return video ? 7.0 / 10.7 : 11.7 / 10.7;
     return video ? 42 / 70 : 1;
   }
-  if (model === "doubao-seedance-2-0-260128") {
+  if (model === "doubao-seedance-2-0-260128" || model === "doubao-seedance-2.0") {
     if (res === "1080p") return video ? 31 / 46 : 51 / 46;
     if (res === "4k") return video ? 16 / 46 : 26 / 46;
     return video ? 28 / 46 : 1;
   }
-  if (model === "doubao-seedance-2-0-fast-260128") return video ? 22 / 37 : 1;
-  if (model === "doubao-seedance-2-0-mini-260615") return video ? 14 / 23 : 1;
+  if (model === "doubao-seedance-2-0-fast-260128" || model === "doubao-seedance-2.0-fast") return video ? 22 / 37 : 1;
+  if (model === "doubao-seedance-2-0-mini-260615" || model === "doubao-seedance-2.0-mini") return video ? 14 / 23 : 1;
   return 1;
 }
 
@@ -197,6 +258,11 @@ function responsesVideoText(ctx) {
 }
 
 export const native = {
+  queryTask: function (ctx) {
+    const taskID = ctx.query && Array.isArray(ctx.query.task_id) ? trimmed(ctx.query.task_id[0]) : "";
+    if (!taskID) throw new Error("task_id is required");
+    return { kind: "query", taskIds: [taskID] };
+  },
   createTask: function (ctx) {
     if (!ctx.body || ctx.body.kind !== "json") throw new Error("JSON body required");
     const body = ctx.body.value;
@@ -205,6 +271,7 @@ export const native = {
     if (!model) throw new Error("model is required");
     if (body.content !== undefined && !Array.isArray(body.content)) throw new Error("content must be an array");
     const content = Array.isArray(body.content) ? body.content : [];
+    seedanceRequestFacts(model, body, body);
     const texts = [];
     let hasReference = false;
     for (const item of content) {
@@ -234,6 +301,10 @@ export const native = {
     return Object.assign({}, data, { id: task.task_id });
   },
   taskStatus: function (ctx, task) {
+    if (Array.isArray(task)) {
+      if (task.length !== 1) return task.map((item) => native.taskStatus(ctx, item));
+      task = task[0];
+    }
     if (task.data && typeof task.data === "object" && !Array.isArray(task.data)) return Object.assign({}, task.data, { id: task.task_id });
     const statusMap = { NOT_START: "queued", SUBMITTED: "queued", QUEUED: "queued", IN_PROGRESS: "running", SUCCESS: "succeeded", FAILURE: "failed" };
     const output = { id: task.task_id, status: statusMap[task.status] || "queued" };
@@ -250,8 +321,16 @@ export function buildSubmitRequest(ctx) {
   const metadata = req.metadata || {};
   const body = Object.assign({ model: req.model || "", content: [] }, metadata);
   const imageContent = [];
+  for (const reference of [req.input_reference, req.image]) {
+    if (!trimmed(reference)) continue;
+    imageContent.push(
+      isVideoReference(reference) ? { type: "video_url", video_url: { url: reference } } : { type: "image_url", image_url: { url: reference } }
+    );
+  }
   const images = Array.isArray(req.images) ? req.images : [];
-  for (const url of images) imageContent.push({ type: "image_url", image_url: { url: url } });
+  for (const url of images) {
+    imageContent.push(isVideoReference(url) ? { type: "video_url", video_url: { url: url } } : { type: "image_url", image_url: { url: url } });
+  }
   const metadataContent = Array.isArray(body.content) ? body.content : [];
   body.content = imageContent.concat(metadataContent).filter((item) => item && item.type !== "text");
   const hasReference = body.content.length > 0;
@@ -278,25 +357,46 @@ export function parseSubmitResponse(ctx, resp) {
 export function extractUsage(ctx) {
   const req = ctx.requestBody || {};
   const metadata = req.metadata || {};
+  const references = (Array.isArray(metadata.content) ? metadata.content : []).slice();
+  for (const reference of [req.input_reference, req.image].concat(Array.isArray(req.images) ? req.images : [])) {
+    if (trimmed(reference))
+      references.push(isVideoReference(reference) ? { type: "video_url", video_url: reference } : { type: "image_url", image_url: reference });
+  }
+  const model = seedanceModelSpecs[ctx.model] ? ctx.model : ctx.upstreamModel || ctx.model;
   if (ctx.usagePurpose === "billing_ratios") {
-    const ratio = videoInputRatio(ctx.upstreamModel || ctx.model, metadata.resolution, metadata.content);
+    const ratio = videoInputRatio(model, metadata.resolution || req.resolution, references);
     return ratio === 1 ? null : { video_input_ratio: ratio };
   }
-  let seconds = Number(req.seconds || req.duration || metadata.duration || 0);
-  if (!Number.isFinite(seconds) || seconds <= 0) {
-    const frames = Number(metadata.frames);
-    seconds = Number.isFinite(frames) && frames > 0 ? Math.floor(frames / 24) : 15;
+  const seedanceFacts = seedanceRequestFacts(model, req, metadata);
+  let seconds;
+  let resolution;
+  if (seedanceFacts) {
+    seconds = seedanceFacts.seconds;
+    resolution = seedanceFacts.resolution;
+  } else {
+    seconds = Number(req.seconds || req.duration || metadata.duration || 0);
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      const frames = Number(metadata.frames);
+      seconds = Number.isFinite(frames) && frames > 0 ? Math.floor(frames / 24) : 15;
+    }
+    if (seconds <= 0) seconds = 5;
+    seconds = Math.min(seconds, 3600);
+    const rawResolution = metadata.resolution || req.resolution || req.size;
+    const raw = trimmed(rawResolution).toLowerCase();
+    const recognized = ["480p", "720p", "1080p", "4k"].includes(raw) || raw.replace("*", "x").split("x").length === 2;
+    resolution = recognized ? normalizeResolution(rawResolution) : "1080p";
   }
-  if (seconds <= 0) seconds = 5;
-  seconds = Math.min(seconds, 3600);
-  const rawResolution = metadata.resolution || req.size;
-  const raw = trimmed(rawResolution).toLowerCase();
-  const recognized = ["480p", "720p", "1080p", "4k"].includes(raw) || raw.replace("*", "x").split("x").length === 2;
-  const resolution = recognized ? normalizeResolution(rawResolution) : "1080p";
+  const videoInput = hasVideo(references);
+  let effectiveSeconds = seconds;
+  if (videoInput) {
+    let inputSeconds = inputVideoSeconds(metadata);
+    if (inputSeconds <= 0) inputSeconds = seconds;
+    effectiveSeconds += Math.max(inputSeconds, minimumInputVideoSeconds(model, seconds));
+  }
   return {
-    tokens: estimateTokens(seconds, resolution),
+    tokens: estimateTokens(model, effectiveSeconds, resolution),
     resolution: resolution,
-    video_input: hasVideo(metadata.content) ? "video" : "none",
+    video_input: videoInput ? "video" : "none",
   };
 }
 
@@ -455,6 +555,7 @@ protocols.openai_video = {
       const seconds = req.seconds === undefined ? req.duration : req.seconds;
       if (seconds !== undefined && (!Number.isFinite(Number(seconds)) || Number(seconds) <= 0 || Number(seconds) > 3600))
         throw new Error("seconds must be between 1 and 3600");
+      seedanceRequestFacts(ctx.model, req, req.metadata);
       return {
         kind: "submit",
         model: ctx.model,
@@ -488,6 +589,7 @@ protocols.openai_video = {
     const seconds = req.seconds === undefined ? req.duration : req.seconds;
     if (seconds !== undefined && (!Number.isFinite(Number(seconds)) || Number(seconds) <= 0 || Number(seconds) > 3600))
       throw new Error("seconds must be between 1 and 3600");
+    seedanceRequestFacts(ctx.model, req, req.metadata);
     return {
       kind: "submit",
       model: ctx.model,

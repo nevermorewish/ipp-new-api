@@ -90,7 +90,15 @@ func PrepareTaskPluginRoute() gin.HandlerFunc {
 		}
 		bodyObject, _ := requestContext.Body.(map[string]any)
 		bodyKind, _ := bodyObject["kind"].(string)
-		if pinned.Route.Type == pluginruntime.RouteTypeQuery && bodyKind != string(pluginruntime.BodyNone) || pinned.Route.Type != pluginruntime.RouteTypeQuery && bodyKind != string(pluginruntime.BodyJSON) {
+		bodyKindAllowed := bodyKind == string(pluginruntime.BodyJSON)
+		if pinned.Route.Type == pluginruntime.RouteTypeQuery {
+			bodyKindAllowed = bodyKind == string(pluginruntime.BodyNone)
+		} else if pinned.Route.Type == pluginruntime.RouteTypeDynamic {
+			// Dynamic routes may decode query-only requests as well as JSON bodies;
+			// the plugin decoder remains responsible for validating the shape.
+			bodyKindAllowed = bodyKind == string(pluginruntime.BodyNone) || bodyKind == string(pluginruntime.BodyJSON)
+		}
+		if !bodyKindAllowed {
 			logger.LogWarn(
 				c,
 				"task_plugin subsystem=route event=prepare_rejected generation=%d plugin=%q stage=request_decode reason=body_kind_mismatch body_kind=%q",

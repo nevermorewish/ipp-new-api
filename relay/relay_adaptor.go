@@ -151,6 +151,7 @@ var taskPluginKeys = map[constant.TaskPlatform]string{
 	constant.TaskPlatform(strconv.Itoa(constant.ChannelTypeSora)):        "sora",
 	constant.TaskPlatform(strconv.Itoa(constant.ChannelTypeOpenAI)):      "sora",
 	constant.TaskPlatform(strconv.Itoa(constant.ChannelTypeVertexAi)):    "vertex-ai",
+	constant.TaskPlatform(strconv.Itoa(constant.ChannelTypeSeedance)):    "doubao",
 }
 
 func ResolveTaskPluginForPlatform(generation *pluginruntime.RoutingGeneration, platform constant.TaskPlatform) (*pluginruntime.LoadedPlugin, bool) {

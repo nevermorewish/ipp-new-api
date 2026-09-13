@@ -240,6 +240,11 @@ var defaultModelRatio = map[string]float64{
 	"deepseek-chat":          0.27 / 2,
 	"deepseek-coder":         0.27 / 2,
 	"deepseek-reasoner":      0.55 / 2, // 0.55 / 1k tokens
+	// Seedance defaults are 70% of the official pure-generation token prices.
+	"doubao-seedance-2.0":      16.1,  // 70% of CNY 46 / 1M tokens
+	"doubao-seedance-2.0-fast": 12.95, // 70% of CNY 37 / 1M tokens
+	"doubao-seedance-2.0-mini": 8.05,  // 70% of CNY 23 / 1M tokens
+	"doubao-seedance-2.5":      24.5,  // 70% of CNY 70 / 1M tokens (480p/720p)
 	// Perplexity online 模型对搜索额外收费，有需要应自行调整，此处不计入搜索费用
 	"llama-3-sonar-small-32k-chat":   0.2 / 1000 * USD,
 	"llama-3-sonar-small-32k-online": 0.2 / 1000 * USD,
@@ -322,11 +327,25 @@ var defaultAudioCompletionRatio = map[string]float64{
 var modelPriceMap = types.NewRWMap[string, float64]()
 var modelRatioMap = types.NewRWMap[string, float64]()
 
+// OriginalModelPrice contains optional provider list prices used only by the
+// public pricing page. Values are USD per one million tokens and never affect
+// quota calculation.
 type OriginalModelPrice struct {
 	Input      *float64 `json:"input,omitempty"`
 	Output     *float64 `json:"output,omitempty"`
 	CacheRead  *float64 `json:"cache_read,omitempty"`
 	CacheWrite *float64 `json:"cache_write,omitempty"`
+}
+
+func newOriginalTokenPrice(price float64) OriginalModelPrice {
+	return OriginalModelPrice{Input: &price, Output: &price}
+}
+
+var defaultOriginalModelPrice = map[string]OriginalModelPrice{
+	"doubao-seedance-2.0":      newOriginalTokenPrice(46),
+	"doubao-seedance-2.0-fast": newOriginalTokenPrice(37),
+	"doubao-seedance-2.0-mini": newOriginalTokenPrice(23),
+	"doubao-seedance-2.5":      newOriginalTokenPrice(70),
 }
 
 var originalModelPriceMap = types.NewRWMap[string, OriginalModelPrice]()
@@ -343,6 +362,7 @@ var defaultCompletionRatio = map[string]float64{
 func InitRatioSettings() {
 	modelPriceMap.AddAll(defaultModelPrice)
 	modelRatioMap.AddAll(defaultModelRatio)
+	originalModelPriceMap.AddAll(defaultOriginalModelPrice)
 	completionRatioMap.AddAll(defaultCompletionRatio)
 	cacheRatioMap.AddAll(defaultCacheRatio)
 	createCacheRatioMap.AddAll(defaultCreateCacheRatio)

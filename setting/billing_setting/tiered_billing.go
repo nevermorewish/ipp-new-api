@@ -2,14 +2,15 @@ package billing_setting
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"sort"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/setting/config"
 	"github.com/samber/lo"
 )
@@ -34,6 +35,13 @@ var billingSetting = BillingSetting{
 	BillingExpr: make(map[string]string),
 }
 
+var defaultTaskBillingExpr = map[string]string{
+	"doubao-seedance-2.0":      `u("resolution") == "1080p" && u("video_input") == "video" ? tier("1080p_video", u("tokens") * 21.7 / 1000000) : u("resolution") == "1080p" ? tier("1080p", u("tokens") * 35.7 / 1000000) : u("resolution") == "4k" && u("video_input") == "video" ? tier("4k_video", u("tokens") * 11.2 / 1000000) : u("resolution") == "4k" ? tier("4k", u("tokens") * 18.2 / 1000000) : u("video_input") == "video" ? tier("video", u("tokens") * 19.6 / 1000000) : tier("base", u("tokens") * 32.2 / 1000000)`,
+	"doubao-seedance-2.0-fast": `u("video_input") == "video" ? tier("video", u("tokens") * 15.4 / 1000000) : tier("base", u("tokens") * 25.9 / 1000000)`,
+	"doubao-seedance-2.0-mini": `u("video_input") == "video" ? tier("video", u("tokens") * 9.8 / 1000000) : tier("base", u("tokens") * 16.1 / 1000000)`,
+	"doubao-seedance-2.5":      `u("resolution") == "1080p" && u("video_input") == "video" ? tier("1080p_video", u("tokens") * 32.2 / 1000000) : u("resolution") == "1080p" ? tier("1080p", u("tokens") * 53.9 / 1000000) : u("video_input") == "video" ? tier("video", u("tokens") * 29.4 / 1000000) : tier("base", u("tokens") * 49 / 1000000)`,
+}
+
 func init() {
 	config.GlobalConfig.Register("billing_setting", &billingSetting)
 }
@@ -46,20 +54,34 @@ func GetBillingMode(model string) string {
 	if mode, ok := billingSetting.BillingMode[model]; ok {
 		return mode
 	}
+	if _, ok := defaultTaskBillingExpr[model]; ok {
+		return BillingModeTieredExpr
+	}
 	return BillingModeRatio
 }
 
 func GetBillingExpr(model string) (string, bool) {
-	expr, ok := billingSetting.BillingExpr[model]
+	if expr, ok := billingSetting.BillingExpr[model]; ok {
+		return expr, true
+	}
+	expr, ok := defaultTaskBillingExpr[model]
 	return expr, ok
 }
 
 func GetBillingModeCopy() map[string]string {
-	return lo.Assign(billingSetting.BillingMode)
+	result := make(map[string]string, len(defaultTaskBillingExpr)+len(billingSetting.BillingMode))
+	for model := range defaultTaskBillingExpr {
+		result[model] = BillingModeTieredExpr
+	}
+	maps.Copy(result, billingSetting.BillingMode)
+	return result
 }
 
 func GetBillingExprCopy() map[string]string {
-	return lo.Assign(billingSetting.BillingExpr)
+	result := make(map[string]string, len(defaultTaskBillingExpr)+len(billingSetting.BillingExpr))
+	maps.Copy(result, defaultTaskBillingExpr)
+	maps.Copy(result, billingSetting.BillingExpr)
+	return result
 }
 
 func GetPricingSyncData(base map[string]any) map[string]any {
