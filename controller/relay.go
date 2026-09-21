@@ -243,6 +243,11 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		if !shouldRetry(c, newAPIError, common.RetryTimes-retryParam.GetRetry()) {
 			break
 		}
+		if newAPIError.GetErrorCode() == types.ErrorCodeChannelOpenAIResponsesUnsupported {
+			service.GetChannelConstraints(c).AddFilter(taskdto.ChannelFilter{
+				Kind: taskdto.FilterExcludedChannels, ExcludedChannelIDs: []int{channel.Id},
+			})
+		}
 	}
 
 	useChannel := c.GetStringSlice("use_channel")
@@ -368,6 +373,10 @@ func shouldRetry(c *gin.Context, openaiErr *types.NewAPIError, retryTimes int) b
 	}
 	if service.ShouldSkipRetryAfterChannelAffinityFailure(c) {
 		return false
+	}
+	if openaiErr.GetErrorCode() == types.ErrorCodeChannelOpenAIResponsesUnsupported {
+		_, pinned, _ := service.GetChannelConstraints(c).ResolvedPin()
+		return retryTimes > 0 && !pinned && !types.IsSkipRetryError(openaiErr)
 	}
 	if types.IsChannelError(openaiErr) {
 		return true

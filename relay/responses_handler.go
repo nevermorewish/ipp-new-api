@@ -1,7 +1,10 @@
 package relay
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/relay/channel/openaigpt"
 	"io"
 	"net/http"
 	"strings"
@@ -66,6 +69,23 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		return types.NewError(fmt.Errorf("failed to copy request to GeneralOpenAIRequest: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
 
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+		if inboundBody, storageErr := common.GetBodyStorage(c); storageErr == nil {
+			if inboundBytes, readErr := inboundBody.Bytes(); readErr == nil {
+				if normalized, changed, normalizeErr := openaigpt.NormalizeLegacyResponsesAliasesInBody(inboundBytes); normalizeErr == nil && changed {
+					var aliasNormalized dto.OpenAIResponsesRequest
+					if unmarshalErr := common.Unmarshal(normalized, &aliasNormalized); unmarshalErr == nil {
+						if replaceErr := common.ReplaceRequestBody(c, normalized); replaceErr == nil {
+							request.MaxOutputTokens = aliasNormalized.MaxOutputTokens
+							request.Reasoning = aliasNormalized.Reasoning
+							logger.LogInfo(c, "normalized legacy max_tokens/reasoning_effort aliases on inbound Responses request")
+						}
+					}
+				}
+			}
+		}
+	}
+
 	err = helper.ModelMappedHelper(c, info, request)
 	if err != nil {
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
@@ -97,6 +117,24 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 			return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
 		}
 
+		if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+			// The shared DTO intentionally keeps the generic OpenAI contract.
+			// Recover Codex stream options only on this dedicated channel, before
+			// channel field settings and explicit parameter overrides are applied.
+			storage, readErr := common.GetBodyStorage(c)
+			if readErr != nil {
+				return types.NewError(readErr, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
+			}
+			inbound, readErr := storage.Bytes()
+			if readErr != nil {
+				return types.NewError(readErr, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
+			}
+			jsonData, err = openaigpt.PreserveResponsesStreamOptions(jsonData, inbound)
+			if err != nil {
+				return types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+			}
+		}
+
 		// remove disabled fields for OpenAI Responses API
 		jsonData, err = relaycommon.RemoveDisabledFields(jsonData, info.ChannelOtherSettings, info.ChannelSetting.PassThroughBodyEnabled)
 		if err != nil {
@@ -121,6 +159,41 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		requestBody = body
 	}
 
+	validatedRequest := request
+	requestWasLocallyValid := false
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+		// Unknown-field checks read the client's original body. The outbound
+		// body below is re-marshaled from the DTO on the non-pass-through path,
+		// so a field the DTO does not model is already gone by then.
+		if inboundBody, storageErr := common.GetBodyStorage(c); storageErr == nil {
+			if inboundBytes, readErr := inboundBody.Bytes(); readErr == nil {
+				if contractErr := openaigpt.ValidateInboundResponsesBody(inboundBytes); contractErr != nil {
+					return newOpenAIGPTContractError(contractErr)
+				}
+			}
+		}
+		bodyBytes, readErr := io.ReadAll(requestBody)
+		if readErr != nil {
+			return types.NewErrorWithStatusCode(readErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
+		effectiveModel := ""
+		if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
+			// Pass-through intentionally preserves the caller's model field, so
+			// model-specific validation must use the mapped channel model.
+			effectiveModel = request.Model
+		}
+		preparedBody, finalRequest, changed, contractErr := openaigpt.PrepareResponsesBody(bodyBytes, effectiveModel, info.ChannelOtherSettings)
+		if contractErr != nil {
+			return newOpenAIGPTContractError(contractErr)
+		}
+		if changed {
+			logger.LogInfo(c, "normalized OpenAI-GPT Responses parameters in final upstream body")
+		}
+		requestBody = bytes.NewReader(preparedBody)
+		validatedRequest = finalRequest
+		requestWasLocallyValid = true
+	}
+
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
@@ -134,6 +207,13 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 
 		if httpResp.StatusCode != http.StatusOK {
 			newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+				if openaigpt.ClassifyResponsesError(newAPIError, requestWasLocallyValid) ||
+					openaigpt.ClassifyResponsesNamespaceError(newAPIError, validatedRequest) ||
+					openaigpt.ClassifyImageDataError(newAPIError, validatedRequest) {
+					logger.LogWarn(c, "channel does not support a requested Responses capability; retrying another channel")
+				}
+			}
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
 			return newAPIError

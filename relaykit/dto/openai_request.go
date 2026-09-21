@@ -1010,10 +1010,11 @@ func (r *OpenAIResponsesRequest) GetToolsMap() []map[string]any {
 }
 
 type Reasoning struct {
-	Effort  string          `json:"effort,omitempty"`
-	Summary string          `json:"summary,omitempty"`
-	Mode    json.RawMessage `json:"mode,omitempty"`
-	Context json.RawMessage `json:"context,omitempty"`
+	GenerateSummary json.RawMessage `json:"generate_summary,omitempty"`
+	Effort          string          `json:"effort,omitempty"`
+	Summary         string          `json:"summary,omitempty"`
+	Mode            json.RawMessage `json:"mode,omitempty"`
+	Context         json.RawMessage `json:"context,omitempty"`
 }
 
 type Input struct {

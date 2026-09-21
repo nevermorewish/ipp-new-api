@@ -22,6 +22,7 @@ import { formatTimestampToDate } from '@/lib/format'
 import {
   CHANNEL_STATUS_CONFIG,
   CHANNEL_TYPES,
+  CHANNEL_TYPE_OPENAI_GPT,
   MULTI_KEY_STATUS_CONFIG,
   RESPONSE_TIME_CONFIG,
   RESPONSE_TIME_THRESHOLDS,
@@ -48,6 +49,7 @@ export function getChannelTypeIcon(type: number): string {
   const TYPE_TO_ICON: Record<number, string> = {
     // OpenAI family
     1: 'OpenAI', // OpenAI
+    [CHANNEL_TYPE_OPENAI_GPT]: 'OpenAI',
     6: 'OpenAI', // OpenAIMax
     7: 'OpenAI', // OhMyGPT
     8: 'OpenAI', // Custom

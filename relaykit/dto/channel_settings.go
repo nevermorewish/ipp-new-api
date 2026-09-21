@@ -67,6 +67,12 @@ const (
 )
 
 type ChannelOtherSettings struct {
+	// RemoveGPTTemperature removes temperature for GPT models that reject it.
+	// It is primarily used by the OpenAI-GPT compatibility channel.
+	RemoveGPTTemperature bool `json:"remove_gpt_temperature,omitempty"`
+	// RemoveAzureGPTEncryption enables compatibility with Azure GPT request
+	// bodies that reject encrypted Responses history and item identifiers.
+	RemoveAzureGPTEncryption              bool                  `json:"remove_azure_gpt_encryption,omitempty"`
 	AzureResponsesVersion                 string                `json:"azure_responses_version,omitempty"`
 	VertexKeyType                         VertexKeyType         `json:"vertex_key_type,omitempty"` // "json" or "api_key"
 	OpenRouterEnterprise                  *bool                 `json:"openrouter_enterprise,omitempty"`

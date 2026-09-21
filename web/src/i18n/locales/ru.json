@@ -5584,6 +5584,11 @@
     "Zero retention": "Без хранения данных",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "OpenAI-GPT": "OpenAI-GPT",
+    "Remove temperature for GPT-5 and GPT-6": "Удалять temperature для GPT-5 и GPT-6",
+    "Off by default. When enabled, removes temperature from GPT-5 and GPT-6 requests on this channel, including pass-through requests.": "По умолчанию выключено. При включении параметр temperature удаляется из запросов GPT-5 и GPT-6 в этом канале, включая запросы со сквозной передачей.",
+    "Azure GPT compatibility": "Совместимость с Azure GPT",
+    "Off by default. Removes encrypted history and unsupported GPT-5/6 temperature, repairs stale tool-call IDs, and preserves tool definitions and call associations. Removed encrypted content cannot be recovered.": "По умолчанию отключено. Удаляет зашифрованную историю и неподдерживаемый параметр температуры GPT-5/6, исправляет устаревшие идентификаторы вызовов инструментов, сохраняя определения инструментов и связи между вызовами и результатами. Удалённое зашифрованное содержимое восстановить нельзя."
   }
 }

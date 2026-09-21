@@ -5,6 +5,8 @@ import "github.com/QuantumNous/new-api/constant"
 func ChannelType2APIType(channelType int) (int, bool) {
 	apiType := -1
 	switch channelType {
+	case constant.ChannelTypeOpenAIGPT:
+		apiType = constant.APITypeOpenAIGPT
 	case constant.ChannelTypeOpenAI:
 		apiType = constant.APITypeOpenAI
 	case constant.ChannelTypeAnthropic:
@@ -95,7 +97,7 @@ func ChannelType2APIType(channelType int) (int, bool) {
 
 func SupportsResponsesCompact(channelType, apiType int) bool {
 	switch apiType {
-	case constant.APITypeOpenAI,
+	case constant.APITypeOpenAIGPT, constant.APITypeOpenAI,
 		constant.APITypeCodex,
 		constant.APITypeAdvancedCustom,
 		constant.APITypeSub2API,

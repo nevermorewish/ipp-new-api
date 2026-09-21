@@ -1,7 +1,9 @@
 package relay
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/QuantumNous/new-api/relay/channel/openaigpt"
 	"io"
 	"net/http"
 	"strings"
@@ -187,6 +189,86 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		requestBody = body
 	}
 
+	chatRequestWasLocallyValid := false
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT && info.RelayMode == relayconstant.RelayModeChatCompletions {
+		// Unknown-field and strict-tool-schema checks read the client's
+		// original body: the outbound body is re-marshaled from the DTO on the
+		// non-pass-through path, which drops unmodeled fields and the per-tool
+		// strict flag before they can be inspected.
+		if inboundBody, storageErr := common.GetBodyStorage(c); storageErr == nil {
+			if inboundBytes, readErr := inboundBody.Bytes(); readErr == nil {
+				if contractErr := openaigpt.ValidateInboundChatBody(inboundBytes); contractErr != nil {
+					return newOpenAIGPTContractError(contractErr)
+				}
+				if contractErr := openaigpt.ValidateChatToolSchemas(inboundBytes); contractErr != nil {
+					return newOpenAIGPTContractError(contractErr)
+				}
+				// A client on the deprecated functions contract expects
+				// message.function_call back. Record that here so the response
+				// stage can restore the shape the request asked for.
+				openaigpt.MarkLegacyFunctionCall(c.Set, inboundBytes)
+			}
+		}
+		bodyBytes, readErr := io.ReadAll(requestBody)
+		if readErr != nil {
+			return types.NewErrorWithStatusCode(readErr, types.ErrorCodeReadRequestBodyFailed, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
+		bodyBytes, imageURLsChanged, normalizeErr := openaigpt.NormalizeChatImageDataURLs(bodyBytes)
+		if normalizeErr != nil {
+			return newOpenAIGPTContractError(normalizeErr)
+		}
+		if imageErr := openaigpt.ValidateChatImageURLs(bodyBytes); imageErr != nil {
+			return newOpenAIGPTContractError(imageErr)
+		}
+		if imageURLsChanged {
+			logger.LogInfo(c, "normalized bare base64 Chat image URLs to data URLs for OpenAI-GPT compatibility")
+		}
+		normalizedBody, schemaChanged, normalizeErr := openaigpt.NormalizeNonStrictChatResponseSchema(bodyBytes)
+		if normalizeErr != nil {
+			return newOpenAIGPTContractError(normalizeErr)
+		}
+		if schemaChanged {
+			logger.LogInfo(c, "closed object schemas in non-strict Chat response_format for upstream compatibility")
+			bodyBytes = normalizedBody
+		}
+		bodyBytes, tokenLimitsChanged, normalizeErr := openaigpt.NormalizeZeroChatTokenLimitsInBody(bodyBytes)
+		if normalizeErr != nil {
+			return newOpenAIGPTContractError(normalizeErr)
+		}
+		if tokenLimitsChanged {
+			logger.LogInfo(c, "normalized Chat token limits below 1 to max_completion_tokens=1 for OpenAI-GPT compatibility")
+		}
+		effectiveModel := ""
+		if passThroughGlobal || info.ChannelSetting.PassThroughBodyEnabled {
+			// Pass-through preserves the caller's raw model while routing uses the
+			// mapped model held by the parsed request.
+			effectiveModel = request.Model
+		}
+		bodyBytes, temperatureChanged, normalizeErr := openaigpt.NormalizeGPTTemperatureInBody(bodyBytes, effectiveModel, info.ChannelOtherSettings.RemoveGPTTemperature || info.ChannelOtherSettings.RemoveAzureGPTEncryption)
+		if normalizeErr != nil {
+			return newOpenAIGPTContractError(normalizeErr)
+		}
+		if temperatureChanged {
+			logger.LogInfo(c, "removed GPT temperature from final Chat body by channel setting")
+		}
+		bodyBytes, encryptionChanged, normalizeErr := openaigpt.NormalizeAzureGPTChatEncryption(bodyBytes, info.ChannelOtherSettings.RemoveAzureGPTEncryption)
+		if normalizeErr != nil {
+			return newOpenAIGPTContractError(normalizeErr)
+		}
+		if encryptionChanged {
+			logger.LogInfo(c, "applied Azure GPT compatibility to final Chat body by channel setting")
+		}
+		// A body the DTO cannot parse is passed through untouched and reports
+		// validated=false, so an opaque upstream 400 for it is not mistaken for
+		// a provider capability gap.
+		_, validated, contractErr := openaigpt.ValidateChatBody(bodyBytes, effectiveModel)
+		if contractErr != nil {
+			return newOpenAIGPTContractError(contractErr)
+		}
+		chatRequestWasLocallyValid = validated
+		requestBody = bytes.NewReader(bodyBytes)
+	}
+
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
@@ -200,6 +282,11 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		info.IsStream = info.IsStream || strings.HasPrefix(httpResp.Header.Get("Content-Type"), "text/event-stream")
 		if httpResp.StatusCode != http.StatusOK {
 			newApiErr := service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			if info.ChannelType == constant.ChannelTypeOpenAIGPT &&
+				info.RelayMode == relayconstant.RelayModeChatCompletions &&
+				openaigpt.ClassifyChatError(newApiErr, chatRequestWasLocallyValid) {
+				logger.LogWarn(c, "channel does not support a requested Chat Completions capability; retrying another channel")
+			}
 			// reset status code 重置状态码
 			service.ResetStatusCode(newApiErr, statusCodeMappingStr)
 			return newApiErr

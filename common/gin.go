@@ -95,6 +95,25 @@ func GetBodyStorage(c *gin.Context) (BodyStorage, error) {
 	return bs, nil
 }
 
+// ReplaceRequestBody replaces the request stream and reusable body cache after
+// a validated request-body transformation.
+func ReplaceRequestBody(c *gin.Context, data []byte) error {
+	storage, err := CreateBodyStorage(data)
+	if err != nil {
+		return err
+	}
+	if previous, exists := c.Get(KeyBodyStorage); exists && previous != nil {
+		if previousStorage, ok := previous.(BodyStorage); ok {
+			_ = previousStorage.Close()
+		}
+	}
+	c.Set(KeyBodyStorage, storage)
+	c.Set(KeyRequestBody, data)
+	c.Request.Body = io.NopCloser(storage)
+	c.Request.ContentLength = int64(len(data))
+	return nil
+}
+
 // CleanupBodyStorage 清理请求体存储（应在请求结束时调用）
 func CleanupBodyStorage(c *gin.Context) {
 	if storage, exists := c.Get(KeyBodyStorage); exists && storage != nil {

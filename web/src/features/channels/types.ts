@@ -91,6 +91,8 @@ export interface ChannelSettings {
 }
 
 export interface ChannelOtherSettings {
+  remove_gpt_temperature?: boolean
+  remove_azure_gpt_encryption?: boolean
   azure_responses_version?: string
   vertex_key_type?: 'json' | 'api_key'
   openrouter_enterprise?: boolean

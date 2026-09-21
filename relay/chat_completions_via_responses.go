@@ -8,8 +8,10 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/channel"
 	openaichannel "github.com/QuantumNous/new-api/relay/channel/openai"
+	openaigptchannel "github.com/QuantumNous/new-api/relay/channel/openaigpt"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -91,9 +93,47 @@ func textRequestViaResponses(c *gin.Context, info *relaycommon.RelayInfo, adapto
 			paramOverrideApplied = true
 		}
 
+		if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+			chatJSON, _, err = openaigptchannel.NormalizeAzureGPTChatEncryption(chatJSON, info.ChannelOtherSettings.RemoveAzureGPTEncryption)
+			if err != nil {
+				return nil, newOpenAIGPTContractError(err)
+			}
+			var changed bool
+			chatJSON, changed, err = openaigptchannel.NormalizeChatImageDataURLs(chatJSON)
+			if err != nil {
+				return nil, newOpenAIGPTContractError(err)
+			}
+			if imageErr := openaigptchannel.ValidateChatImageURLs(chatJSON); imageErr != nil {
+				return nil, newOpenAIGPTContractError(imageErr)
+			}
+			if changed {
+				logger.LogInfo(c, "normalized bare base64 Chat image URLs to data URLs for OpenAI-GPT compatibility")
+			}
+		}
+
 		var overriddenChatReq dto.GeneralOpenAIRequest
 		if err := common.Unmarshal(chatJSON, &overriddenChatReq); err != nil {
 			return nil, types.NewError(err, types.ErrorCodeChannelParamOverrideInvalid, types.ErrOptionWithSkipRetry())
+		}
+		if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+			// This path returns before the Chat contract gate in TextHelper, so the
+			// same checks run here. Unknown fields and the per-tool strict flag are
+			// read from the client's original body, which chatJSON no longer
+			// carries after the DTO round trip above.
+			if inboundBody, storageErr := common.GetBodyStorage(c); storageErr == nil {
+				if inboundBytes, readErr := inboundBody.Bytes(); readErr == nil {
+					if err := openaigptchannel.ValidateInboundChatBody(inboundBytes); err != nil {
+						return nil, newOpenAIGPTContractError(err)
+					}
+					if err := openaigptchannel.ValidateChatToolSchemas(inboundBytes); err != nil {
+						return nil, newOpenAIGPTContractError(err)
+					}
+					openaigptchannel.MarkLegacyFunctionCall(c.Set, inboundBytes)
+				}
+			}
+			if err := openaigptchannel.ValidateChatRequest(&overriddenChatReq); err != nil {
+				return nil, newOpenAIGPTContractError(err)
+			}
 		}
 		request = &overriddenChatReq
 	}
@@ -105,6 +145,11 @@ func textRequestViaResponses(c *gin.Context, info *relaycommon.RelayInfo, adapto
 	responsesReq, ok := result.Value.(*dto.OpenAIResponsesRequest)
 	if !ok {
 		return nil, types.NewError(fmt.Errorf("expected OpenAI responses request, got %T", result.Value), types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+	}
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+		if chat, ok := request.(*dto.GeneralOpenAIRequest); ok {
+			openaigptchannel.NormalizeConvertedChatRequest(chat, responsesReq)
+		}
 	}
 	return relayResponsesRequest(c, info, adaptor, responsesReq, paramOverrideApplied)
 }
@@ -142,6 +187,21 @@ func relayResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, adaptor 
 		}
 	}
 
+	validatedRequest := responsesReq
+	requestWasLocallyValid := false
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+		preparedBody, finalRequest, changed, contractErr := openaigptchannel.PrepareResponsesBody(jsonData, "", info.ChannelOtherSettings)
+		if contractErr != nil {
+			return nil, newOpenAIGPTContractError(contractErr)
+		}
+		if changed {
+			logger.LogInfo(c, "normalized OpenAI-GPT Responses parameters in converted Chat request")
+		}
+		jsonData = preparedBody
+		validatedRequest = finalRequest
+		requestWasLocallyValid = true
+	}
+
 	body, closer, err := relaycommon.NewOutboundJSONBody(jsonData)
 	if err != nil {
 		return nil, types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
@@ -167,6 +227,13 @@ func relayResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, adaptor 
 	info.IsStream = clientStream || upstreamStream
 	if httpResp.StatusCode != http.StatusOK {
 		newApiErr := service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+		if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+			if openaigptchannel.ClassifyResponsesError(newApiErr, requestWasLocallyValid) ||
+				openaigptchannel.ClassifyResponsesNamespaceError(newApiErr, validatedRequest) ||
+				openaigptchannel.ClassifyImageDataError(newApiErr, validatedRequest) {
+				logger.LogWarn(c, "channel does not support a requested Responses capability; retrying another channel")
+			}
+		}
 		service.ResetStatusCode(newApiErr, statusCodeMappingStr)
 		return nil, newApiErr
 	}
@@ -191,6 +258,13 @@ func relayResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, adaptor 
 
 	usage, newApiErr := openaichannel.OaiResponsesToChatHandler(c, info, httpResp)
 	if newApiErr != nil {
+		if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+			if openaigptchannel.ClassifyResponsesError(newApiErr, requestWasLocallyValid) ||
+				openaigptchannel.ClassifyResponsesNamespaceError(newApiErr, validatedRequest) ||
+				openaigptchannel.ClassifyImageDataError(newApiErr, validatedRequest) {
+				logger.LogWarn(c, "channel does not support a requested Responses capability; retrying another channel")
+			}
+		}
 		service.ResetStatusCode(newApiErr, statusCodeMappingStr)
 		return nil, newApiErr
 	}

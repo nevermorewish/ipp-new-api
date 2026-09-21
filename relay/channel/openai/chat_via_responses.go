@@ -50,6 +50,9 @@ func OaiResponsesToChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 		return nil, types.NewOpenAIError(err, types.ErrorCodeJsonMarshalFailed, http.StatusInternalServerError)
 	}
 
+	if legacy, exists := c.Get(relaycommon.LegacyFunctionCallContextKey); exists && legacy == true && info.RelayFormat == types.RelayFormatOpenAI {
+		responseBody, _ = relaycommon.RestoreLegacyFunctionCallResponse(responseBody)
+	}
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 	return usage, nil
 }
@@ -136,6 +139,9 @@ func OaiResponsesToChatBufferedStreamHandler(c *gin.Context, info *relaycommon.R
 		return nil, types.NewOpenAIError(err, types.ErrorCodeJsonMarshalFailed, http.StatusInternalServerError)
 	}
 
+	if legacy, exists := c.Get(relaycommon.LegacyFunctionCallContextKey); exists && legacy == true && info.RelayFormat == types.RelayFormatOpenAI {
+		responseBody, _ = relaycommon.RestoreLegacyFunctionCallResponse(responseBody)
+	}
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 	return usage, nil
 }

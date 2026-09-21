@@ -52,13 +52,14 @@ const (
 	ErrorCodeGenRelayInfoFailed ErrorCode = "gen_relay_info_failed"
 
 	// channel error
-	ErrorCodeChannelNoAvailableKey        ErrorCode = "channel:no_available_key"
-	ErrorCodeChannelParamOverrideInvalid  ErrorCode = "channel:param_override_invalid"
-	ErrorCodeChannelHeaderOverrideInvalid ErrorCode = "channel:header_override_invalid"
-	ErrorCodeChannelModelMappedError      ErrorCode = "channel:model_mapped_error"
-	ErrorCodeChannelAwsClientError        ErrorCode = "channel:aws_client_error"
-	ErrorCodeChannelInvalidKey            ErrorCode = "channel:invalid_key"
-	ErrorCodeChannelResponseTimeExceeded  ErrorCode = "channel:response_time_exceeded"
+	ErrorCodeChannelNoAvailableKey             ErrorCode = "channel:no_available_key"
+	ErrorCodeChannelParamOverrideInvalid       ErrorCode = "channel:param_override_invalid"
+	ErrorCodeChannelHeaderOverrideInvalid      ErrorCode = "channel:header_override_invalid"
+	ErrorCodeChannelModelMappedError           ErrorCode = "channel:model_mapped_error"
+	ErrorCodeChannelAwsClientError             ErrorCode = "channel:aws_client_error"
+	ErrorCodeChannelInvalidKey                 ErrorCode = "channel:invalid_key"
+	ErrorCodeChannelResponseTimeExceeded       ErrorCode = "channel:response_time_exceeded"
+	ErrorCodeChannelOpenAIResponsesUnsupported ErrorCode = "channel:openai_responses_unsupported"
 
 	// client request error
 	ErrorCodeReadRequestBodyFailed ErrorCode = "read_request_body_failed"
@@ -96,6 +97,14 @@ type NewAPIError struct {
 	errorCode      ErrorCode
 	StatusCode     int
 	Metadata       json.RawMessage
+}
+
+// SetErrorCode reclassifies an existing error while retaining its upstream
+// payload. Capability errors use this to make channel selection retryable.
+func (e *NewAPIError) SetErrorCode(errorCode ErrorCode) {
+	if e != nil {
+		e.errorCode = errorCode
+	}
 }
 
 // Unwrap enables errors.Is / errors.As to work with NewAPIError by exposing the underlying error.

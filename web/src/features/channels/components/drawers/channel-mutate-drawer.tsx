@@ -146,6 +146,7 @@ import {
   channelTypeOptionsForTaskPluginBind,
   CHANNEL_TYPE_WARNINGS,
   ERROR_MESSAGES,
+  CHANNEL_TYPE_OPENAI_GPT,
   FIELD_PASSTHROUGH_TYPES,
   FIELD_DESCRIPTIONS,
   FIELD_PLACEHOLDERS,
@@ -188,6 +189,7 @@ import {
 import { ParamOverrideEditorDialog } from '../dialogs/param-override-editor-dialog'
 import { StatusCodeRiskDialog } from '../dialogs/status-code-risk-dialog'
 import { ModelMappingEditor } from '../model-mapping-editor'
+import { OpenAIGPTSettings } from './openaigpt-settings'
 import {
   ChannelAdvancedSection,
   ChannelApiAccessSection,
@@ -296,6 +298,8 @@ const SENSITIVE_FORM_FIELDS = [
   'system_prompt',
   'system_prompt_override',
   'allow_service_tier',
+  'remove_gpt_temperature',
+  'remove_azure_gpt_encryption',
   'disable_store',
   'allow_safety_identifier',
   'allow_include_obfuscation',
@@ -765,6 +769,8 @@ export function ChannelMutateDrawer({
   const currentHttp2ConnectionShards = form.watch('http2_connection_shards')
   const currentSystemPrompt = form.watch('system_prompt')
   const currentSystemPromptOverride = form.watch('system_prompt_override')
+  const currentRemoveGPTTemperature = form.watch('remove_gpt_temperature')
+  const currentAzureGPTCompatibility = form.watch('remove_azure_gpt_encryption')
   const currentAllowServiceTier = form.watch('allow_service_tier')
   const currentDisableStore = form.watch('disable_store')
   const currentAllowSafetyIdentifier = form.watch('allow_safety_identifier')
@@ -901,7 +907,7 @@ export function ChannelMutateDrawer({
   const basicModels = useMemo(() => {
     if (!allModelsList.length) return []
     // Filter models based on common patterns for specific types
-    if (currentType === 1) {
+    if (currentType === 1 || currentType === CHANNEL_TYPE_OPENAI_GPT) {
       return allModelsList.filter(
         (model) => model.startsWith('gpt-') || model.startsWith('text-')
       )
@@ -1046,6 +1052,8 @@ export function ChannelMutateDrawer({
   let fieldPassthroughConfigured = false
   if (OPENAI_FIELD_PASSTHROUGH_TYPES.has(currentType)) {
     fieldPassthroughConfigured = Boolean(
+      (currentType === CHANNEL_TYPE_OPENAI_GPT &&
+        (currentRemoveGPTTemperature || currentAzureGPTCompatibility)) ||
       currentAllowServiceTier ||
       currentDisableStore ||
       currentAllowSafetyIdentifier ||
@@ -2164,7 +2172,8 @@ export function ChannelMutateDrawer({
                           />
                         )}
 
-                        {currentType === 1 && (
+                        {(currentType === 1 ||
+                          currentType === CHANNEL_TYPE_OPENAI_GPT) && (
                           <fieldset
                             disabled={sensitiveLocked}
                             className='disabled:opacity-60'
@@ -4167,7 +4176,8 @@ export function ChannelMutateDrawer({
                             className='space-y-4 disabled:opacity-60'
                           >
                             <div className='divide-border space-y-0 divide-y border-y'>
-                              {currentType === 1 && (
+                              {(currentType === 1 ||
+                                currentType === CHANNEL_TYPE_OPENAI_GPT) && (
                                 <FormField
                                   control={form.control}
                                   name='force_format'
@@ -4487,6 +4497,11 @@ export function ChannelMutateDrawer({
                               className='disabled:opacity-60'
                             >
                               <div className='divide-border space-y-0 divide-y border-y'>
+                                <OpenAIGPTSettings
+                                  control={form.control}
+                                  channelType={currentType}
+                                  disabled={sensitiveLocked}
+                                />
                                 <FormField
                                   control={form.control}
                                   name='allow_service_tier'

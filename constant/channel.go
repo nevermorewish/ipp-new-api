@@ -60,6 +60,7 @@ const (
 	ChannelTypeNewAPI         = 60
 	ChannelTypeTaskPlugin     = 61
 	ChannelTypeSeedance       = 62
+	ChannelTypeOpenAIGPT      = 63
 	ChannelTypeDummy          // this one is only for count, do not add any channel after this
 
 )
@@ -128,6 +129,7 @@ var ChannelBaseURLs = []string{
 	"",                                          //60
 	"",                                          //61
 	"https://api.huanxing.ai",                   //62
+	"https://api.openai.com",                    //63
 }
 
 func GetChannelBaseURL(channelType int) string {
@@ -197,6 +199,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeNewAPI:         "New API",
 	ChannelTypeTaskPlugin:     "Task Plugin",
 	ChannelTypeSeedance:       "Seedance",
+	ChannelTypeOpenAIGPT:      "OpenAI-GPT",
 }
 
 func GetChannelTypeName(channelType int) string {

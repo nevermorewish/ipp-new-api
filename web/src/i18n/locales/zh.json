@@ -5584,6 +5584,11 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "OpenAI-GPT": "OpenAI-GPT",
+    "Remove temperature for GPT-5 and GPT-6": "删除 GPT-5 / GPT-6 的 temperature 参数",
+    "Off by default. When enabled, removes temperature from GPT-5 and GPT-6 requests on this channel, including pass-through requests.": "默认关闭。开启后，删除此渠道 GPT-5 和 GPT-6 系列请求中的 temperature 参数，包括透传请求。",
+    "Azure GPT compatibility": "兼容 Azure GPT",
+    "Off by default. Removes encrypted history and unsupported GPT-5/6 temperature, repairs stale tool-call IDs, and preserves tool definitions and call associations. Removed encrypted content cannot be recovered.": "默认关闭。清理加密历史和不受支持的 GPT-5/6 温度参数，修复旧工具调用 ID，并保留工具定义与调用关系。移除的加密内容无法恢复。"
   }
 }

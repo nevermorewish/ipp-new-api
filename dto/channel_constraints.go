@@ -36,11 +36,13 @@ type ChannelPin struct {
 type ChannelFilterKind string
 
 const (
+	FilterExcludedChannels   ChannelFilterKind = "excluded_channels"
 	FilterRequestPath        ChannelFilterKind = "request_path"
 	FilterTaskPluginIdentity ChannelFilterKind = "task_plugin_identity"
 )
 
 type ChannelFilter struct {
+	ExcludedChannelIDs     []int
 	Kind                   ChannelFilterKind
 	RequestPath            string
 	TaskPluginKey          string

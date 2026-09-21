@@ -468,7 +468,7 @@ func updateStandardChannelBalance(channel *model.Channel) (float64, error) {
 		channel.BaseURL = &baseURL
 	}
 	switch channel.Type {
-	case constant.ChannelTypeOpenAI:
+	case constant.ChannelTypeOpenAI, constant.ChannelTypeOpenAIGPT:
 		if channel.GetBaseURL() != "" {
 			baseURL = channel.GetBaseURL()
 		}
