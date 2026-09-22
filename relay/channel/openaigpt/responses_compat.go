@@ -161,7 +161,7 @@ func (n *responsesCompatibility) items(items []any, depth int) ([]any, error) {
 			// the optional item id. Omit deprecated item_* IDs instead of forging
 			// fc_* IDs. Reasoning IDs are not optional tool-call IDs: encrypted
 			// reasoning is removed above; other reasoning is left intact.
-			if depth == 0 && (typeName == "function_call" || typeName == "custom_tool_call") {
+			if typeName == "function_call" || typeName == "custom_tool_call" {
 				if id, ok := item["id"].(string); ok && strings.HasPrefix(id, "item_") {
 					if err := n.checkRemovedID(item); err != nil {
 						return nil, err

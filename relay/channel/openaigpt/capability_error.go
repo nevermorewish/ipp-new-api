@@ -32,6 +32,11 @@ var capabilityMismatchMarkers = []string{
 var chatCapabilityMismatchMarkers = []string{
 	"audio input is not available",
 	"n>1 is not supported in responses compatibility mode",
+	// Some OpenAI-compatible gateways expose GPT-5/6 through Chat
+	// Completions but do not implement function tools when reasoning is on.
+	// The request is valid; retrying a channel that supports the capability is
+	// the safe behavior.
+	"function tools with reasoning_effort are not supported",
 }
 
 // ClassifyResponsesError decides whether an upstream 400 means "this provider

@@ -62,6 +62,11 @@ const (
 	maxMetadataPairs       = 16
 	maxMetadataKeyLength   = 64
 	maxMetadataValueLength = 512
+	// OpenAI rejects a request when the top-level tools array contains more
+	// than 128 entries. Keep this check local so an oversized request does not
+	// make a paid upstream round trip (and so the error remains attributable to
+	// the caller instead of looking like an intermittent provider failure).
+	maxToolsPerRequest = 128
 )
 
 var imageDetails = map[string]struct{}{
@@ -146,6 +151,9 @@ func ValidateChatRequest(r *dto.GeneralOpenAIRequest) error {
 	}
 
 	toolNames := make(map[string]struct{}, len(r.Tools))
+	if len(r.Tools) > maxToolsPerRequest {
+		return fmt.Errorf("tools must contain at most %d entries, got %d", maxToolsPerRequest, len(r.Tools))
+	}
 	for index, tool := range r.Tools {
 		switch tool.Type {
 		case "function":
@@ -246,6 +254,16 @@ func validateChatToolCallHistory(messages []dto.Message) error {
 			}
 			answered[callID] = struct{}{}
 		}
+	}
+	missing := make([]string, 0)
+	for callID := range announced {
+		if _, ok := answered[callID]; !ok {
+			missing = append(missing, callID)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return fmt.Errorf("assistant tool_calls must be followed by tool messages responding to each tool_call_id; missing responses for: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
@@ -362,6 +380,9 @@ func validateToolList(value any, path string, depth int) error {
 	tools, ok := value.([]any)
 	if !ok {
 		return fmt.Errorf("%s must be an array of objects", path)
+	}
+	if len(tools) > maxToolsPerRequest {
+		return fmt.Errorf("%s must contain at most %d entries, got %d", path, maxToolsPerRequest, len(tools))
 	}
 	for index, value := range tools {
 		tool, ok := value.(map[string]any)

@@ -74,3 +74,27 @@ func TestPrepareResponsesBodyNormalizesMappedTemperature(t *testing.T) {
 	require.Equal(t, "alias", gjson.GetBytes(prepared, "model").String())
 	require.False(t, gjson.GetBytes(prepared, "temperature").Exists())
 }
+
+func TestNormalizeAzureGPTSamplingParametersRemovesReasoningOnlyFields(t *testing.T) {
+	body := []byte(`{"model":"gpt-6-astra","top_p":0.2,"logprobs":true,"top_logprobs":2,"provider_extension":{"keep":true}}`)
+	got, changed, err := NormalizeAzureGPTSamplingParametersInBody(body, "", true)
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.False(t, gjson.GetBytes(got, "top_p").Exists())
+	require.False(t, gjson.GetBytes(got, "logprobs").Exists())
+	require.False(t, gjson.GetBytes(got, "top_logprobs").Exists())
+	require.True(t, gjson.GetBytes(got, "provider_extension.keep").Bool())
+
+	untouched, changed, err := NormalizeAzureGPTSamplingParametersInBody(body, "", false)
+	require.NoError(t, err)
+	require.False(t, changed)
+	require.Equal(t, body, untouched)
+}
+
+func TestNormalizeAzureGPTSamplingParametersLeavesGPT4ModelsUntouched(t *testing.T) {
+	body := []byte(`{"model":"gpt-4.1","top_p":0.2,"logprobs":true,"top_logprobs":2}`)
+	got, changed, err := NormalizeAzureGPTSamplingParametersInBody(body, "", true)
+	require.NoError(t, err)
+	require.False(t, changed)
+	require.Equal(t, body, got)
+}

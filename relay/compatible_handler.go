@@ -251,6 +251,13 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		if temperatureChanged {
 			logger.LogInfo(c, "removed GPT temperature from final Chat body by channel setting")
 		}
+		bodyBytes, azureSamplingChanged, normalizeErr := openaigpt.NormalizeAzureGPTSamplingParametersInBody(bodyBytes, effectiveModel, info.ChannelOtherSettings.RemoveAzureGPTEncryption)
+		if normalizeErr != nil {
+			return newOpenAIGPTContractError(normalizeErr)
+		}
+		if azureSamplingChanged {
+			logger.LogInfo(c, "removed Azure GPT-incompatible sampling parameters from final Chat body by channel setting")
+		}
 		bodyBytes, encryptionChanged, normalizeErr := openaigpt.NormalizeAzureGPTChatEncryption(bodyBytes, info.ChannelOtherSettings.RemoveAzureGPTEncryption)
 		if normalizeErr != nil {
 			return newOpenAIGPTContractError(normalizeErr)

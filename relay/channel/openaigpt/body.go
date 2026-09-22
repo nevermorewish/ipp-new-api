@@ -42,6 +42,11 @@ func PrepareResponsesBody(body []byte, effectiveModel string, settings dto.Chann
 		return nil, nil, false, err
 	}
 	changed = changed || samplingChanged
+	normalized, azureSamplingChanged, err := NormalizeAzureGPTSamplingParametersInBody(normalized, model, settings.RemoveAzureGPTEncryption)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	changed = changed || azureSamplingChanged
 	normalized, toolsChanged, err := NormalizeGPT56ToolsInBody(normalized, model)
 	if err != nil {
 		return nil, nil, false, err

@@ -65,6 +65,15 @@ func TestAzureCompatibilityOnlyRemovesOptionalStaleToolIDs(t *testing.T) {
 	}
 }
 
+func TestAzureCompatibilityRemovesNestedToolItemIDs(t *testing.T) {
+	body := []byte(`{"input":[{"type":"message","role":"assistant","content":[{"type":"function_call","id":"item_nested","call_id":"call_1","name":"lookup","arguments":"{}"}]}]}`)
+	got, changed, err := NormalizeResponsesCompatibility(body, true)
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.False(t, gjson.GetBytes(got, "input.0.content.0.id").Exists())
+	require.Equal(t, "call_1", gjson.GetBytes(got, "input.0.content.0.call_id").String())
+}
+
 func TestAzureCompatibilityDoesNotBreakItemReferences(t *testing.T) {
 	for _, item := range []string{
 		`{"type":"function_call","id":"item_referenced","call_id":"call_pair","name":"lookup","arguments":"{}"}`,

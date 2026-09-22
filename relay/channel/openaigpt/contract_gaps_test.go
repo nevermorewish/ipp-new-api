@@ -1,6 +1,7 @@
 package openaigpt
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
@@ -275,4 +276,44 @@ func TestAcceptsWellFormedToolHistory(t *testing.T) {
 		{"role":"tool","tool_call_id":"call_b","content":"{\"weather\":\"rain\"}"},
 		{"role":"tool","tool_call_id":"call_a","content":"{\"weather\":\"sunny\"}"}]}`
 	require.NoError(t, ValidateChatRequest(chatRequest(t, body)))
+}
+
+func TestRejectsAssistantToolCallsWithoutResults(t *testing.T) {
+	body := `{"model":"gpt-5.6-sol","messages":[
+		{"role":"user","content":"Call get_weather."},
+		{"role":"assistant","content":null,"tool_calls":[
+			{"id":"call_missing_result","type":"function","function":{"name":"get_weather","arguments":"{}"}}]}]}`
+	require.ErrorContains(t, ValidateChatRequest(chatRequest(t, body)),
+		"missing responses for: call_missing_result")
+}
+
+func TestRejectsMoreThan128ChatTools(t *testing.T) {
+	request := &dto.GeneralOpenAIRequest{
+		Model: "gpt-5.6-sol",
+		Tools: make([]dto.ToolCallRequest, maxToolsPerRequest+1),
+	}
+	for index := range request.Tools {
+		request.Tools[index] = dto.ToolCallRequest{
+			Type:     "function",
+			Function: dto.FunctionRequest{Name: fmt.Sprintf("tool_%d", index)},
+		}
+	}
+	require.ErrorContains(t, ValidateChatRequest(request), "at most 128 entries, got 129")
+}
+
+func TestRejectsMoreThan128ResponsesTools(t *testing.T) {
+	tools := make([]map[string]any, maxToolsPerRequest+1)
+	for index := range tools {
+		tools[index] = map[string]any{
+			"type":       "function",
+			"name":       fmt.Sprintf("tool_%d", index),
+			"parameters": map[string]any{"type": "object"},
+		}
+	}
+	rawTools, err := common.Marshal(tools)
+	require.NoError(t, err)
+	require.ErrorContains(t, ValidateResponsesRequest(&dto.OpenAIResponsesRequest{
+		Model: "gpt-6-astra",
+		Tools: rawTools,
+	}), "at most 128 entries, got 129")
 }

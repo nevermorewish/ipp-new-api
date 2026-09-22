@@ -218,6 +218,48 @@ func NormalizeGPTTemperatureInBody(body []byte, model string, enabled bool) ([]b
 	return normalized, true, nil
 }
 
+// NormalizeAzureGPTSamplingParametersInBody removes sampling parameters that
+// Azure GPT reasoning deployments reject even though they are valid on the
+// public OpenAI contract. The compatibility switch is opt-in because these
+// fields are meaningful to other OpenAI-compatible providers. Temperature is
+// handled by NormalizeGPTTemperatureInBody; this helper covers the remaining
+// reasoning-only parameters that otherwise produce an upstream HTTP 400.
+func NormalizeAzureGPTSamplingParametersInBody(body []byte, model string, enabled bool) ([]byte, bool, error) {
+	if !enabled {
+		return body, false, nil
+	}
+	var object map[string]json.RawMessage
+	if err := common.Unmarshal(body, &object); err != nil {
+		return body, false, nil
+	}
+	if strings.TrimSpace(model) == "" {
+		_ = common.Unmarshal(object["model"], &model)
+	}
+	model = strings.ToLower(strings.TrimSpace(model))
+	reasoningModel := model == "gpt-5" || model == "gpt-6" ||
+		strings.HasPrefix(model, "gpt-5-") || strings.HasPrefix(model, "gpt-5.") ||
+		strings.HasPrefix(model, "gpt-6-") || strings.HasPrefix(model, "gpt-6.")
+	if !reasoningModel {
+		return body, false, nil
+	}
+
+	changed := false
+	for _, field := range []string{"top_p", "logprobs", "top_logprobs"} {
+		if _, exists := object[field]; exists {
+			delete(object, field)
+			changed = true
+		}
+	}
+	if !changed {
+		return body, false, nil
+	}
+	normalized, err := common.Marshal(object)
+	if err != nil {
+		return nil, false, err
+	}
+	return normalized, true, nil
+}
+
 func normalizeSmallMaxOutputTokens(r *dto.OpenAIResponsesRequest) bool {
 	if r == nil || r.MaxOutputTokens == nil || *r.MaxOutputTokens >= minResponsesOutputTokens {
 		return false

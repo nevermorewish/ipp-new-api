@@ -72,6 +72,7 @@ func TestClassifyProductionChatCapabilityMismatches(t *testing.T) {
 	cases := map[string]string{
 		"audio input":                "Audio input is not available.",
 		"multiple responses":         "n>1 is not supported in responses compatibility mode",
+		"reasoning tools":            "Function tools with reasoning_effort are not supported for this model.",
 		"custom tool shape mismatch": "Missing required parameter: 'tools[0].name'.",
 		// The mirror-image complaint from the 2026-08-28 review: the provider
 		// says tools[0].custom is missing on a request that supplied it.
