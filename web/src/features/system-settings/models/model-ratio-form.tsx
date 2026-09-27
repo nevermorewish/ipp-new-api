@@ -17,11 +17,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { useQuery } from '@tanstack/react-query'
-import { Code2, Download, Eye, RotateCcw, Save, Upload } from 'lucide-react'
+import {
+  Code2,
+  Download,
+  Eye,
+  FileSpreadsheet,
+  RotateCcw,
+  Save,
+  Upload,
+} from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import * as XLSX from 'xlsx'
 
 import { JsonCodeEditor } from '@/components/json-code-editor'
 import { Button } from '@/components/ui/button'
@@ -36,12 +45,18 @@ import {
 } from '@/components/ui/form'
 import { Switch } from '@/components/ui/switch'
 import { getEnabledModels } from '@/features/channels/api'
+import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 
 import {
   SettingsForm,
   SettingsSwitchContent,
   SettingsSwitchItem,
 } from '../components/settings-form-layout'
+import {
+  buildModelPricingExportRows,
+  createModelPricingWorkbook,
+} from './model-pricing-export'
+import { buildModelSnapshots } from './model-pricing-snapshots'
 import {
   ModelRatioVisualEditor,
   type ModelRatioVisualEditorHandle,
@@ -263,6 +278,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
   const visualEditorRef = useRef<ModelRatioVisualEditorHandle>(null)
   const importInputRef = useRef<HTMLInputElement | null>(null)
+  const { models: pricingModels } = usePricingData(!isUnsetVariant)
 
   const enabledModelsQuery = useQuery({
     queryKey: ['enabled-models'],
@@ -361,6 +377,48 @@ export const ModelRatioForm = memo(function ModelRatioForm({
     [form, t]
   )
 
+  const handleExportPricingExcel = useCallback(() => {
+    try {
+      const snapshots = buildModelSnapshots({
+        modelPrice: form.getValues('ModelPrice'),
+        modelRatio: form.getValues('ModelRatio'),
+        originalModelPrice: form.getValues('OriginalModelPrice') || '{}',
+        cacheRatio: form.getValues('CacheRatio'),
+        createCacheRatio: form.getValues('CreateCacheRatio'),
+        completionRatio: form.getValues('CompletionRatio'),
+        imageRatio: form.getValues('ImageRatio'),
+        audioRatio: form.getValues('AudioRatio'),
+        audioCompletionRatio: form.getValues('AudioCompletionRatio'),
+        billingMode: form.getValues('BillingMode'),
+        billingExpr: form.getValues('BillingExpr'),
+      })
+      const rows = buildModelPricingExportRows(snapshots, pricingModels)
+      const workbook = createModelPricingWorkbook(rows)
+      const workbookData = XLSX.write(workbook, {
+        bookType: 'xlsx',
+        type: 'array',
+      })
+      const blob = new Blob([workbookData], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `model-pricing-${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.success(t('Model pricing Excel exported successfully'))
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('Failed to export model pricing Excel')
+      )
+    }
+  }, [form, pricingModels, t])
+
   const handleSave = useCallback(async () => {
     if (editMode === 'visual') {
       const committed = await visualEditorRef.current?.commitOpenEditor()
@@ -401,6 +459,15 @@ export const ModelRatioForm = memo(function ModelRatioForm({
           >
             <Download data-icon='inline-start' />
             {t('Export model pricing')}
+          </Button>
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            onClick={handleExportPricingExcel}
+          >
+            <FileSpreadsheet data-icon='inline-start' />
+            {t('Export pricing Excel')}
           </Button>
           <Button
             type='button'
