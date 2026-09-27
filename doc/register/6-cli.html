@@ -1,0 +1,130 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>安装 CLI 工具 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="在 Windows / macOS / Linux 上安装 Claude Code CLI 的图文步骤。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">快速开始 · 第 4 步</p>
+            <h1>安装 CLI 工具</h1>
+          </header>
+
+          <p>前一步「<a href="/docs/register/5-env.html">环境检查</a>」完成后（Windows 端装好 Node.js 与 Git Bash），按系统切到对应页签，安装 Claude Code CLI。</p>
+
+          <div class="tabs" data-tabs>
+            <div class="tabs-nav">
+              <button type="button" class="active">Windows</button>
+              <button type="button">macOS</button>
+              <button type="button">Linux</button>
+            </div>
+
+            <!-- Windows -->
+            <div class="tab-panel active">
+              <h3>安装 Claude Code</h3>
+              <div class="callout">
+                <p><strong>安装 Claude Code：</strong>打开 PowerShell，运行以下命令：</p>
+<pre><code>npm install -g @anthropic-ai/claude-code</code></pre>
+                <p>这个命令会从 npm 官方仓库下载并安装最新版本的 Claude Code。</p>
+              </div>
+              <figure><img src="/docs/assets/img/claude_code/windows-img-09.webp" alt="安装 Claude Code" /></figure>
+              <div class="callout">
+                <p><strong>将 ~/.local/bin 加入 PATH（仅当提示要求时）：</strong></p>
+<pre><code>[Environment]::SetEnvironmentVariable('Path', ([Environment]::GetEnvironmentVariable('Path','User') + ";$HOME\.local\bin"), 'User')</code></pre>
+              </div>
+              <div class="callout">
+                <p><strong>验证 Claude Code 安装：</strong>安装完成后，输入以下命令检查是否安装成功：</p>
+<pre><code>claude --version</code></pre>
+                <p>如果显示版本号，恭喜你！Claude Code 已经成功安装了。</p>
+              </div>
+            </div>
+
+            <!-- macOS -->
+            <div class="tab-panel">
+              <h3>安装 Claude Code CLI</h3>
+              <p>打开终端：</p>
+              <figure><img src="/docs/assets/img/claude_code/macos-img-01.webp" alt="macOS 打开终端" /></figure>
+              <div class="callout">
+                <p><strong>安装 Claude Code：</strong>在终端运行以下命令：</p>
+<pre><code>curl -fsSL https://claude.ai/install.sh | bash</code></pre>
+                <p>可选项：出现提示后运行提供的命令：</p>
+<pre><code>echo 'export PATH="$HOME/.local/bin:$PATH"' &gt;&gt; ~/.bashrc &amp;&amp; source ~/.bashrc</code></pre>
+              </div>
+              <figure><img src="/docs/assets/img/claude_code/macos-img-02.webp" alt="macOS 安装 Claude Code" /></figure>
+              <div class="callout">
+                <p><strong>验证 Claude Code 安装：</strong></p>
+<pre><code>claude --version</code></pre>
+                <p>如果显示版本号，恭喜你！Claude Code 已经成功安装了。</p>
+              </div>
+            </div>
+
+            <!-- Linux -->
+            <div class="tab-panel">
+              <h3>安装 Claude Code</h3>
+              <figure><img src="/docs/assets/img/claude_code/linux-img-01.webp" alt="Linux 终端" /></figure>
+              <div class="callout">
+                <p><strong>安装 Claude Code：</strong>打开终端，运行以下命令：</p>
+<pre><code>curl -fsSL https://claude.ai/install.sh | bash</code></pre>
+                <p>如果遇到权限问题，可以使用 sudo：</p>
+<pre><code>sudo curl -fsSL https://claude.ai/install.sh | bash</code></pre>
+              </div>
+              <figure><img src="/docs/assets/img/claude_code/linux-img-03.webp" alt="Linux 安装 Claude Code" /></figure>
+              <div class="callout">
+                <p><strong>验证 Claude Code 安装：</strong></p>
+<pre><code>claude --version</code></pre>
+                <p>如果显示版本号，恭喜你！Claude Code 已经成功安装了。</p>
+              </div>
+            </div>
+          </div>
+
+          <h2>安装 Codex</h2>
+          <p>Codex 是 OpenAI 官方的终端代码助手，通过 npm 全局安装即可。三个系统命令一致，需要先按上方完成 Node.js 与 npm 的安装。</p>
+          <div class="callout">
+            <p><strong>安装命令：</strong></p>
+<pre><code>npm install -g @openai/codex@latest</code></pre>
+            <p><strong>验证安装：</strong></p>
+<pre><code>codex --version</code></pre>
+            <p>如果显示版本号，说明安装成功。</p>
+          </div>
+          <div class="tip">
+            <p>Codex 接入寰星云科的接口与令牌配置在 <a href="/docs/cli/3-codex.html">CLI 配置教程 · Codex</a> 或 <a href="/docs/ccswitch/3-codex.html">CC-Switch · Codex</a> 中详细说明。</p>
+          </div>
+
+          <h2>安装 Gemini CLI</h2>
+          <p>Gemini CLI 是 Google 官方的终端 AI 助手，同样通过 npm 全局安装。</p>
+          <div class="callout">
+            <p><strong>安装命令：</strong></p>
+<pre><code>npm install -g @google/gemini-cli@latest</code></pre>
+            <p><strong>验证安装：</strong></p>
+<pre><code>gemini --version</code></pre>
+            <p>如果显示版本号，说明安装成功。</p>
+          </div>
+          <div class="tip">
+            <p>Gemini CLI 接入寰星云科的接口与令牌配置在 <a href="/docs/cli/4-gemini.html">CLI 配置教程 · Gemini</a> 或 <a href="/docs/ccswitch/4-gemini.html">CC-Switch · Gemini</a> 中详细说明。</p>
+          </div>
+
+          <h2>下一步</h2>
+          <p>CLI 工具都装好之后，按需进入下一步：</p>
+          <ul class="list">
+            <li><a href="/docs/ccswitch/1-common.html">CC-Switch 使用</a> · 图形化管理 Claude / Codex / Gemini 三套配置</li>
+            <li><a href="/docs/cli/2-claude.html">CLI 配置教程</a> · 手动编辑 settings.json / config.toml / 环境变量</li>
+            <li><a href="/docs/token/1-intro.html">模型广场</a> · 了解可用模型与计费倍率</li>
+          </ul>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

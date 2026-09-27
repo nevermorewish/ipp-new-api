@@ -1,6 +1,10 @@
 package controller
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service/embed"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -189,4 +194,57 @@ func materialErrorCode(t *testing.T, body []byte) string {
 	}
 	require.NoError(t, common.Unmarshal(body, &envelope))
 	return envelope.Result.Error.Code
+}
+
+func TestProxySeedanceAPIMaterialSignedIdentityAndRedirect(t *testing.T) {
+	setupSeedanceMaterialTestDB(t)
+	secret := "material-signing-secret"
+	var gotHeaders http.Header
+	var gotBody []byte
+	redirected := false
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { redirected = true }))
+	t.Cleanup(target.Close)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotHeaders = r.Header.Clone()
+		gotBody, _ = io.ReadAll(r.Body)
+		if r.URL.Query().Get("Action") == "Redirect" {
+			http.Redirect(w, r, target.URL, http.StatusTemporaryRedirect)
+			return
+		}
+		_, _ = w.Write([]byte(materialEnvelopeResponse))
+	}))
+	t.Cleanup(upstream.Close)
+	insertSeedanceChannel(t, upstream.URL, secret, "default", constant.ChannelTypeSeedanceAPI, common.ChannelStatusEnabled)
+	engine := gin.New()
+	engine.POST("/api/material", func(c *gin.Context) {
+		common.SetContextKey(c, constant.ContextKeyUsingGroup, "default")
+		if c.GetHeader("Authorization") != "" {
+			common.SetContextKey(c, constant.ContextKeyTokenId, 42)
+			common.SetContextKey(c, constant.ContextKeyTokenKey, "caller-secret")
+		}
+		ProxySeedanceMaterial(c)
+	})
+	request := httptest.NewRequest(http.MethodPost, "/api/material?Action=CreateVisualValidateSession", strings.NewReader(`{}`))
+	request.Header.Set("Authorization", "Bearer caller-secret")
+	recorder := httptest.NewRecorder()
+	engine.ServeHTTP(recorder, request)
+	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
+	assert.Empty(t, gotHeaders.Get("Authorization"))
+	payload, err := base64.RawURLEncoding.DecodeString(gotHeaders.Get(embed.HeaderContext))
+	require.NoError(t, err)
+	assert.NotContains(t, string(payload), "caller-secret")
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, err = mac.Write([]byte(gotHeaders.Get(embed.HeaderContext)))
+	require.NoError(t, err)
+	assert.Equal(t, hex.EncodeToString(mac.Sum(nil)), gotHeaders.Get(embed.HeaderSignature))
+	assert.Contains(t, string(gotBody), "/docs/seedance/assets.html")
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequest(http.MethodPost, "/api/material?Action=Redirect", strings.NewReader(`{}`))
+	request.Header.Set("Authorization", "Bearer caller-secret")
+	engine.ServeHTTP(recorder, request)
+	assert.Equal(t, http.StatusBadGateway, recorder.Code)
+	assert.False(t, redirected)
+	recorder = httptest.NewRecorder()
+	engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/material?Action=ListAssets", strings.NewReader(`{}`)))
+	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
 }

@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPT-Image-2 绘图教程 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="GPT-Image-2 的 Images API 请求格式、参考图请求、参数说明和试一试功能。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">绘图模型</p>
+            <h1>GPT-Image-2 绘图教程</h1>
+          </header>
+
+          <p><code>gpt-image-2</code> 使用 OpenAI Images API 风格调用。按照 <code>D:\video\Huanxing-ImageHub</code> 的实际请求逻辑，文生图直接调用 <code>POST /v1/images/generations</code>；带参考图时优先调用 <code>POST /v1/images/edits</code> 并用 <code>multipart/form-data</code> 上传 <code>image[]</code>。</p>
+
+          <div class="hint-container tip">
+            <p class="hint-container-title">令牌要求</p>
+            <p><code>gpt-image-2</code> 建议使用令牌分组为 <code>gptimage</code> 的 API 令牌。文档中的“试一试”会直接请求当前 API 域名，请填写可用的 <code>sk-...</code> 令牌。</p>
+          </div>
+
+          <h2>可用接口</h2>
+          <table class="table">
+            <thead><tr><th>功能</th><th>接口</th><th>请求格式</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>文生图</td><td><code>POST /v1/images/generations</code></td><td>JSON</td><td>只传提示词和图片参数。</td></tr>
+              <tr><td>参考图 / 图片编辑</td><td><code>POST /v1/images/edits</code></td><td><code>multipart/form-data</code></td><td>上传一张或多张参考图，字段名使用 <code>image[]</code>。</td></tr>
+              <tr><td>参考图 fallback</td><td><code>POST /v1/images/generations</code></td><td>JSON</td><td>ImageHub 在编辑接口失败时会退回该方式，并传 <code>image</code> 数组，值为 data URI 或公网 URL。</td></tr>
+            </tbody>
+          </table>
+
+          <h2>模型与尺寸</h2>
+          <table class="table">
+            <thead><tr><th>参数</th><th>推荐值</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code>model</code></td><td><code>gpt-image-2</code></td><td>当前文档默认模型。ImageHub 也兼容 <code>gpt-image-2-pro</code>、<code>gpt-image-2-4k</code>、<code>gpt-5.4-image-2</code> 等 image-2 系列模型，是否可用取决于你的渠道与令牌权限。</td></tr>
+              <tr><td><code>size</code></td><td><code>1024x1024</code>、<code>1536x1024</code>、<code>1024x1536</code>、<code>2048x1152</code>、<code>3840x2160</code></td><td>ImageHub 会按宽高比和分辨率计算最终 <code>size</code>。最长边不超过 3840，宽高建议为 16 的倍数。</td></tr>
+              <tr><td><code>quality</code></td><td><code>auto</code>、<code>low</code>、<code>medium</code>、<code>high</code></td><td>草稿图可用 <code>low</code>，正式出图可用 <code>high</code>。部分 VIP/Pro 模型可能忽略或限制该字段。</td></tr>
+              <tr><td><code>output_format</code></td><td><code>png</code>、<code>jpeg</code>、<code>webp</code></td><td>ImageHub 默认 <code>png</code>；只有非 <code>png</code> 时才显式传给上游。</td></tr>
+              <tr><td><code>response_format</code></td><td><code>url</code> 或 <code>b64_json</code></td><td>文档示例默认用 <code>url</code>，便于直接查看图片。ImageHub 代理内部使用 <code>b64_json</code> 再转成浏览器本地图片。</td></tr>
+              <tr><td><code>n</code></td><td><code>1</code></td><td>建议固定为 1；多图请多次请求或由客户端批量队列控制。</td></tr>
+            </tbody>
+          </table>
+
+          <h2>功能分类</h2>
+
+          <section class="api-feature">
+            <h3>文生图</h3>
+            <p>只提供文本提示词生成图片。这个请求对应 ImageHub 无参考图时的最终上游调用：<code>POST /v1/images/generations</code>，请求体为 JSON。</p>
+            <p>示例：</p>
+            <pre><code>curl https://api.huanxing.ai/v1/images/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-image-2",
+    "prompt": "一只橘猫戴着橙色围巾抱着水獭，温暖插画风格",
+    "size": "1024x1024",
+    "quality": "high",
+    "output_format": "png",
+    "response_format": "url",
+    "n": 1
+  }'</code></pre>
+            <div class="api-playground" data-playground data-method="POST" data-path="/v1/images/generations">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/v1/images/generations</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <label class="api-try-field">
+                  <span>API 令牌</span>
+                  <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+                </label>
+                <div class="api-param-grid">
+                  <label class="api-try-field">
+                    <span>模型</span>
+                    <select data-json-path="model">
+                      <option value="gpt-image-2" selected>gpt-image-2</option>
+                      <option value="gpt-image-2-pro">gpt-image-2-pro</option>
+                      <option value="gpt-image-2-4k">gpt-image-2-4k</option>
+                      <option value="gpt-5.4-image-2">gpt-5.4-image-2</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field api-field-wide">
+                    <span>提示词</span>
+                    <input type="text" data-json-path="prompt" value="一只橘猫戴着橙色围巾抱着水獭，温暖插画风格" />
+                  </label>
+                  <label class="api-try-field">
+                    <span>尺寸</span>
+                    <select data-json-path="size">
+                      <option value="1024x1024" selected>1024x1024</option>
+                      <option value="1536x1024">1536x1024</option>
+                      <option value="1024x1536">1024x1536</option>
+                      <option value="2048x1152">2048x1152</option>
+                      <option value="3840x2160">3840x2160</option>
+                      <option value="auto">auto</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>质量</span>
+                    <select data-json-path="quality">
+                      <option value="auto">auto</option>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high" selected>high</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>输出格式</span>
+                    <select data-json-path="output_format">
+                      <option value="png" selected>png</option>
+                      <option value="jpeg">jpeg</option>
+                      <option value="webp">webp</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>响应格式</span>
+                    <select data-json-path="response_format">
+                      <option value="url" selected>url</option>
+                      <option value="b64_json">b64_json</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="api-try-field">
+                  <span>请求体（JSON）</span>
+                  <textarea data-field="body">{
+  "model": "gpt-image-2",
+  "prompt": "一只橘猫戴着橙色围巾抱着水獭，温暖插画风格",
+  "size": "1024x1024",
+  "quality": "high",
+  "output_format": "png",
+  "response_format": "url",
+  "n": 1
+}</textarea>
+                </label>
+                <div class="api-try-actions">
+                  <button type="button" class="api-send">发送请求</button>
+                  <span class="api-try-hint">使用 <code>url</code> 可直接返回图片地址；<code>b64_json</code> 响应较长，页面会截断显示。</span>
+                </div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature">
+            <h3>参考图 / 图片编辑</h3>
+            <p>上传参考图进行图生图或图片编辑。这个请求对应 ImageHub 有参考图时的优先路径：<code>POST /v1/images/edits</code>，使用 <code>multipart/form-data</code>，参考图字段名为 <code>image[]</code>。</p>
+            <p>示例：</p>
+            <pre><code>curl https://api.huanxing.ai/v1/images/edits \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -F 'model="gpt-image-2"' \
+  -F 'prompt="保留参考图主体，把背景改成暖色调产品海报，干净商业摄影风格"' \
+  -F 'image[]=@"/path/to/reference.png"' \
+  -F 'size="1024x1024"' \
+  -F 'quality="high"' \
+  -F 'output_format="png"' \
+  -F 'response_format="url"' \
+  -F 'n="1"'</code></pre>
+            <div class="api-playground" data-playground data-method="POST" data-path="/v1/images/edits" data-encoding="multipart">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/v1/images/edits</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <label class="api-try-field">
+                  <span>API 令牌</span>
+                  <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+                </label>
+                <div class="api-param-grid">
+                  <label class="api-try-field">
+                    <span>模型</span>
+                    <select data-form-field="model">
+                      <option value="gpt-image-2" selected>gpt-image-2</option>
+                      <option value="gpt-image-2-pro">gpt-image-2-pro</option>
+                      <option value="gpt-image-2-4k">gpt-image-2-4k</option>
+                      <option value="gpt-5.4-image-2">gpt-5.4-image-2</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field api-field-wide">
+                    <span>提示词</span>
+                    <input type="text" data-form-field="prompt" data-required value="保留参考图主体，把背景改成暖色调产品海报，干净商业摄影风格" />
+                  </label>
+                  <label class="api-try-field api-field-wide">
+                    <span>参考图</span>
+                    <input type="file" data-form-field="image[]" data-required accept="image/*" multiple />
+                  </label>
+                  <label class="api-try-field">
+                    <span>尺寸</span>
+                    <select data-form-field="size">
+                      <option value="1024x1024" selected>1024x1024</option>
+                      <option value="1536x1024">1536x1024</option>
+                      <option value="1024x1536">1024x1536</option>
+                      <option value="2048x1152">2048x1152</option>
+                      <option value="3840x2160">3840x2160</option>
+                      <option value="auto">auto</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>质量</span>
+                    <select data-form-field="quality">
+                      <option value="auto">auto</option>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high" selected>high</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>输出格式</span>
+                    <select data-form-field="output_format">
+                      <option value="png" selected>png</option>
+                      <option value="jpeg">jpeg</option>
+                      <option value="webp">webp</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>响应格式</span>
+                    <select data-form-field="response_format">
+                      <option value="url" selected>url</option>
+                      <option value="b64_json">b64_json</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>输入保真</span>
+                    <select data-form-field="input_fidelity">
+                      <option value="">不传</option>
+                      <option value="high">high</option>
+                    </select>
+                  </label>
+                </div>
+                <input type="hidden" data-form-field="n" value="1" />
+                <div class="api-try-actions">
+                  <button type="button" class="api-send">发送请求</button>
+                  <span class="api-try-hint">可选择多张参考图；字段名会按 ImageHub 请求方式作为 <code>image[]</code> 上传。</span>
+                </div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature">
+            <h3>参考图 fallback：JSON image 数组</h3>
+            <p>ImageHub 在 <code>/v1/images/edits</code> 不可用时，会退回 <code>/v1/images/generations</code>，并把参考图放入 JSON 字段 <code>image</code>。值可以是 data URI，也可以是公网可访问 URL。</p>
+            <p>示例：</p>
+            <pre><code>curl https://api.huanxing.ai/v1/images/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-image-2",
+    "prompt": "参考这张图的主体姿态，生成一张商业摄影产品图",
+    "image": [
+      "https://example.com/reference.png"
+    ],
+    "size": "1024x1024",
+    "quality": "high",
+    "output_format": "png",
+    "response_format": "url",
+    "n": 1
+  }'</code></pre>
+            <div class="api-playground" data-playground data-method="POST" data-path="/v1/images/generations">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/v1/images/generations</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <label class="api-try-field">
+                  <span>API 令牌</span>
+                  <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+                </label>
+                <div class="api-param-grid">
+                  <label class="api-try-field">
+                    <span>模型</span>
+                    <select data-json-path="model">
+                      <option value="gpt-image-2" selected>gpt-image-2</option>
+                      <option value="gpt-image-2-pro">gpt-image-2-pro</option>
+                      <option value="gpt-image-2-4k">gpt-image-2-4k</option>
+                      <option value="gpt-5.4-image-2">gpt-5.4-image-2</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field api-field-wide">
+                    <span>提示词</span>
+                    <input type="text" data-json-path="prompt" value="参考这张图的主体姿态，生成一张商业摄影产品图" />
+                  </label>
+                  <label class="api-try-field api-field-wide">
+                    <span>参考图 URL</span>
+                    <input type="url" data-json-path="image.0" value="https://example.com/reference.png" />
+                  </label>
+                  <label class="api-try-field">
+                    <span>尺寸</span>
+                    <select data-json-path="size">
+                      <option value="1024x1024" selected>1024x1024</option>
+                      <option value="1536x1024">1536x1024</option>
+                      <option value="1024x1536">1024x1536</option>
+                      <option value="2048x1152">2048x1152</option>
+                      <option value="3840x2160">3840x2160</option>
+                    </select>
+                  </label>
+                  <label class="api-try-field">
+                    <span>质量</span>
+                    <select data-json-path="quality">
+                      <option value="auto">auto</option>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high" selected>high</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="api-try-field">
+                  <span>请求体（JSON）</span>
+                  <textarea data-field="body">{
+  "model": "gpt-image-2",
+  "prompt": "参考这张图的主体姿态，生成一张商业摄影产品图",
+  "image": [
+    "https://example.com/reference.png"
+  ],
+  "size": "1024x1024",
+  "quality": "high",
+  "output_format": "png",
+  "response_format": "url",
+  "n": 1
+}</textarea>
+                </label>
+                <div class="api-try-actions">
+                  <button type="button" class="api-send">发送请求</button>
+                  <span class="api-try-hint">请把示例 URL 换成公网可访问图片地址；本地文件请使用上方 multipart 编辑接口。</span>
+                </div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <h2>参数说明</h2>
+          <table class="table">
+            <thead><tr><th>参数</th><th>类型</th><th>适用接口</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code>model</code></td><td>string</td><td>生成、编辑</td><td>模型名称，默认 <code>gpt-image-2</code>。</td></tr>
+              <tr><td><code>prompt</code></td><td>string</td><td>生成、编辑</td><td>图片描述或编辑要求。ImageHub 会把负面提示词追加到提示词末尾。</td></tr>
+              <tr><td><code>image[]</code></td><td>file</td><td>编辑</td><td>multipart 上传参考图，支持多张。ImageHub 优先使用该方式。</td></tr>
+              <tr><td><code>image</code></td><td>array&lt;string&gt;</td><td>生成 fallback</td><td>JSON 参考图数组，元素为 data URI 或公网 URL。</td></tr>
+              <tr><td><code>size</code></td><td>string</td><td>生成、编辑</td><td>输出尺寸。常用 <code>1024x1024</code>、<code>1536x1024</code>、<code>1024x1536</code>、<code>2048x1152</code>、<code>3840x2160</code>。</td></tr>
+              <tr><td><code>quality</code></td><td>string</td><td>生成、编辑</td><td><code>auto</code>、<code>low</code>、<code>medium</code>、<code>high</code>。</td></tr>
+              <tr><td><code>output_format</code></td><td>string</td><td>生成、编辑</td><td><code>png</code>、<code>jpeg</code>、<code>webp</code>。</td></tr>
+              <tr><td><code>response_format</code></td><td>string</td><td>生成、编辑</td><td><code>url</code> 返回图片地址；<code>b64_json</code> 返回 Base64 图片数据。</td></tr>
+              <tr><td><code>input_fidelity</code></td><td>string</td><td>编辑</td><td>可选 <code>high</code>，用于尽量保留参考图主体和细节。</td></tr>
+              <tr><td><code>n</code></td><td>integer</td><td>生成、编辑</td><td>建议固定为 <code>1</code>。</td></tr>
+            </tbody>
+          </table>
+
+          <h2>响应示例</h2>
+          <p>当 <code>response_format</code> 为 <code>url</code> 时，响应通常包含图片 URL：</p>
+          <pre><code>{
+  "created": 1776923999,
+  "data": [
+    {
+      "url": "https://.../file_download/xxxxxxxx.png",
+      "revised_prompt": "..."
+    }
+  ]
+}</code></pre>
+          <p>当 <code>response_format</code> 为 <code>b64_json</code> 时，响应会包含 Base64 图片数据：</p>
+          <pre><code>{
+  "created": 1776923999,
+  "data": [
+    {
+      "b64_json": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "revised_prompt": "..."
+    }
+  ]
+}</code></pre>
+
+          <h2>不建议的调用方式</h2>
+          <div class="hint-container warning">
+            <p class="hint-container-title">不要用 Chat Completions 或 Responses 替代 Images API</p>
+            <p>当前 <code>gpt-image-2</code> 文档按 ImageHub 的实际请求方式整理：出图请使用 <code>/v1/images/generations</code> 或 <code>/v1/images/edits</code>。不要把 <code>/v1/chat/completions</code> 当成图片生成入口；<code>size</code>、<code>quality</code>、<code>output_format</code> 等参数不会按 Images API 的方式生效。</p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

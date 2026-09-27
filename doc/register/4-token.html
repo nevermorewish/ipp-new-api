@@ -1,0 +1,61 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>创建 API 令牌 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="如何在寰星云科控制台为不同客户端创建独立 API 令牌，并设置分组、额度与过期时间。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">快速开始 · 第 2 步</p>
+            <h1>创建 API 令牌</h1>
+          </header>
+
+          <p>令牌（Token / API Key）是客户端调用 API 的身份凭证。建议为每一个客户端、每一个用途单独创建一个令牌，互相隔离额度、模型范围与有效期。</p>
+
+          <h2>新建令牌</h2>
+          <ol class="ordered">
+            <li>进入控制台「令牌 / API Keys」页面，点击「新建令牌」。</li>
+            <li>填写名称：建议带上用途与机器名，便于在日志和账单里区分。</li>
+            <li>选择分组：统一选择 <code>default</code>，详见 <a href="/docs/token/2-group.html">令牌分组介绍</a>。</li>
+            <li>设置额度：可以选「不限额」，也可以填写一个上限（如 100 元），令牌跑满上限后自动失效。</li>
+            <li>设置过期时间：默认永久；建议为机器、CI、共享调试令牌设一个较短的过期时间。</li>
+            <li>点击「创建」，弹窗会显示 <code>sk-...</code> 格式的令牌字符串。</li>
+          </ol>
+
+          <figure>
+            <img src="/docs/assets/img/register-4-create.png" alt="新建令牌表单" data-slot="register-4-create" />
+            <figcaption>占位图：新建令牌表单</figcaption>
+          </figure>
+
+          <div class="warning">
+            <p><strong>只展示一次：</strong>令牌完整字符串只会在创建成功时弹窗显示一次。请立刻复制保存到密码管理器或 1Password。关闭弹窗后再也看不到完整内容，只能重新生成。</p>
+          </div>
+
+          <h2>令牌的形态</h2>
+          <p>寰星云科 API 的令牌通常以 <code>sk-</code> 开头，整段长度约 48~64 位，例如：</p>
+          <pre><code>sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre>
+          <p>这段字符串就是 OpenAI 兼容 API 中的 <code>Authorization: Bearer sk-...</code>，也是 Claude Code 的 <code>ANTHROPIC_AUTH_TOKEN</code> 与 Gemini CLI 的 <code>GEMINI_API_KEY</code> 实际填的内容。</p>
+
+          <h2>令牌泄露怎么办</h2>
+          <p>如果不小心把令牌粘贴到 GitHub、聊天群或日志里，请立即回到「令牌」列表，把这条令牌「禁用」或「删除」，然后新建一条替换它，并把新令牌重新配置到所有客户端。</p>
+
+          <h2>下一步</h2>
+          <p>拿到令牌后，先 <a href="/docs/register/5-env.html">检查 CLI 运行环境</a>，再进入具体客户端配置。</p>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

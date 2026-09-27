@@ -1,0 +1,34 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini FAQ | 寰星云科 API 使用文档</title>
+    <meta name="description" content="Gemini CLI 接入寰星云科 API 的常见问题与排查思路。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">FAQ · Gemini</p>
+            <h1>Gemini</h1>
+          </header>
+
+          <h3 id="gemini-cli-使用难题与建议"> Gemini CLI 使用难题与建议</h3><div class="hint-container warning"><p class="hint-container-title">现状说明</p><p>Gemini CLI 目前存在多种使用问题，例如可能无法正常调用模型、无法粘贴图片。<br> 因此通常不建议将 Gemini-3 接入 Gemini CLI。</p></div><div class="hint-container tip"><p class="hint-container-title">更推荐的方式</p><ul><li>优先使用 Roo Code 等第三方 VSCode 插件</li><li>如必须使用 Gemini CLI，请使用 <code>default</code> 分组令牌，并确认目标模型已在该分组开放</li></ul></div><figure><img src="/docs/assets/img/faq/Gemini/001.webp" alt=""><figcaption></figcaption></figure><div class="hint-container important"><p class="hint-container-title">重要</p><p>如果你不会使用 Roo Code，也可以使用 <code>default</code> 分组令牌在 Gemini CLI 中配置。配置前请确认模型名称在 <code>default</code> 分组可用，避免出现“无可用渠道”或“模型不存在”问题。</p></div><div class="hint-container info"><p class="hint-container-title">特别提醒</p><ul><li>在 Roo Code 等第三方使用时，选取 <code>OpenAI Response</code> 请求格式</li><li>Gemini 模型通常不自带联网功能，可能需要借助 MCP 等工具实现</li></ul></div><h3 id="如何在-cline-使用-gemini-3">如何在 Cline 使用 Gemini-3</h3><h4 id="软件要求">软件要求</h4><table class="table"><thead><tr><th>软件</th><th>版本要求</th><th>下载链接</th></tr></thead><tbody><tr><td><strong>VSCode</strong></td><td>1.80.0+</td><td><code>https://code.visualstudio.com/</code></td></tr></tbody></table><h4 id="_1-创建-default-分组令牌">1. 创建 default 分组令牌</h4><p>按照 <a href="/docs/register/4-token.html">创建 API 令牌</a> 一章提到的方法，创建如下图中 <code>default</code> 分组的令牌：</p><figure><img src="/docs/assets/img/faq/Gemini/002.webp" alt="创建 API 选择分组示意图"><figcaption>创建 API 选择分组示意图</figcaption></figure><h4 id="_2-安装-cline-插件">2. 安装 Cline 插件</h4><ul><li>打开 VSCode</li><li>单击左侧边栏的 <strong>扩展</strong> 图标（或按 <code>Ctrl+Shift+X</code> / <code>Cmd+Shift+X</code>）</li><li>在搜索框输入 <strong>Cline</strong></li><li>找到 Cline 插件，单击 <strong>安装</strong></li></ul><div class="hint-container info"><p class="hint-container-title">安装提示</p><ul><li>安装完成后，左侧边栏会出现 Cline 图标</li><li>首次使用需要配置 API Key</li><li>建议安装最新版本以获得最佳体验</li></ul></div><h4 id="_3-打开-cline-界面">3. 打开 Cline 界面</h4><p>安装完成后，有两种方式打开 Cline：</p><p><strong>方式一：侧边栏图标</strong></p><ul><li>单击 VSCode 左侧边栏的 Cline 图标</li></ul><p><strong>方式二：命令面板</strong></p><ul><li>按 <code>Ctrl+Shift+P</code> (Windows/Linux) 或 <code>Cmd+Shift+P</code> (macOS)</li><li>输入 <code>Cline: Open</code></li><li>按 Enter</li></ul><h4 id="_4-首次配置">4. 首次配置</h4><p>打开 Cline 界面后，按以下步骤配置：</p><ol><li>单击 <strong>API Configuration</strong> 按钮</li><li>按下方填写配置信息</li></ol><div class="language-yaml line-numbers-mode" data-highlighter="shiki" data-ext="yaml" style="--shiki-light:#383A42;--shiki-dark:#abb2bf;--shiki-light-bg:#FAFAFA;--shiki-dark-bg:#282c34;"><pre class="shiki shiki-themes one-light one-dark-pro vp-code"><code class="language-yaml"><span class="line"><span style="--shiki-light:#E45649;--shiki-dark:#E06C75;">API Provider</span><span style="--shiki-light:#383A42;--shiki-dark:#ABB2BF;">: </span><span style="--shiki-light:#50A14F;--shiki-dark:#98C379;">OpenAI-compatible</span></span>
+          <span class="line"><span style="--shiki-light:#E45649;--shiki-dark:#E06C75;">Base URL</span><span style="--shiki-light:#383A42;--shiki-dark:#ABB2BF;">: </span><span style="--shiki-light:#50A14F;--shiki-dark:#98C379;">https://api.huanxing.ai/v1</span></span>
+          <span class="line"><span style="--shiki-light:#E45649;--shiki-dark:#E06C75;">API Key</span><span style="--shiki-light:#383A42;--shiki-dark:#ABB2BF;">: </span><span style="--shiki-light:#50A14F;--shiki-dark:#98C379;">sk-*****</span></span>
+          <span class="line"><span style="--shiki-light:#E45649;--shiki-dark:#E06C75;">Model ID</span><span style="--shiki-light:#383A42;--shiki-dark:#ABB2BF;">: </span><span style="--shiki-light:#50A14F;--shiki-dark:#98C379;">gemini-3-pro-preview</span></span></code></pre><div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0;"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><figure><img src="/docs/assets/img/faq/Gemini/003.webp" alt="Cline 配置界面示意图"><figcaption>Cline 配置界面示意图</figcaption></figure><div class="hint-container warning"><p class="hint-container-title">安全提醒</p><p>请妥善保管你的 <code>API Key</code>，不要在群聊或公开截图中泄露。</p></div><details class="hint-container details"><summary>已有用户提示</summary><p>如果您之前使用过 Cline，请单击右上角的 <strong>⚙️ 设置</strong>按钮进入配置界面。</p></details><p><strong>配置参数说明</strong></p><table class="table"><thead><tr><th>配置项</th><th>推荐值</th><th>说明</th></tr></thead><tbody><tr><td><strong>API Provider</strong></td><td><code>OpenAI-compatible</code></td><td>推荐选择此项，支持更多模型</td></tr><tr><td><strong>Base URL</strong></td><td><code>https://api.huanxing.ai/v1</code></td><td>寰星云科 的兼容端点</td></tr><tr><td><strong>API Key</strong></td><td><code>sk-******</code></td><td>您的 寰星云科 Key</td></tr><tr><td><strong>Model ID</strong></td><td><code>gemini-3-pro-preview</code></td><td>推荐使用代码专精模型</td></tr></tbody></table><h4 id="_5-完成配置">5. 完成配置</h4><p>单击右上角 <strong>Done</strong>。</p>
+</article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

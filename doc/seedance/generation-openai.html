@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>doubao-seedance-2.0 视频生成(openai格式) | 寰星云科 API 使用文档</title>
+    <meta name="description" content="使用 OpenAI 兼容 JSON 格式通过 /v1/video/generations 调用 doubao-seedance-2.0 系列视频生成模型。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">视频模型</p>
+            <h1>doubao-seedance-2.0 视频生成(openai格式)</h1>
+          </header>
+
+          <p>本接口使用 OpenAI 兼容的 JSON 请求格式。先调用 <code>POST /v1/video/generations</code> 创建异步视频任务，再调用 <code>GET /v1/video/generations/{task_id}</code> 查询生成状态和结果。</p>
+
+          <div class="callout">
+            <strong>接口地址：</strong>请求域名使用当前寰星云科 API 地址；请求头必须携带 <code>Authorization: Bearer sk-你的令牌</code> 和 <code>Content-Type: application/json</code>。
+          </div>
+
+          <h2>可选模型</h2>
+          <table class="table">
+            <thead><tr><th>model</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code>doubao-seedance-2.0</code></td><td>标准版，适合通用视频生成场景，质量和速度均衡。</td></tr>
+              <tr><td><code>doubao-seedance-2.0-fast</code></td><td>快速版，适合对生成速度要求更高的场景。</td></tr>
+              <tr><td><code>doubao-seedance-2.0-mini</code></td><td>轻量版，适合成本敏感或快速预览场景。</td></tr>
+            </tbody>
+          </table>
+
+          <h2>创建视频任务</h2>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0" selected>doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini">doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="清晨池塘上的纸船，电影感镜头缓慢推进，水面泛起微光" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="5" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>画面比例</span>
+                  <select data-json-path="size,metadata.ratio">
+                    <option value="16:9" selected>16:9</option>
+                    <option value="9:16">9:16</option>
+                    <option value="1:1">1:1</option>
+                    <option value="4:3">4:3</option>
+                    <option value="3:4">3:4</option>
+                  </select>
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution,metadata.resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0",
+  "prompt": "清晨池塘上的纸船，电影感镜头缓慢推进，水面泛起微光",
+  "duration": 5,
+  "size": "16:9",
+  "resolution": "720p",
+  "metadata": {
+    "ratio": "16:9",
+    "resolution": "720p",
+    "watermark": false
+  }
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">提交成功后会返回任务 ID，请使用下方查询接口轮询。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h2>请求参数</h2>
+          <table class="table">
+            <thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code>model</code></td><td>string</td><td>是</td><td>模型名称，可选 <code>doubao-seedance-2.0</code>、<code>doubao-seedance-2.0-fast</code> 或 <code>doubao-seedance-2.0-mini</code>。</td></tr>
+              <tr><td><code>prompt</code></td><td>string</td><td>是</td><td>视频生成提示词，不能为空。建议描述主体、动作、环境、镜头运动和画面风格。</td></tr>
+              <tr><td><code>duration</code></td><td>integer</td><td>否</td><td>视频时长，单位秒。常用值为 <code>5</code>，建议范围 <code>3</code> 到 <code>15</code>，实际可选值以模型能力为准。</td></tr>
+              <tr><td><code>seconds</code></td><td>string</td><td>否</td><td><code>duration</code> 的 OpenAI 兼容别名，例如 <code>"5"</code>。请勿与 <code>duration</code> 同时提供；同时提供时 <code>seconds</code> 优先。</td></tr>
+              <tr><td><code>size</code></td><td>string</td><td>否</td><td>画面比例或输出尺寸，例如 <code>16:9</code>、<code>9:16</code>、<code>1280x720</code>、<code>720x1280</code>。</td></tr>
+              <tr><td><code>resolution</code></td><td>string</td><td>否</td><td>输出分辨率，例如 <code>480p</code>、<code>720p</code>、<code>1080p</code>。未提供时默认按渠道能力处理。</td></tr>
+              <tr><td><code>input_reference</code></td><td>string</td><td>否</td><td>单个参考图片 URL，用于图生视频。必须是上游可访问的公网地址。</td></tr>
+              <tr><td><code>images</code></td><td>string[]</td><td>否</td><td>参考图片 URL 数组。若只使用一张图片，优先使用 <code>input_reference</code>。</td></tr>
+              <tr><td><code>image_urls</code></td><td>string[]</td><td>否</td><td>Seedance 参考图片 URL 数组，用于图生视频或参考素材。不能与 <code>image_with_roles</code> 同时使用。</td></tr>
+              <tr><td><code>referenceVideos</code></td><td>string[]</td><td>否</td><td>参考视频 URL 数组，用于约束生成视频的主体动作、镜头运动或画面节奏。字段名区分大小写。</td></tr>
+              <tr><td><code>referenceAudios</code></td><td>string[]</td><td>否</td><td>参考音频 URL 数组，可与 <code>referenceVideos</code> 同时使用，用于声音、说话节奏或口型参考。字段名区分大小写。</td></tr>
+              <tr><td><code>generate_audio</code></td><td>boolean</td><td>否</td><td>是否为生成的视频保留或生成音频。参考音频场景通常设为 <code>true</code>；显式传入 <code>false</code> 时也会原样发送给上游。</td></tr>
+              <tr><td><code>image_with_roles</code></td><td>object[]</td><td>否</td><td>带用途的图片数组。每项包含 <code>url</code> 和 <code>role</code>；<code>role</code> 可使用 <code>first_frame</code> 或 <code>last_frame</code> 指定首帧、尾帧。</td></tr>
+              <tr><td><code>first_frame_image</code></td><td>string</td><td>否</td><td>首帧图片 URL。用于图生视频时指定视频起始画面。</td></tr>
+              <tr><td><code>last_frame_image</code></td><td>string</td><td>否</td><td>尾帧图片 URL。与 <code>first_frame_image</code> 一起使用时指定视频结束画面。</td></tr>
+              <tr><td><code>mode</code></td><td>string</td><td>否</td><td>渠道扩展的生成模式；没有明确需求时可省略。</td></tr>
+              <tr><td><code>metadata</code></td><td>object</td><td>否</td><td>渠道扩展参数，可放置 <code>ratio</code>、<code>resolution</code>、<code>watermark</code> 等配置。</td></tr>
+            </tbody>
+          </table>
+
+          <div class="warning">
+            <strong>参数提示：</strong><code>image_urls</code> 与 <code>image_with_roles</code> 不能同时提供。首尾帧可以使用 <code>image_with_roles</code> 的 <code>role</code> 字段，也可以使用 <code>first_frame_image</code> / <code>last_frame_image</code> 字段；请不要重复提供相互冲突的图片。参考视频和参考音频必须是 SeedanceAPI 上游可访问的地址。<code>duration</code>、<code>size</code>、<code>resolution</code>、音频生成和参考素材的可用组合可能因模型版本而不同。请求被拒绝时，请先使用文生视频的最小请求验证模型和令牌，再逐项增加可选参数。
+          </div>
+
+          <h2>请求示例</h2>
+          <h3>文生视频</h3>
+          <pre><code>curl https://api.huanxing.ai/v1/video/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2.0",
+    "prompt": "清晨池塘上的纸船，电影感镜头缓慢推进，水面泛起微光",
+    "duration": 5,
+    "size": "16:9",
+    "resolution": "720p"
+  }'</code></pre>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0" selected>doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini">doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="清晨池塘上的纸船，电影感镜头缓慢推进，水面泛起微光" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="5" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>画面比例</span>
+                  <select data-json-path="size">
+                    <option value="16:9" selected>16:9</option>
+                    <option value="9:16">9:16</option>
+                    <option value="1:1">1:1</option>
+                    <option value="4:3">4:3</option>
+                    <option value="3:4">3:4</option>
+                  </select>
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0",
+  "prompt": "清晨池塘上的纸船，电影感镜头缓慢推进，水面泛起微光",
+  "duration": 5,
+  "size": "16:9",
+  "resolution": "720p"
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">提交后返回任务 ID，用下方查询接口继续查询。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h3>使用 image_urls 参考图生视频</h3>
+          <pre><code>curl https://api.huanxing.ai/v1/video/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2.0",
+    "prompt": "人物自然眨眼并看向镜头，轻微运镜，真实摄影风格",
+    "image_urls": ["https://example.com/person.jpg"],
+    "duration": 5,
+    "size": "16:9",
+    "resolution": "720p"
+  }'</code></pre>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0" selected>doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini">doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="人物自然眨眼并看向镜头，轻微运镜，真实摄影风格" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>参考图 URL</span>
+                  <input type="url" data-json-path="image_urls.0" value="https://example.com/person.jpg" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="5" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>画面比例</span>
+                  <select data-json-path="size">
+                    <option value="16:9" selected>16:9</option>
+                    <option value="9:16">9:16</option>
+                    <option value="1:1">1:1</option>
+                    <option value="4:3">4:3</option>
+                    <option value="3:4">3:4</option>
+                  </select>
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0",
+  "prompt": "人物自然眨眼并看向镜头，轻微运镜，真实摄影风格",
+  "image_urls": [
+    "https://example.com/person.jpg"
+  ],
+  "duration": 5,
+  "size": "16:9",
+  "resolution": "720p"
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">请把参考图 URL 换成上游可访问的公网地址。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h3>首帧图生视频</h3>
+          <pre><code>curl https://api.huanxing.ai/v1/video/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2.0",
+    "prompt": "人物抬头看向镜头，镜头缓慢推进",
+    "image_with_roles": [
+      {
+        "url": "https://example.com/start.png",
+        "role": "first_frame"
+      }
+    ],
+    "duration": 5,
+    "resolution": "720p"
+  }'</code></pre>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0" selected>doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini">doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="人物抬头看向镜头，镜头缓慢推进" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>首帧图片 URL</span>
+                  <input type="url" data-json-path="image_with_roles.0.url" value="https://example.com/start.png" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="5" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0",
+  "prompt": "人物抬头看向镜头，镜头缓慢推进",
+  "image_with_roles": [
+    {
+      "url": "https://example.com/start.png",
+      "role": "first_frame"
+    }
+  ],
+  "duration": 5,
+  "resolution": "720p"
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">请把首帧图片 URL 换成上游可访问的公网地址。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h3>首尾帧图生视频</h3>
+          <pre><code>curl https://api.huanxing.ai/v1/video/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2.0",
+    "prompt": "镜头从白天平滑过渡到夜晚，保持主体构图稳定",
+    "image_with_roles": [
+      {
+        "url": "https://example.com/day.png",
+        "role": "first_frame"
+      },
+      {
+        "url": "https://example.com/night.png",
+        "role": "last_frame"
+      }
+    ],
+    "duration": 5,
+    "resolution": "720p"
+  }'</code></pre>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0" selected>doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini">doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="镜头从白天平滑过渡到夜晚，保持主体构图稳定" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>首帧图片 URL</span>
+                  <input type="url" data-json-path="image_with_roles.0.url" value="https://example.com/day.png" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>尾帧图片 URL</span>
+                  <input type="url" data-json-path="image_with_roles.1.url" value="https://example.com/night.png" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="5" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0",
+  "prompt": "镜头从白天平滑过渡到夜晚，保持主体构图稳定",
+  "image_with_roles": [
+    {
+      "url": "https://example.com/day.png",
+      "role": "first_frame"
+    },
+    {
+      "url": "https://example.com/night.png",
+      "role": "last_frame"
+    }
+  ],
+  "duration": 5,
+  "resolution": "720p"
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">请把首帧和尾帧图片 URL 换成上游可访问的公网地址。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h3>使用首帧/尾帧独立字段</h3>
+          <pre><code>curl https://api.huanxing.ai/v1/video/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2.0",
+    "prompt": "镜头从起始画面过渡到结束画面",
+    "first_frame_image": "https://example.com/start.png",
+    "last_frame_image": "https://example.com/end.png",
+    "duration": 5,
+    "resolution": "720p"
+  }'</code></pre>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0" selected>doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini">doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="镜头从起始画面过渡到结束画面" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>首帧图片 URL</span>
+                  <input type="url" data-json-path="first_frame_image" value="https://example.com/start.png" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>尾帧图片 URL</span>
+                  <input type="url" data-json-path="last_frame_image" value="https://example.com/end.png" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="5" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0",
+  "prompt": "镜头从起始画面过渡到结束画面",
+  "first_frame_image": "https://example.com/start.png",
+  "last_frame_image": "https://example.com/end.png",
+  "duration": 5,
+  "resolution": "720p"
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">请把首帧和尾帧图片 URL 换成上游可访问的公网地址。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h3>参考视频 + 参考音频生成视频</h3>
+          <p>同时提供参考视频和参考音频，可让生成结果参考输入视频的动作与运镜，并参考音频的说话节奏、声音或口型。下面示例会创建一个有声视频任务。</p>
+          <pre><code>curl https://api.huanxing.ai/v1/video/generations \
+  -H "Authorization: Bearer sk-你的令牌" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "doubao-seedance-2.0-mini",
+    "prompt": "人物自然说话，参考视频中的动作和镜头运动，并匹配参考音频的说话节奏",
+    "referenceVideos": [
+      "https://example.com/reference.mp4"
+    ],
+    "referenceAudios": [
+      "https://example.com/speech.wav"
+    ],
+    "duration": 11,
+    "size": "16:9",
+    "resolution": "720p",
+    "generate_audio": true
+  }'</code></pre>
+          <div class="api-playground" data-playground data-method="POST" data-path="/v1/video/generations">
+            <div class="api-endpoint">
+              <span class="api-method post">POST</span>
+              <code class="api-path">/v1/video/generations</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <div class="api-param-grid">
+                <label class="api-try-field">
+                  <span>模型</span>
+                  <select data-json-path="model">
+                    <option value="doubao-seedance-2.0">doubao-seedance-2.0</option>
+                    <option value="doubao-seedance-2.0-fast">doubao-seedance-2.0-fast</option>
+                    <option value="doubao-seedance-2.0-mini" selected>doubao-seedance-2.0-mini</option>
+                  </select>
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>提示词</span>
+                  <input type="text" data-json-path="prompt" value="人物自然说话，参考视频中的动作和镜头运动，并匹配参考音频的说话节奏" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>参考视频 URL</span>
+                  <input type="url" data-json-path="referenceVideos.0" value="https://example.com/reference.mp4" />
+                </label>
+                <label class="api-try-field api-field-wide">
+                  <span>参考音频 URL</span>
+                  <input type="url" data-json-path="referenceAudios.0" value="https://example.com/speech.wav" />
+                </label>
+                <label class="api-try-field">
+                  <span>时长（秒）</span>
+                  <input type="number" data-json-path="duration" data-json-type="number" value="11" min="3" max="15" />
+                </label>
+                <label class="api-try-field">
+                  <span>画面比例</span>
+                  <select data-json-path="size">
+                    <option value="16:9" selected>16:9</option>
+                    <option value="9:16">9:16</option>
+                    <option value="1:1">1:1</option>
+                    <option value="4:3">4:3</option>
+                    <option value="3:4">3:4</option>
+                  </select>
+                </label>
+                <label class="api-try-field">
+                  <span>分辨率</span>
+                  <select data-json-path="resolution">
+                    <option value="480p">480p</option>
+                    <option value="720p" selected>720p</option>
+                    <option value="1080p">1080p</option>
+                  </select>
+                </label>
+                <label class="api-try-field">
+                  <span>生成音频</span>
+                  <select data-json-path="generate_audio" data-json-type="boolean">
+                    <option value="true" selected>是</option>
+                    <option value="false">否</option>
+                  </select>
+                </label>
+              </div>
+              <label class="api-try-field">
+                <span>请求体（JSON）</span>
+                <textarea data-field="body">{
+  "model": "doubao-seedance-2.0-mini",
+  "prompt": "人物自然说话，参考视频中的动作和镜头运动，并匹配参考音频的说话节奏",
+  "referenceVideos": [
+    "https://example.com/reference.mp4"
+  ],
+  "referenceAudios": [
+    "https://example.com/speech.wav"
+  ],
+  "duration": 11,
+  "size": "16:9",
+  "resolution": "720p",
+  "generate_audio": true
+}</textarea>
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">请把参考视频和参考音频 URL 换成 SeedanceAPI 上游可访问的地址。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <h2>创建响应</h2>
+          <p>创建成功后，响应顶层的 <code>id</code> 是公开任务 ID。请保存该值用于后续查询。</p>
+          <pre><code>{
+  "id": "task_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "model": "doubao-seedance-2.0",
+  "status": "queued",
+  "created_at": 1783355337
+}</code></pre>
+
+          <h2>查询任务结果</h2>
+          <div class="api-playground" data-playground data-method="GET" data-path="/v1/video/generations/{task_id}">
+            <div class="api-endpoint">
+              <span class="api-method get">GET</span>
+              <code class="api-path">/v1/video/generations/{task_id}</code>
+              <button type="button" class="api-try-btn">试一试</button>
+            </div>
+            <div class="api-try-panel" hidden>
+              <label class="api-try-field">
+                <span>API 令牌</span>
+                <input type="password" data-field="token" placeholder="sk-你的令牌" autocomplete="off" />
+              </label>
+              <label class="api-try-field">
+                <span>任务 ID</span>
+                <input type="text" data-field="task_id" placeholder="task_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+              </label>
+              <div class="api-try-actions">
+                <button type="button" class="api-send">发送请求</button>
+                <span class="api-try-hint">状态为 <code>succeeded</code> 时，响应中会返回视频地址。</span>
+              </div>
+              <pre class="api-response"><code></code></pre>
+            </div>
+          </div>
+
+          <p>任务完成后的响应示例：</p>
+          <pre><code>{
+  "id": "task_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "model": "doubao-seedance-2.0",
+  "status": "succeeded",
+  "content": {
+    "video_url": "https://example.com/result.mp4"
+  }
+}</code></pre>
+
+          <h3>任务状态</h3>
+          <table class="table">
+            <thead><tr><th>status</th><th>说明</th><th>处理方式</th></tr></thead>
+            <tbody>
+              <tr><td><code>queued</code></td><td>任务正在排队。</td><td>稍后继续查询。</td></tr>
+              <tr><td><code>in_progress</code></td><td>视频正在生成。</td><td>稍后继续查询。</td></tr>
+              <tr><td><code>succeeded</code></td><td>生成成功。</td><td>读取 <code>content.video_url</code>。</td></tr>
+              <tr><td><code>failed</code></td><td>生成失败。</td><td>停止轮询并读取 <code>error</code>。</td></tr>
+            </tbody>
+          </table>
+
+          <h2>失败响应格式</h2>
+          <p>参数错误、鉴权失败或服务异常使用统一错误对象。任务本身生成失败时，查询响应的 <code>status</code> 为 <code>failed</code>，并包含具体错误信息。</p>
+          <pre><code>{
+  "error": {
+    "message": "model field is required",
+    "type": "invalid_request_error",
+    "param": "model",
+    "code": "missing_model"
+  }
+}</code></pre>
+          <p>任务生成失败时，查询接口仍会返回任务对象，并使用固定错误码：</p>
+          <pre><code>{
+  "id": "task_xxxxxxxxxxxxxxxxxxxxxxxx",
+  "model": "doubao-seedance-2.0",
+  "status": "failed",
+  "error": {
+    "message": "Video generation failed",
+    "code": "VIDEO_GENERATION_FAILED"
+  }
+}</code></pre>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

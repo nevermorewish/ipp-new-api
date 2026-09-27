@@ -8,11 +8,14 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/service/embed"
+	"github.com/QuantumNous/new-api/setting/system_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,6 +54,30 @@ func ProxySeedanceMaterial(c *gin.Context) {
 		return
 	}
 
+	if channel.Type == constant.ChannelTypeSeedanceAPI && c.Query("Action") == "CreateVisualValidateSession" {
+		var payload map[string]any
+		if common.Unmarshal(requestBody, &payload) != nil || payload == nil {
+			writeSeedanceMaterialError(c, http.StatusBadRequest, "InvalidRequest", "JSON object required")
+			return
+		}
+		if callback, _ := payload["CallbackURL"].(string); strings.TrimSpace(callback) == "" {
+			baseURL := strings.TrimRight(system_setting.ServerAddress, "/")
+			if baseURL == "" {
+				scheme := "http"
+				if c.Request.TLS != nil {
+					scheme = "https"
+				}
+				baseURL = scheme + "://" + c.Request.Host
+			}
+			payload["CallbackURL"] = baseURL + "/docs/seedance/assets.html"
+		}
+		requestBody, err = common.Marshal(payload)
+		if err != nil {
+			writeSeedanceMaterialError(c, http.StatusBadRequest, "InvalidRequest", "invalid verification request")
+			return
+		}
+	}
+
 	targetURL := strings.TrimRight(channel.GetBaseURL(), "/") + "/api/material"
 	if c.Request.URL.RawQuery != "" {
 		targetURL += "?" + c.Request.URL.RawQuery
@@ -60,7 +87,18 @@ func ProxySeedanceMaterial(c *gin.Context) {
 		writeSeedanceMaterialError(c, http.StatusBadRequest, "InvalidRequest", err.Error())
 		return
 	}
-	request.Header.Set("Authorization", "Bearer "+key)
+	if channel.Type == constant.ChannelTypeSeedanceAPI {
+		headers, signErr := embed.SignedHeaders(embed.FromContext(c), key)
+		if signErr != nil {
+			writeSeedanceMaterialError(c, http.StatusUnauthorized, "AccessDenied", "authenticated token identity is required")
+			return
+		}
+		for name, value := range headers {
+			request.Header.Set(name, value)
+		}
+	} else {
+		request.Header.Set("Authorization", "Bearer "+key)
+	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
 
@@ -69,7 +107,10 @@ func ProxySeedanceMaterial(c *gin.Context) {
 		writeSeedanceMaterialError(c, http.StatusServiceUnavailable, "MaterialUpstreamUnavailable", "new proxy http client failed")
 		return
 	}
-	response, err := client.Do(request)
+	proxyClient := *client
+	proxyClient.Timeout = 10 * time.Minute
+	proxyClient.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
+	response, err := proxyClient.Do(request)
 	if err != nil {
 		writeSeedanceMaterialError(c, http.StatusBadGateway, "MaterialUpstreamError", "Seedance material service request failed")
 		return
@@ -103,7 +144,7 @@ func seedanceMaterialChannel(c *gin.Context) (*model.Channel, error) {
 	group := common.GetContextKeyString(c, constant.ContextKeyUsingGroup)
 	for _, channel := range channels {
 		if channel.Status != common.ChannelStatusEnabled ||
-			channel.Type != constant.ChannelTypeSeedance ||
+			(channel.Type != constant.ChannelTypeSeedance && channel.Type != constant.ChannelTypeSeedanceAPI) ||
 			(group != "" && !slices.Contains(channel.GetGroups(), group)) {
 			continue
 		}

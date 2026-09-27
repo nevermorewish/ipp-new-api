@@ -42,6 +42,11 @@ type proxyURLConfig struct {
 }
 
 func checkRedirect(req *http.Request, via []*http.Request) error {
+	// Signed SeedanceAPI assertions are audience-specific credentials. The
+	// upstream must return its task response directly, never relay them onward.
+	if len(via) > 0 && via[0].Header.Get("X-Embed-Sig") != "" {
+		return http.ErrUseLastResponse
+	}
 	urlStr := req.URL.String()
 	if err := validateURLWithCurrentFetchSetting(urlStr, true); err != nil {
 		return fmt.Errorf("redirect to %s blocked: %v", urlStr, err)

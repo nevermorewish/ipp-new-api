@@ -1,0 +1,102 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CC-Switch · Claude Code 配置 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="使用 CC-Switch 把寰星云科作为 Claude Code 的供应商。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">CC-Switch · Claude Code</p>
+            <h1>Claude Code 配置</h1>
+          </header>
+
+          <ol>
+            <li>打开你下载的 CC Switch 软件，你会看到如下图的初始界面</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/ccswitch/003.webp" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="2">
+            <li>在顶部工具类型中，选择“Claude”</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/ccswitch/004.webp" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="3">
+            <li>在供应商列表中，选择“自定义配置”</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/ccswitch/005.png" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="4">
+            <li>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a>，在寰星云科中创建 <code>default</code> 分组令牌，点击复制按钮，复制 ApiKey 到剪切板</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/cli/025.webp" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="5">
+            <li>下拉模态框，找到“API 请求地址”配置项，填写 <code data-api-base>https://api.huanxing.ai</code></li>
+          </ol>
+
+          <ol start="6">
+            <li>继续找到“API Key”配置项，填入你刚才复制的 ApiKey，再点击右下角“添加”按钮</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/ccswitch/006.png" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="7">
+            <li>添加成功后，在主界面会看到我们配置的供应商，在右侧点击“启用”按钮，显示“使用中”，则配置完成</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/ccswitch/007.png" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="8">
+            <li>点击左上角“设置”按钮，在通用页面下拉找到 <code>跳过 Claude Code初次安装确认</code> ，务必勾选</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/ccswitch/017.webp" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <ol start="9">
+            <li>在终端运行 <code>claude</code>，看到对话界面并能正常回复即表示配置完成</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/cli/016.webp" alt="" />
+            <figcaption></figcaption>
+          </figure>
+
+          <div class="hint-container warning">
+            <p class="hint-container-title">使用提醒</p>
+            <p>配置是否生效，请直接以 Claude Code 内的实际对话结果为准，并在 Claude Code 中完成最终测试。</p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

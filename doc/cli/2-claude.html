@@ -1,0 +1,108 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Code 配置 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="不依赖 CC-Switch，直接修改 settings.json 把 Claude Code 接到寰星云科。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">CLI · Claude Code</p>
+            <h1>Claude Code 配置</h1>
+          </header>
+
+          <div class="vp-tabs" data-vp-tabs>
+            <div class="vp-tabs-nav" role="tablist">
+              <button type="button" class="vp-tab-nav active" role="tab" aria-controls="claude-windows" aria-selected="true">Windows</button>
+              <button type="button" class="vp-tab-nav" role="tab" aria-controls="claude-macos" aria-selected="false">MacOS</button>
+            </div>
+            <div class="vp-tab active" id="claude-windows" role="tabpanel" aria-expanded="true">
+              <div class="vp-tab-title">Windows</div>
+              <ol>
+                <li>键盘按下“Win+R”键，输入以下内容后回车，打开 Claude Code 配置目录</li>
+              </ol>
+              <pre><code>%userprofile%\.claude</code></pre>
+              <figure><img src="/docs/assets/img/cli/013.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="2">
+                <li>目录内容如图所示，如果目录中没有 <code>settings.json</code>，你需要手动创建后打开</li>
+              </ol>
+              <ul><li><strong>settings.json</strong>：Claude 主要的配置文件，主要用来配置中转站地址以及 ApiKey，以及一些 hooks、plugins 等</li></ul>
+              <figure><img src="/docs/assets/img/cli/014.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="3">
+                <li>将以下内容写入 <code>settings.json</code></li>
+              </ol>
+              <pre><code>{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.huanxing.ai",
+    "ANTHROPIC_AUTH_TOKEN": "xxx",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  }
+}</code></pre>
+              <figure><img src="/docs/assets/img/cli/015.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="4">
+                <li>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a>，在寰星云科中创建 <code>default</code> 分组令牌，替换上方 <code>xxx</code> 部分</li>
+              </ol>
+              <figure><img src="/docs/assets/img/cli/025.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="5">
+                <li>在 Windows 终端运行 <code>claude</code>，出现对话界面后进行对话测试，能收到回复即表示配置成功</li>
+              </ol>
+              <figure><img src="/docs/assets/img/cli/016.webp" alt="" /><figcaption></figcaption></figure>
+            </div>
+            <div class="vp-tab" id="claude-macos" role="tabpanel" aria-expanded="false">
+              <div class="vp-tab-title">MacOS</div>
+              <ol>
+                <li>在访达界面按下 “Command+Shift+G”，输入以下路径后回车，打开配置目录</li>
+              </ol>
+              <pre><code>~/.claude</code></pre>
+              <figure><img src="/docs/assets/img/cli/017.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="2">
+                <li>若目录不存在 <code>settings.json</code>，需要你手动进行创建</li>
+              </ol>
+              <ul><li><strong>settings.json</strong>：Claude 主要的配置文件，主要用来配置中转站地址以及 ApiKey，以及一些 hooks、plugins 等</li></ul>
+              <figure><img src="/docs/assets/img/cli/018.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="3">
+                <li>将以下内容写入 <code>settings.json</code></li>
+              </ol>
+              <pre><code>{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.huanxing.ai",
+    "ANTHROPIC_AUTH_TOKEN": "xxx",
+    "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  }
+}</code></pre>
+              <figure><img src="/docs/assets/img/cli/015.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="4">
+                <li>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a>，在寰星云科中创建 <code>default</code> 分组令牌，替换上方 <code>xxx</code></li>
+              </ol>
+              <figure><img src="/docs/assets/img/cli/025.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="5">
+                <li>在终端运行 <code>claude</code>，看到对话界面并能正常回复即表示配置完成</li>
+              </ol>
+              <figure><img src="/docs/assets/img/cli/016.webp" alt="" /><figcaption></figcaption></figure>
+            </div>
+          </div>
+          <div class="hint-container important">
+            <p class="hint-container-title">重要</p>
+            <p><strong>注意，如果配置完仍然有报错问题，提示你需要登录，请看如下链接解决</strong><br /><a href="/docs/faq/CC.html#claude-code-无法连接到-anthropic-服务">claude-code-无法连接到-anthropic-服务</a></p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

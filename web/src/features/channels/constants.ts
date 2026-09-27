@@ -37,6 +37,8 @@ export const CHANNEL_TYPE_SEEDANCE = 64
 
 export const CHANNEL_TYPE_OPENAI_GPT = 65
 
+export const CHANNEL_TYPE_SEEDANCE_API = 66
+
 export const CHANNEL_TYPES = {
   0: 'Unknown',
   1: 'OpenAI',
@@ -100,6 +102,7 @@ export const CHANNEL_TYPES = {
   63: 'SGLang',
   64: 'Seedance',
   65: 'OpenAI-GPT',
+  66: 'SeedanceAPI',
 } as const
 
 export type ChannelProviderPresentation = {
@@ -183,17 +186,22 @@ export const CHANNEL_PROVIDER_PRESENTATION: Partial<
   },
   62: { descriptionKey: 'Connect to self-hosted models served by vLLM' },
   63: { descriptionKey: 'Connect to self-hosted models served by SGLang' },
-  64: { descriptionKey: 'Connect to Doubao Seedance video generation services' },
+  64: {
+    descriptionKey: 'Connect to Doubao Seedance video generation services',
+  },
   65: { descriptionKey: 'Connect to OpenAI GPT compatible services' },
+  66: {
+    descriptionKey: 'Connect to SeedanceAPI using a shared signing secret',
+  },
 } satisfies Record<
   Exclude<keyof typeof CHANNEL_TYPES, 0 | typeof CHANNEL_TYPE_TASK_PLUGIN>,
   ChannelProviderPresentation
 >
 
 const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [
-  1, 65, 14, 24, 33, 43, 3, 41, 17, 45, 25, 26, 23, 48, 60, 58, 59, 61, 42, 34, 20,
-  4, 62, 40, 27, 15, 46, 18, 31, 35, 49, 19, 47, 37, 38, 39, 11, 8, 57, 22, 21,
-  44, 2, 5, 36, 50, 51, 52, 53, 54, 64, 55, 56,
+  1, 65, 14, 24, 33, 43, 3, 41, 17, 45, 25, 26, 23, 48, 60, 58, 59, 61, 42, 34,
+  20, 4, 62, 40, 27, 15, 46, 18, 31, 35, 49, 19, 47, 37, 38, 39, 11, 8, 57, 22,
+  21, 44, 2, 5, 36, 50, 51, 52, 53, 54, 64, 66, 55, 56,
 ]
 
 export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {

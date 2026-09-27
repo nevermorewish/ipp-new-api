@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRAE 接入 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="在 TRAE 中添加模型并通过自定义配置接入寰星云科 API。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Tools · TRAE</p>
+            <h1>TRAE 接入</h1>
+          </header>
+
+          <div class="callout">
+            <p><strong>接入方式：</strong>TRAE 的“添加模型”支持自定义配置。选择自定义配置后，填写寰星云科接口地址、API Key 和模型名即可。</p>
+          </div>
+
+          <h2>前置准备</h2>
+          <ul class="list">
+            <li>已在寰星云科控制台创建 API 令牌，建议使用 <code>default</code> 分组。</li>
+            <li>已确认要填写的模型名在当前令牌分组可用。</li>
+            <li>本文示例模型为 <code>claude-opus-4-8</code>。</li>
+          </ul>
+
+          <h2>进入添加模型</h2>
+          <ol class="ordered">
+            <li>打开 TRAE，在输入框右侧或模型下拉菜单中展开当前模型列表。</li>
+            <li>点击底部的 <strong>添加模型</strong>。</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/tools/trae/01.png" alt="TRAE 点击添加模型" />
+            <figcaption>在模型列表底部点击“添加模型”。</figcaption>
+          </figure>
+
+          <h2>选择自定义配置</h2>
+          <ol class="ordered" start="3">
+            <li>在“添加模型”窗口中找到 <strong>自定义配置</strong>。</li>
+            <li>展开自定义配置，并填写接口信息。</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/tools/trae/02.png" alt="TRAE 选择自定义配置" />
+            <figcaption>在模型提供商列表中选择“自定义配置”。</figcaption>
+          </figure>
+
+          <h2>填写接口信息</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>配置项</th>
+                <th>填写内容</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>接口地址</td>
+                <td><code>https://api.huanxing.ai</code></td>
+                <td>使用寰星云科 API 根地址。</td>
+              </tr>
+              <tr>
+                <td>API Key</td>
+                <td><code>sk-******</code></td>
+                <td>填写在寰星云科创建的 API 令牌。</td>
+              </tr>
+              <tr>
+                <td>模型名称</td>
+                <td><code>claude-opus-4-8</code></td>
+                <td>可替换为模型广场中当前可用的模型名。</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="tip">
+            <p><strong>保存后测试：</strong>回到 TRAE 对话页，选择刚添加的模型发送测试消息。如果提示模型不存在或无可用渠道，优先检查模型名和令牌分组。</p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

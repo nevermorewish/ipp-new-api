@@ -248,7 +248,7 @@ export const meta = {
   },
   version: "1.1.0",
   author: { name: "QuantumNous" },
-  channelTypes: [54, 45], // VolcEngine-type channels serve Ark video models with the same wire format
+  channelTypes: [54, 45, 64], // VolcEngine-type channels serve Ark video models with the same wire format
   models: Object.keys(VIDEO_MODELS).concat(Object.keys(IMAGE_MODELS)),
   fetchMode: "per_task",
   upstreams: ["vendor", "new_api"],

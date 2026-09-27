@@ -616,6 +616,9 @@ func executeTaskSubmissionWith(
 	stage = "insert"
 	task := model.InitTask(result.Platform, relayInfo)
 	task.PrivateData.Execution = service.TaskExecutionSnapshotFromContext(c)
+	if execution := task.PrivateData.Execution; execution != nil && execution.TaskPlugin != nil && execution.TaskPlugin.Key == "seedanceapi" {
+		task.PrivateData.Key = relayInfo.ApiKey
+	}
 	task.PrivateData.UpstreamTaskID = result.UpstreamTaskID
 	task.PrivateData.BillingSource = relayInfo.BillingSource
 	task.PrivateData.SubscriptionId = relayInfo.SubscriptionId

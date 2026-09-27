@@ -1,0 +1,73 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>令牌分组介绍 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="令牌分组（Token Group）的作用、常见分组划分与如何为客户端挑选合适的分组。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">模型与令牌</p>
+            <h1>令牌分组介绍</h1>
+          </header>
+
+          <p>「令牌分组」是寰星云科 API 控制访问范围的主要机制。每条令牌都属于一个分组，每个分组对应一组可用模型。换句话说：<strong>令牌分组 = 这条令牌能用的模型集合</strong>。</p>
+
+          <h2>当前可用分组</h2>
+          <table class="table">
+            <thead><tr><th>分组名</th><th>包含的模型</th><th>典型用途</th></tr></thead>
+            <tbody>
+              <tr><td>default</td><td>大多数对话模型，包括 Claude / GPT / Gemini 主流型号</td><td>日常开发、个人 Claude Code、Codex、Gemini CLI</td></tr>
+            </tbody>
+          </table>
+          <div class="callout">
+            <p>当前文档中的令牌创建步骤统一选择 <code>default</code> 分组。实际可用模型范围以控制台「分组」页签显示为准。</p>
+          </div>
+
+          <h2>新建令牌时挑分组</h2>
+          <p>创建令牌时，分组字段决定接下来这条令牌能调到哪个模型集合。当前只需要选择 <code>default</code> 分组：</p>
+          <ul class="list">
+            <li>Claude Code、Codex、Gemini CLI、Cline 等客户端都使用 <code>default</code> 分组令牌。</li>
+            <li>多人共用时，建议给团队成员各自发独立令牌，但都放在 <code>default</code> 分组里，方便审计。</li>
+            <li>如果模型调用失败，先确认该模型是否已在 <code>default</code> 分组开放。</li>
+          </ul>
+
+          <figure>
+            <img src="/docs/assets/img/token-2-group-select.png" alt="令牌分组选择" data-slot="token-2-group-select" />
+            <figcaption>新建令牌时的分组下拉</figcaption>
+          </figure>
+
+          <h2>常见错误信息</h2>
+          <div class="warning">
+            <p><strong>model_not_found / model is not allowed in this group：</strong>当前令牌所属分组里没有这个模型。请确认令牌属于 <code>default</code> 分组，并联系管理员把模型加入该分组。</p>
+          </div>
+          <div class="warning">
+            <p><strong>group_disabled：</strong>分组被临时关停。常见于上游故障应急或商务调整，等管理员重新开启即可。</p>
+          </div>
+
+          <h2>分组与计费</h2>
+          <p>模型倍率以控制台模型广场显示为准。当前文档统一使用 <code>default</code> 分组，因此创建令牌和查看倍率时都选择 <code>default</code>。</p>
+
+          <h2>怎么知道某个客户端必须用哪个分组？</h2>
+          <ol class="ordered">
+            <li>找到该客户端的目标模型名（如 Claude Code 默认使用 Claude Sonnet 系列）。</li>
+            <li>到模型广场搜索该模型，确认「所在分组」列里包含 <code>default</code>。</li>
+            <li>创建或使用 <code>default</code> 分组令牌调用该模型。</li>
+          </ol>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

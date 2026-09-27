@@ -1,13 +1,18 @@
 package router
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/jsplugin"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -160,6 +165,90 @@ func TestGetOpenAIVideoRouteRendersJimengTask(t *testing.T) {
 			if testCase.wantStatus == http.StatusOK {
 				assert.Equal(t, "data", recorder.Body.String())
 			}
+		})
+	}
+}
+
+func TestServeDocsPagesAndAssets(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	assets := os.DirFS("../doc")
+	engine := gin.New()
+	engine.GET("/docs/*filepath", serveDocs(assets))
+	count := 0
+	require.NoError(t, fs.WalkDir(assets, ".", func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		count++
+		expected, err := fs.ReadFile(assets, name)
+		require.NoError(t, err)
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/docs/"+name, nil))
+		require.Equal(t, http.StatusOK, recorder.Code, name)
+		assert.Equal(t, expected, recorder.Body.Bytes(), name)
+		assert.Contains(t, recorder.Header().Get("Cache-Control"), "no-store", name)
+		if strings.HasSuffix(name, ".html") {
+			assert.Contains(t, recorder.Header().Get("Content-Type"), "text/html", name)
+		}
+		return nil
+	}))
+	assert.Greater(t, count, 100)
+}
+
+func TestServeDocsFallbackAndMissingAsset(t *testing.T) {
+	engine := gin.New()
+	engine.GET("/docs/*filepath", serveDocs(fstest.MapFS{
+		"index.html":          &fstest.MapFile{Data: []byte("documentation home")},
+		"seedance/index.html": &fstest.MapFile{Data: []byte("video docs")},
+	}))
+	for _, tc := range []struct {
+		path   string
+		status int
+		body   string
+	}{
+		{"/docs/", 200, "documentation home"},
+		{"/docs/seedance/", 200, "video docs"},
+		{"/docs/unknown/page.html", 200, "documentation home"},
+		{"/docs/missing.png", 404, ""},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, tc.path, nil))
+			assert.Equal(t, tc.status, recorder.Code)
+			if tc.body != "" {
+				assert.Equal(t, tc.body, recorder.Body.String())
+			}
+		})
+	}
+}
+
+func TestSeedanceNativeRouteSelectsMatchingVideoPlugin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, tc := range []struct{ model, plugin string }{
+		{"doubao-seedance-2.0-mini", "seedanceapi"},
+		{"doubao-seedance-2-0-260128", "doubao"},
+	} {
+		t.Run(tc.plugin, func(t *testing.T) {
+			engine := gin.New()
+			engine.POST("/api/v3/contents/generations/tasks", pinSeedanceNativeRoute(jsplugin.Route{Method: http.MethodPost, Type: jsplugin.RouteTypeSubmit}), func(c *gin.Context) {
+				pinned, exists := c.Get(jsplugin.ContextKeyPinnedRoute)
+				require.True(t, exists)
+				assert.Equal(t, tc.plugin, pinned.(jsplugin.PinnedRoute).Plugin.Meta.Key)
+				storage, err := common.GetBodyStorage(c)
+				require.NoError(t, err)
+				body, err := storage.Bytes()
+				require.NoError(t, err)
+				assert.Contains(t, string(body), tc.model)
+				c.Status(http.StatusNoContent)
+			})
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPost, "/api/v3/contents/generations/tasks", strings.NewReader(`{"model":"`+tc.model+`","content":[{"type":"text","text":"ball"}]}`))
+			request.Header.Set("Content-Type", "application/json")
+			engine.ServeHTTP(recorder, request)
+			assert.Equal(t, http.StatusNoContent, recorder.Code, recorder.Body.String())
 		})
 	}
 }

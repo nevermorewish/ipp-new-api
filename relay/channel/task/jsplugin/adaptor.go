@@ -30,6 +30,7 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	kitdto "github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/service/embed"
 	"github.com/gin-gonic/gin"
 )
 
@@ -81,12 +82,13 @@ const maxTaskArtifacts = 64
 const maxTaskPluginPersistedJSONBytes = 1 << 20
 
 type TaskAdaptor struct {
-	plugin         *pluginruntime.LoadedPlugin
-	info           *relaycommon.RelayInfo
-	submit         *requestDescriptor
-	routeRequest   *pluginruntime.RouteRequestContext
-	requestHeaders map[string]string
-	files          []map[string]any
+	plugin           *pluginruntime.LoadedPlugin
+	info             *relaycommon.RelayInfo
+	submit           *requestDescriptor
+	routeRequest     *pluginruntime.RouteRequestContext
+	requestHeaders   map[string]string
+	files            []map[string]any
+	seedanceIdentity embed.Identity
 }
 
 func New(plugin *pluginruntime.LoadedPlugin) *TaskAdaptor { return &TaskAdaptor{plugin: plugin} }
@@ -925,7 +927,11 @@ func (a *TaskAdaptor) BuildContentRequest(task *model.Task, artifactKey string, 
 	ctx["artifactKey"] = artifactKey
 	ctx["baseUrl"] = a.info.ChannelBaseUrl
 	ctx["clientRequest"] = jsonValue(clientRequest)
-	if err = a.applyUpstreamCredentials(ctx, a.info.ChannelType, a.info.ApiKey, a.info.ChannelSetting.Proxy); err != nil {
+	contentKey := a.info.ApiKey
+	if task.PrivateData.Key != "" {
+		contentKey = task.PrivateData.Key
+	}
+	if err = a.applyUpstreamCredentials(ctx, a.info.ChannelType, contentKey, a.info.ChannelSetting.Proxy); err != nil {
 		return nil, err
 	}
 	value, err := a.plugin.Engine.Call(context.Background(), "buildContentRequest", ctx)
@@ -1094,6 +1100,22 @@ func (a *TaskAdaptor) applyUpstreamCredentials(ctx map[string]any, channelType i
 		return nil
 	}
 	ctx["upstream"] = map[string]any{"kind": pluginruntime.UpstreamKindVendor}
+	if a.plugin.Meta.Key == "seedanceapi" {
+		var identity embed.Identity
+		identityValue := ctx["seedanceIdentity"]
+		if state, ok := ctx["state"].(map[string]any); ok {
+			identityValue = state["identity"]
+		}
+		if err := convert(identityValue, &identity); err != nil {
+			return fmt.Errorf("SeedanceAPI task identity is unavailable")
+		}
+		headers, err := embed.SignedHeaders(identity, key)
+		if err != nil {
+			return err
+		}
+		ctx["auth"] = map[string]any{"headers": headers, "identity": identity}
+		return nil
+	}
 	auth, err := resolveAuth(a.plugin.Meta.Auth, key, proxy)
 	if err != nil {
 		return err
@@ -1369,6 +1391,12 @@ func (a *TaskAdaptor) submitContext(c *gin.Context, info *relaycommon.RelayInfo)
 	ctx["upstreamModel"] = info.UpstreamModelName
 	ctx["baseUrl"] = info.ChannelBaseUrl
 	ctx["userSetting"] = info.UserSetting
+	if a.plugin.Meta.Key == "seedanceapi" && c != nil {
+		a.seedanceIdentity = embed.FromContext(c)
+	}
+	if a.plugin.Meta.Key == "seedanceapi" {
+		ctx["seedanceIdentity"] = a.seedanceIdentity
+	}
 	if err := a.applyUpstreamCredentials(ctx, info.ChannelType, info.ApiKey, info.ChannelSetting.Proxy); err != nil {
 		ctx["authError"] = err.Error()
 	}

@@ -1,0 +1,70 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模型广场 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="寰星云科控制台的模型广场如何使用：查看可用模型、上下文长度、计费倍率。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">模型与令牌</p>
+            <h1>模型广场</h1>
+          </header>
+
+          <p>模型广场（Model Marketplace）是控制台里所有可用模型的清单。任何接入工作的第一件事，都是先在这里确认「目标模型是否存在」「default 分组是否可用」「价格是不是预期内」。</p>
+
+          <figure>
+            <img src="/docs/assets/img/token-1-marketplace.png" alt="模型广场列表" data-slot="token-1-marketplace" />
+            <figcaption>占位图：模型广场列表与筛选条件</figcaption>
+          </figure>
+
+          <h2>列表里能看到的信息</h2>
+          <table class="table">
+            <thead>
+              <tr><th>字段</th><th>含义</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>模型名</td><td>API 调用时填入的 <code>model</code> 字段，例如 <code>claude-sonnet-4-6</code>、<code>gpt-5.4</code>、<code>gemini-3.1-pro</code>。</td></tr>
+              <tr><td>上游供应商</td><td>背后接的是 Anthropic、OpenAI、Google、Azure、AWS Bedrock 等中的哪一家。</td></tr>
+              <tr><td>所在分组</td><td>该模型当前可由 <code>default</code> 分组令牌访问。</td></tr>
+              <tr><td>上下文长度</td><td>模型一次能接收的最大 token 数，例如 200K、1M。</td></tr>
+              <tr><td>计费倍率</td><td>相对官方定价的倍数；输入 / 输出 / 缓存可能有不同倍率。</td></tr>
+              <tr><td>能力标签</td><td>是否支持流式（stream）、工具调用（tool_use）、视觉（vision）、缓存（cache）等。</td></tr>
+            </tbody>
+          </table>
+
+          <h2>挑选模型的常见思路</h2>
+          <ul class="list">
+            <li><strong>代码任务：</strong>优先选有「工具调用」能力的旗舰对话模型，如 Claude Sonnet 系列与 GPT-5 系列。</li>
+            <li><strong>长上下文阅读：</strong>选明确标注 200K / 1M 上下文长度的模型，避免传完整代码库时被截断。</li>
+            <li><strong>批量任务 / 后台脚本：</strong>选倍率更低的 mini / haiku / flash 系列模型，并设较短的输出上限。</li>
+            <li><strong>图像生成 / 编辑：</strong>到 <a href="/docs/paint/GPTImage.html">绘图模型教程</a> 看专用模型说明。</li>
+          </ul>
+
+          <h2>价格判断小窍门</h2>
+          <p>列表上的「输入 / 输出 / 缓存」三列价格不是绝对值，而是「上游官方价 × 倍率」。比如官方 Sonnet 输入 3 USD / 1M tokens，倍率 1.0x 就是 3 美元，倍率 0.5x 就是 1.5 美元。请按控制台实际展示的倍率判断成本。</p>
+
+          <h2>看不到目标模型？</h2>
+          <ol class="ordered">
+            <li>切换「分组」筛选条件为 <code>default</code>，确认当前只查看 default 分组模型。</li>
+            <li>到 <a href="/docs/token/2-group.html">令牌分组</a> 查看 default 分组说明。</li>
+            <li>如果目标模型未在 <code>default</code> 分组开放，请联系管理员加入该模型。</li>
+            <li>如果账号权限受限，请联系管理员确认 default 分组是否已开放。</li>
+          </ol>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

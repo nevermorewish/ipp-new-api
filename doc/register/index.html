@@ -1,0 +1,40 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>快速开始 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="寰星云科 API 快速开始：从购买额度到完成第一次 CLI 调用的完整路径。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Getting Started</p>
+            <h1>快速开始</h1>
+          </header>
+          <p>本章把第一次使用寰星云科 API 拆成 4 步。每一步都对应导航中的一个子页面，按顺序完成即可在 Claude Code、Codex 或 Gemini CLI 上跑通第一次调用。</p>
+          <div class="steps">
+            <a class="step" href="/docs/register/3-quota.html"><span class="num">1</span><h3>购买额度</h3><p>进入「钱包管理」选择或自定义额度后完成支付。</p></a>
+            <a class="step" href="/docs/register/4-token.html"><span class="num">2</span><h3>创建 API 令牌</h3><p>按用途创建独立令牌，统一选择 default 分组，并设置额度与有效期。</p></a>
+            <a class="step" href="/docs/register/5-env.html"><span class="num">3</span><h3>环境检查（必要）</h3><p>检查 Node.js、npm 以及目标 CLI 是否已经安装到位。</p></a>
+            <a class="step" href="/docs/register/6-cli.html"><span class="num">4</span><h3>安装 CLI 工具</h3><p>按 Windows / macOS / Linux 安装 Claude Code 等 CLI 工具。</p></a>
+          </div>
+          <div class="callout">
+            <strong>建议：</strong>
+            <p>第一次接入时，先用一个无限制的临时令牌跑通流程，确认能成功调用后，再为生产环境另建一个有额度上限、default 分组、可随时停用的正式令牌。</p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

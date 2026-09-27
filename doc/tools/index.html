@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>工具接入教程 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="WorkBuddy、Cursor、TRAE 等工具接入寰星云科 API 的配置教程。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Tools</p>
+            <h1>工具接入教程</h1>
+          </header>
+          <p>
+            本分类用于说明第三方开发工具如何通过 OpenAI 兼容接口接入寰星云科。开始前请先在控制台创建
+            <code>default</code> 分组 API 令牌，并确认要使用的模型已经在该分组开放。
+          </p>
+          <div class="grid three">
+            <a class="card" href="/docs/tools/workbuddy.html">
+              <h3>WorkBuddy 接入</h3>
+              <p>在 WorkBuddy 中添加自定义模型，填写接口地址、API Key 和模型名称。</p>
+            </a>
+            <a class="card" href="/docs/tools/cursor.html">
+              <h3>Cursor 接入</h3>
+              <p>在 Cursor Models 设置中启用 OpenAI Key，并覆盖 OpenAI Base URL。</p>
+            </a>
+            <a class="card" href="/docs/tools/TRAE.html">
+              <h3>TRAE 接入</h3>
+              <p>在 TRAE 中添加模型，选择自定义配置并填写寰星云科接口信息。</p>
+            </a>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

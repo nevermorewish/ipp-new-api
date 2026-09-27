@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WorkBuddy 接入 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="在 WorkBuddy 中添加自定义模型并接入寰星云科 API。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Tools · WorkBuddy</p>
+            <h1>WorkBuddy 接入</h1>
+          </header>
+
+          <div class="callout">
+            <p><strong>接入方式：</strong>WorkBuddy 支持 OpenAI 兼容协议的自定义 API。配置时使用寰星云科接口地址、你的 API Key，以及要调用的模型名称。</p>
+          </div>
+
+          <h2>前置准备</h2>
+          <ul class="list">
+            <li>已在寰星云科控制台完成 <a href="/docs/register/4-token.html">创建 API 令牌</a>。</li>
+            <li>令牌分组建议选择 <code>default</code>，并确认目标模型在该分组可用。</li>
+            <li>本文示例模型为 <code>claude-opus-4-8</code>，也可以替换为模型广场中实际开放的模型名。</li>
+          </ul>
+
+          <h2>添加自定义模型</h2>
+          <ol class="ordered">
+            <li>打开 WorkBuddy，在对话输入框附近点击当前模型名称，展开模型列表。</li>
+            <li>在模型列表底部找到 <strong>配置自定义模型</strong>，进入模型设置页面。</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/tools/workbuddy/01.jpeg" alt="WorkBuddy 选择配置自定义模型" />
+            <figcaption>在模型列表中进入“配置自定义模型”。</figcaption>
+          </figure>
+
+          <ol class="ordered" start="3">
+            <li>在“添加模型”弹窗中，供应商选择 <strong>自定义 / Custom</strong>。</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/tools/workbuddy/02.jpeg" alt="WorkBuddy 选择自定义供应商" />
+            <figcaption>供应商选择“自定义 / Custom”。</figcaption>
+          </figure>
+
+          <h2>填写接口信息</h2>
+          <p>按下方内容填写后保存：</p>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>配置项</th>
+                <th>填写内容</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>提供商</td>
+                <td><code>自定义 / Custom</code></td>
+                <td>使用 WorkBuddy 的 OpenAI 兼容自定义 API 配置。</td>
+              </tr>
+              <tr>
+                <td>接口地址</td>
+                <td><code>https://api.huanxing.ai</code></td>
+                <td>按 WorkBuddy 当前配置入口填写根地址。</td>
+              </tr>
+              <tr>
+                <td>API Key</td>
+                <td><code>sk-******</code></td>
+                <td>填写你在寰星云科创建的 API 令牌。</td>
+              </tr>
+              <tr>
+                <td>模型名称</td>
+                <td><code>claude-opus-4-8</code></td>
+                <td>可替换为模型广场中当前可用的模型名。</td>
+              </tr>
+            </tbody>
+          </table>
+          <figure>
+            <img src="/docs/assets/img/tools/workbuddy/03.png" alt="WorkBuddy 填写寰星云科接口地址和模型名称" />
+            <figcaption>填写接口地址、API Key 和模型名称后保存。</figcaption>
+          </figure>
+
+          <div class="tip">
+            <p><strong>配置完成后：</strong>回到对话界面，在模型下拉列表中选择刚添加的自定义模型，发送一条简单消息测试是否能正常回复。</p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

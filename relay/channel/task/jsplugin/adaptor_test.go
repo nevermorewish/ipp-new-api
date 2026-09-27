@@ -3,16 +3,27 @@ package jsplugin
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/QuantumNous/new-api/service/embed"
+	"github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	"io"
 	"math"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -2034,4 +2045,282 @@ func TestTaskAdaptorChainsSunoBatchFetchThroughNewAPIUpstream(t *testing.T) {
 	require.Contains(t, results, "task_up_public")
 	assert.Equal(t, "SUCCESS", results["task_up_public"].TaskInfo.Status)
 	assert.Equal(t, []string{"POST /suno/submit/MUSIC", "POST /suno/fetch"}, seen)
+}
+
+func TestSeedanceAPIRequestSigningPollingAndContent(t *testing.T) {
+	source, err := plugins.Source("seedanceapi")
+	require.NoError(t, err)
+	plugin, err := pluginruntime.NewRegistry().Register(source, pluginruntime.Options{})
+	require.NoError(t, err)
+	secret := "test-signing-secret"
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/videos", nil)
+	common.SetContextKey(c, constant.ContextKeyTokenId, 42)
+	common.SetContextKey(c, constant.ContextKeyTokenKey, "test-caller-token")
+	common.SetContextKey(c, constant.ContextKeyUserId, 7)
+	c.Set("task_request", map[string]any{"model": "doubao-seedance-2.0-mini", "prompt": "A red ball", "duration": 5, "watermark": false, "seed": 0})
+	info := &relaycommon.RelayInfo{OriginModelName: "doubao-seedance-2.0-mini", ChannelMeta: &relaycommon.ChannelMeta{UpstreamModelName: "doubao-seedance-2.0-mini", ChannelType: constant.ChannelTypeSeedanceAPI, ChannelBaseUrl: "https://seedance.example", ApiKey: secret}, TaskRelayInfo: &relaycommon.TaskRelayInfo{PublicTaskID: "task_public"}}
+	adaptor := New(plugin)
+	adaptor.Init(info)
+	body, err := adaptor.BuildRequestBody(c, info)
+	require.NoError(t, err)
+	encoded, err := io.ReadAll(body)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"watermark":false`)
+	assert.Contains(t, string(encoded), `"seed":0`)
+	request := httptest.NewRequest(http.MethodPost, "https://seedance.example/v1/videos", nil)
+	require.NoError(t, adaptor.BuildRequestHeader(c, request, info))
+	assert.Empty(t, request.Header.Get("Authorization"))
+	signed := request.Header.Get(embed.HeaderContext)
+	signature, err := hex.DecodeString(request.Header.Get(embed.HeaderSignature))
+	require.NoError(t, err)
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, err = mac.Write([]byte(signed))
+	require.NoError(t, err)
+	assert.True(t, hmac.Equal(mac.Sum(nil), signature))
+	payload, err := base64.RawURLEncoding.DecodeString(signed)
+	require.NoError(t, err)
+	var identity struct {
+		TokenID int    `json:"tid"`
+		Expires int64  `json:"exp"`
+		Hash    string `json:"kh"`
+	}
+	require.NoError(t, common.Unmarshal(payload, &identity))
+	assert.Equal(t, 42, identity.TokenID)
+	assert.InDelta(t, time.Now().Unix()+60, identity.Expires, 2)
+	assert.Len(t, identity.Hash, 64)
+	assert.NotContains(t, string(payload), "test-caller-token")
+	parsed, taskErr := adaptor.ParseResponse(c, &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"id":"upstream-1","status":"queued"}`))}, info)
+	require.Nil(t, taskErr)
+	task := model.InitTask("seedanceapi", info)
+	task.PrivateData.PluginState = parsed.PluginState
+	task.PrivateData.UpstreamTaskID = parsed.UpstreamTaskID
+	task.Status = model.TaskStatusSuccess
+	assert.Equal(t, secret, task.PrivateData.Key)
+	assert.NotContains(t, string(task.PrivateData.PluginState), "test-caller-token")
+	// A changed channel key cannot change the tenant/secret selected at submit.
+	info.ApiKey = "rotated-secret"
+	content, err := adaptor.BuildContentRequest(task, "video", channel.TaskArtifactClientRequest{Method: http.MethodGet})
+	require.NoError(t, err)
+	assert.Equal(t, "https://seedance.example/v1/videos/upstream-1/content", content.URL)
+	assert.Empty(t, content.Headers["Authorization"])
+	pollCtx, err := adaptor.queryContext(task, "rotated-secret", "https://seedance.example", "")
+	require.NoError(t, err)
+	descriptor, err := plugin.Engine.Call(t.Context(), "buildQueryRequest", pollCtx)
+	require.NoError(t, err)
+	var query requestDescriptor
+	require.NoError(t, convert(descriptor, &query))
+	assert.Equal(t, "https://seedance.example/v1/videos/upstream-1", query.URL)
+	for _, headers := range []map[string]string{content.Headers, query.Headers} {
+		signature, err := hex.DecodeString(headers[embed.HeaderSignature])
+		require.NoError(t, err)
+		mac := hmac.New(sha256.New, []byte(secret))
+		_, err = mac.Write([]byte(headers[embed.HeaderContext]))
+		require.NoError(t, err)
+		assert.True(t, hmac.Equal(mac.Sum(nil), signature))
+	}
+	task.PrivateData.PluginState = nil
+	_, err = adaptor.BuildContentRequest(task, "video", channel.TaskArtifactClientRequest{Method: http.MethodGet})
+	require.Error(t, err)
+	common.SetContextKey(c, constant.ContextKeyTokenId, 0)
+	adaptor = New(plugin)
+	adaptor.Init(info)
+	_, err = adaptor.BuildRequestBody(c, info)
+	require.Error(t, err)
+}
+
+func TestSeedanceAPIUsageValidationAndTerminalStatuses(t *testing.T) {
+	source, err := plugins.Source("seedanceapi")
+	require.NoError(t, err)
+	plugin, err := pluginruntime.NewRegistry().Register(source, pluginruntime.Options{})
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		name       string
+		request    map[string]any
+		wantTokens float64
+		wantError  bool
+	}{
+		{"default", map[string]any{"prompt": "ball"}, 86400, false},
+		{"five seconds", map[string]any{"prompt": "ball", "seconds": 5}, 108000, false},
+		{"mini 480p", map[string]any{"prompt": "ball", "seconds": 5, "resolution": "480p"}, 50220, false},
+		{"video input minimum", map[string]any{"prompt": "ball", "duration": 10, "reference_videos": []any{"https://example.com/input.mp4"}, "metadata": map[string]any{"input_video_seconds": 2}}, 367200, false},
+		{"negative", map[string]any{"prompt": "ball", "seconds": -1}, 0, true},
+		{"huge metadata", map[string]any{"prompt": "ball", "seconds": 5, "metadata": map[string]any{"duration": 1e20}}, 0, true},
+		{"huge input", map[string]any{"prompt": "ball", "metadata": map[string]any{"input_video_seconds": 1e20}}, 0, true},
+		{"unsupported resolution", map[string]any{"prompt": "ball", "resolution": "4k"}, 0, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := map[string]any{"model": "doubao-seedance-2.0-mini", "upstreamModel": "doubao-seedance-2.0-mini", "requestBody": tc.request}
+			value, err := plugin.Engine.Call(t.Context(), "extractUsage", ctx)
+			if tc.wantError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			var facts map[string]any
+			require.NoError(t, convert(value, &facts))
+			assert.Equal(t, tc.wantTokens, facts["tokens"])
+			ctx["usagePurpose"] = "billing_ratios"
+			value, err = plugin.Engine.Call(t.Context(), "extractUsage", ctx)
+			require.NoError(t, err)
+			assert.Nil(t, value)
+		})
+	}
+	for input, expected := range map[string]string{"running": "IN_PROGRESS", "succeeded": "SUCCESS", "completed": "SUCCESS", "failed": "FAILURE", "cancelled": "FAILURE", "expired": "FAILURE", "unrecognized": "UNKNOWN"} {
+		value, err := plugin.Engine.Call(t.Context(), "parseTaskResult", map[string]any{}, map[string]any{"id": "upstream", "status": input})
+		require.NoError(t, err)
+		var result taskResult
+		require.NoError(t, convert(value, &result))
+		assert.Equal(t, expected, result.Status, input)
+	}
+	for _, tokens := range []float64{0, 12345, -1, 1e30} {
+		value, err := plugin.Engine.Call(t.Context(), "extractUsageOnComplete", map[string]any{"model": "doubao-seedance-2.0-mini"}, map[string]any{"status": "SUCCESS"}, map[string]any{"usage": map[string]any{"total_tokens": tokens}})
+		require.NoError(t, err)
+		var facts map[string]any
+		require.NoError(t, convert(value, &facts))
+		if tokens >= 0 && tokens < 2147483647 {
+			assert.Equal(t, tokens, facts["tokens"])
+		} else {
+			assert.NotContains(t, facts, "tokens")
+		}
+	}
+}
+
+func TestSeedanceAPITaskIdentityDatabaseMatrix(t *testing.T) {
+	for _, dialect := range []string{"sqlite", "mysql", "postgres"} {
+		t.Run(dialect, func(t *testing.T) {
+			var dialector gorm.Dialector
+			switch dialect {
+			case "sqlite":
+				dialector = sqlite.Open(":memory:")
+			case "mysql":
+				dsn := os.Getenv("TEST_MYSQL_DSN")
+				if dsn == "" {
+					t.Skip("TEST_MYSQL_DSN is not configured")
+				}
+				dialector = mysql.Open(dsn)
+			case "postgres":
+				dsn := os.Getenv("TEST_POSTGRES_DSN")
+				if dsn == "" {
+					t.Skip("TEST_POSTGRES_DSN is not configured")
+				}
+				dialector = postgres.Open(dsn)
+			}
+			db, err := gorm.Open(dialector, &gorm.Config{NamingStrategy: schema.NamingStrategy{TablePrefix: "seedance_port_test_"}})
+			require.NoError(t, err)
+			sqlDB, err := db.DB()
+			require.NoError(t, err)
+			sqlDB.SetMaxOpenConns(1)
+			t.Cleanup(func() { require.NoError(t, db.Migrator().DropTable(&model.Task{})); require.NoError(t, sqlDB.Close()) })
+			require.NoError(t, db.AutoMigrate(&model.Task{}))
+			var version string
+			query := "SELECT version()"
+			if dialect == "sqlite" {
+				query = "SELECT sqlite_version()"
+			}
+			require.NoError(t, db.Raw(query).Scan(&version).Error)
+			t.Logf("database version: %s", version)
+			task := model.InitTask("seedanceapi", &relaycommon.RelayInfo{ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeSeedanceAPI, ApiKey: "original-signing-secret"}, TaskRelayInfo: &relaycommon.TaskRelayInfo{PublicTaskID: "task_seedance_matrix"}, OriginModelName: "doubao-seedance-2.0-mini"})
+			task.PrivateData.PluginState = []byte(`{"identity":{"tid":42,"kh":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"ark":true}`)
+			task.PrivateData.UpstreamTaskID = "upstream-private"
+			task.Data = []byte(`{"id":"upstream-private","status":"queued"}`)
+			require.NoError(t, db.Create(task).Error)
+			var loaded model.Task
+			require.NoError(t, db.First(&loaded, task.ID).Error)
+			assert.Equal(t, "original-signing-secret", loaded.PrivateData.Key)
+			assert.JSONEq(t, string(task.PrivateData.PluginState), string(loaded.PrivateData.PluginState))
+			require.NoError(t, db.Model(&loaded).Update("status", model.TaskStatusSuccess).Error)
+			require.NoError(t, db.First(&loaded, task.ID).Error)
+			assert.Equal(t, model.TaskStatus(model.TaskStatusSuccess), loaded.Status)
+			assert.Equal(t, "original-signing-secret", loaded.PrivateData.Key)
+			public, err := common.Marshal(loaded)
+			require.NoError(t, err)
+			assert.NotContains(t, string(public), "original-signing-secret")
+			assert.NotContains(t, string(public), "identity")
+		})
+	}
+}
+
+func TestSeedanceAPISignedRequestsDoNotFollowRedirects(t *testing.T) {
+	service.InitHttpClient()
+	redirected := false
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { redirected = true }))
+	t.Cleanup(target.Close)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL, http.StatusTemporaryRedirect)
+	}))
+	t.Cleanup(upstream.Close)
+	req, err := http.NewRequest(http.MethodGet, upstream.URL, nil)
+	require.NoError(t, err)
+	req.Header.Set(embed.HeaderSignature, "test-assertion")
+	response, err := service.GetHttpClient().Do(req)
+	require.NoError(t, err)
+	require.NoError(t, response.Body.Close())
+	assert.Equal(t, http.StatusTemporaryRedirect, response.StatusCode)
+	assert.False(t, redirected)
+}
+
+func TestSeedanceAPIMultipartAndBillingAliases(t *testing.T) {
+	source, err := plugins.Source("seedanceapi")
+	require.NoError(t, err)
+	plugin, err := pluginruntime.NewRegistry().Register(source, pluginruntime.Options{})
+	require.NoError(t, err)
+	fields := map[string]any{"model": []string{"doubao-seedance-2.0-mini"}, "prompt": []string{"ball"}, "seconds": []string{"5"}, "watermark": []string{"false"}}
+	body := map[string]any{"kind": "multipart", "fields": fields, "files": []any{map[string]any{"field": "input_reference", "ref": "input_reference:0", "mimeType": "video/mp4"}}}
+	value, err := plugin.Engine.CallPath(t.Context(), "protocols", []string{"openai_video", "decodeRequest"}, map[string]any{"body": body})
+	require.NoError(t, err)
+	var decoded map[string]any
+	require.NoError(t, convert(value, &decoded))
+	assert.Equal(t, "video_to_video", decoded["action"])
+	request := decoded["requestBody"].(map[string]any)
+	assert.Equal(t, false, request["watermark"])
+	assert.Equal(t, float64(5), request["duration"])
+	value, err = plugin.Engine.Call(t.Context(), "extractUsage", map[string]any{"model": "doubao-seedance-2.0-mini", "requestBody": request})
+	require.NoError(t, err)
+	var facts map[string]any
+	require.NoError(t, convert(value, &facts))
+	assert.Equal(t, float64(194400), facts["tokens"])
+	for _, request := range []map[string]any{
+		{"prompt": "ball", "seconds": 5, "duration": 3600},
+		{"prompt": "ball", "seconds": true},
+		{"prompt": "ball", "resolution": "480p", "metadata": map[string]any{"resolution": "720p"}},
+		{"prompt": "ball", "metadata": map[string]any{"n": 2}},
+	} {
+		_, err := plugin.Engine.Call(t.Context(), "extractUsage", map[string]any{"model": "doubao-seedance-2.0-mini", "requestBody": request})
+		require.Error(t, err)
+	}
+	fields["duration"] = []string{"10"}
+	_, err = plugin.Engine.CallPath(t.Context(), "protocols", []string{"openai_video", "decodeRequest"}, map[string]any{"body": body})
+	require.Error(t, err)
+}
+
+func TestSeedanceAPIEndpointAndPublicVideoResponse(t *testing.T) {
+	source, err := plugins.Source("seedanceapi")
+	require.NoError(t, err)
+	plugin, err := pluginruntime.NewRegistry().Register(source, pluginruntime.Options{})
+	require.NoError(t, err)
+	for _, path := range []string{"/v1/videos", "/v1/video/generations", "/api/v3/contents/generations/tasks"} {
+		ctx := map[string]any{"model": "doubao-seedance-2.0-mini", "path": path, "baseUrl": "https://upstream.example", "requestBody": map[string]any{"prompt": "ball"}, "auth": map[string]any{"headers": map[string]string{"X-Embed-Sig": "test"}}}
+		value, err := plugin.Engine.Call(t.Context(), "buildSubmitRequest", ctx)
+		require.NoError(t, err)
+		var request requestDescriptor
+		require.NoError(t, convert(value, &request))
+		assert.Equal(t, "https://upstream.example"+path, request.URL)
+	}
+	task := map[string]any{"task_id": "task_public", "status": "SUCCESS", "data": map[string]any{
+		"id": "upstream", "task_id": "upstream", "content": map[string]any{"video_url": "https://upstream.example/v1/videos/upstream/content"},
+	}}
+	value, err := plugin.Engine.CallPath(t.Context(), "native", []string{"taskStatus"}, map[string]any{}, task)
+	require.NoError(t, err)
+	var response map[string]any
+	require.NoError(t, convert(value, &response))
+	assert.Equal(t, "task_public", response["id"])
+	assert.Equal(t, "succeeded", response["status"])
+	assert.NotContains(t, response, "task_id")
+	assert.Equal(t, "/v1/videos/task_public/content", response["content"].(map[string]any)["video_url"])
+	task["data"].(map[string]any)["metadata"] = map[string]any{"url": "https://cdn.example/result.mp4?signature=example"}
+	value, err = plugin.Engine.CallPath(t.Context(), "protocols", []string{"openai_video", "render"}, map[string]any{}, task)
+	require.NoError(t, err)
+	require.NoError(t, convert(value, &response))
+	assert.Equal(t, "https://cdn.example/result.mp4?signature=example", response["content"].(map[string]any)["video_url"])
 }

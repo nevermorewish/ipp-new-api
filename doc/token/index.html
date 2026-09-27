@@ -1,0 +1,40 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>模型分组介绍 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="模型广场与令牌分组介绍：搞清楚每个令牌能调用哪些模型。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Models</p>
+            <h1>模型分组介绍</h1>
+          </header>
+          <p>寰星云科 API 后端聚合了多家上游供应商（Anthropic、OpenAI、Google、AWS Bedrock、Azure 等）。为了让用户清晰看到「我能调什么模型」「这条令牌能调什么模型」，控制台用「模型广场」+「令牌分组」两个概念配合管理。</p>
+          <div class="grid two">
+            <a class="card" href="/docs/token/1-intro.html">
+              <h3>模型广场</h3>
+              <p>当前账号可以看见的所有模型、default 分组可用性、上下文长度、计费倍率与能力标签。</p>
+            </a>
+            <a class="card" href="/docs/token/2-group.html">
+              <h3>令牌分组介绍</h3>
+              <p>当前文档统一使用 default 分组令牌访问模型，是接入各类客户端的默认选择。</p>
+            </a>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

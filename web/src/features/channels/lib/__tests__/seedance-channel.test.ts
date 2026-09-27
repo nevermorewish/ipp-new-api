@@ -22,13 +22,23 @@ import { CHANNEL_TYPE_OPTIONS, CHANNEL_TYPES } from '../../constants'
 import { getChannelTypeIcon, getChannelTypeLabel } from '../channel-utils'
 
 describe('Seedance channel metadata', () => {
-  it('is selectable with the Seedance label and Doubao icon', () => {
-    expect(CHANNEL_TYPES[62]).toBe('Seedance')
+  it('offers SeedanceAPI independently from existing channel types', () => {
     expect(CHANNEL_TYPE_OPTIONS).toContainEqual({
-      value: 62,
+      value: 66,
+      label: 'SeedanceAPI',
+    })
+    expect(getChannelTypeLabel(66)).toBe('SeedanceAPI')
+    expect(getChannelTypeIcon(66)).toBe('Doubao')
+    expect(CHANNEL_TYPES[59]).toBe('Sub2API')
+    expect(CHANNEL_TYPES[62]).toBe('vLLM')
+  })
+  it('is selectable with the Seedance label and Doubao icon', () => {
+    expect(CHANNEL_TYPES[64]).toBe('Seedance')
+    expect(CHANNEL_TYPE_OPTIONS).toContainEqual({
+      value: 64,
       label: 'Seedance',
     })
-    expect(getChannelTypeLabel(62)).toBe('Seedance')
-    expect(getChannelTypeIcon(62)).toBe('Doubao')
+    expect(getChannelTypeLabel(64)).toBe('Seedance')
+    expect(getChannelTypeIcon(64)).toBe('Doubao')
   })
 })

@@ -105,6 +105,8 @@ export function getChannelTypeIcon(type: number): string {
     36: 'Suno', // SunoAPI
     55: 'OpenAI', // Sora
     54: 'Doubao', // Doubao
+    64: 'Doubao', // Seedance
+    66: 'Doubao', // SeedanceAPI
     56: 'Replicate', // Replicate
 
     // Tools & Platforms

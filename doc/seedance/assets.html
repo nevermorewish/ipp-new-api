@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>素材库 API | 寰星云科 API 使用文档</title>
+    <meta name="description" content="Seedance 素材组、真人认证和素材文件 API 使用说明。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Seedance Material Library</p>
+            <h1>素材库 API</h1>
+          </header>
+
+          <p>素材库 API 用于创建和管理素材组、完成真人认证，以及上传、查询和删除素材文件。</p>
+          <div class="callout">
+            <strong>接口地址</strong>
+            <p><code>POST https://api.huanxing.ai/api/material?Action=&lt;Action&gt;</code></p>
+            <p>所有接口使用 Bearer Token 鉴权，请求体为 JSON。</p>
+          </div>
+
+          <h2>统一响应格式</h2>
+          <p>所有素材库接口均使用 <code>ResponseMetadata</code> 和 <code>Result</code> 包装响应。业务错误位于 <code>Result.Error</code>。</p>
+          <pre><code>{
+  "ResponseMetadata": {
+    "RequestId": "sys-...",
+    "Action": "GetAsset",
+    "Version": "2024-01-01",
+    "Region": "cn-beijing"
+  },
+  "Result": {
+    "Id": "asset-example-id",
+    "Status": "Active"
+  }
+}</code></pre>
+
+          <h2>素材组</h2>
+
+          <section class="api-feature" id="create-asset-group">
+            <h3>CreateAssetGroup — 创建素材组</h3>
+            <p>创建一个虚拟素材组。<code>Name</code> 必填，<code>Description</code> 可选。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=CreateAssetGroup</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="CreateAssetGroup" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>Name（必填）</span><input type="text" data-json-path="Name" value="角色素材库" /></label>
+                <label class="api-try-field"><span>Description</span><input type="text" data-json-path="Description" data-json-omit-empty value="用于存放角色参考图和视频" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{
+  "Name": "角色素材库",
+  "Description": "用于存放角色参考图和视频"
+}</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="list-asset-groups">
+            <h3>ListAssetGroups — 查询素材组列表</h3>
+            <p>查询当前令牌可访问的素材组列表。无需请求参数；素材组数据和可能的分页信息由上游返回在 <code>Result</code> 中。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=ListAssetGroups</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="ListAssetGroups" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{}</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="get-asset-group">
+            <h3>GetAssetGroup — 查询素材组</h3>
+            <p>通过素材组 ID 查询名称、描述、类型和创建时间等信息。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=GetAssetGroup</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="GetAssetGroup" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>Id（必填）</span><input type="text" data-json-path="Id" placeholder="group-example-id" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{ "Id": "group-example-id" }</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="delete-asset-group">
+            <h3>DeleteAssetGroup — 删除素材组</h3>
+            <p>通过素材组 ID 删除素材组。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=DeleteAssetGroup</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="DeleteAssetGroup" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>Id（必填）</span><input type="text" data-json-path="Id" placeholder="group-example-id" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{ "Id": "group-example-id" }</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <h2>真人认证</h2>
+          <p><code>CreateVisualValidateSession</code> 用于创建真人素材组；<code>CreateAssetGroup</code> 用于创建虚拟素材组，请按素材类型选择。</p>
+
+          <section class="api-feature" id="create-visual-validate-session">
+            <h3>CreateVisualValidateSession — 创建真人认证会话</h3>
+            <p>请求参数均为可选。可通过 <code>Url</code> 指定认证完成后的回调地址；该参数仅用于火山引擎认证会话，并会转换为火山原生字段 <code>CallbackURL</code>。响应包含 <code>BytedToken</code>、H5 认证链接和二维码。完成认证后，使用 <code>BytedToken</code> 查询结果。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=CreateVisualValidateSession</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="CreateVisualValidateSession" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>Url（可选，仅火山引擎）</span><input type="url" data-json-path="Url" placeholder="https://example.com/verify/callback" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{ "Url": "https://example.com/verify/callback" }</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="get-visual-validate-result">
+            <h3>GetVisualValidateResult — 查询真人认证结果</h3>
+            <p>使用创建认证会话时返回的 <code>BytedToken</code> 查询。建议每 3 秒查询一次，最长查询 5 分钟。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=GetVisualValidateResult</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="GetVisualValidateResult" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>BytedToken（必填）</span><input type="text" data-json-path="BytedToken" placeholder="example-token" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{ "BytedToken": "example-token" }</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="create-real-validate-h5">
+            <h3>CreateRealValidateH5 — 创建真人认证管理页面</h3>
+            <p>无需请求参数。响应中的 <code>Result.H5Link</code> 是真人认证与素材管理页面地址，<code>Result.ExpiresIn</code> 表示有效期；小于或等于 0 表示长期有效。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=CreateRealValidateH5</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="CreateRealValidateH5" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{}</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <div class="api-response-link" hidden></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <h2>素材文件</h2>
+
+          <section class="api-feature" id="create-asset">
+            <h3>CreateAsset — 上传素材</h3>
+            <p>从可公开访问的 HTTP(S) URL 创建素材。<code>AssetType</code> 支持 <code>Image</code>、<code>Video</code> 和 <code>Audio</code>。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=CreateAsset</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="CreateAsset" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>GroupId（必填）</span><input type="text" data-json-path="GroupId" placeholder="group-example-id" /></label>
+                <label class="api-try-field"><span>URL（必填）</span><input type="url" data-json-path="URL" value="https://example.com/person.jpg" /></label>
+                <label class="api-try-field"><span>Name（必填）</span><input type="text" data-json-path="Name" value="人物正面照" /></label>
+                <label class="api-try-field"><span>AssetType（必填）</span><input type="text" data-json-path="AssetType" value="Image" placeholder="Image / Video / Audio" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{
+  "GroupId": "group-example-id",
+  "URL": "https://example.com/person.jpg",
+  "Name": "人物正面照",
+  "AssetType": "Image"
+}</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="get-asset">
+            <h3>GetAsset — 查询素材</h3>
+            <p>通过素材 ID 查询名称、URL、类型、所属素材组和处理状态等信息。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=GetAsset</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="GetAsset" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>Id（必填）</span><input type="text" data-json-path="Id" placeholder="asset-example-id" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{ "Id": "asset-example-id" }</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <section class="api-feature" id="delete-asset">
+            <h3>DeleteAsset — 删除素材</h3>
+            <p>通过素材 ID 删除素材。</p>
+            <div class="api-playground" data-playground data-api-base="api" data-auth="bearer" data-method="POST" data-path="/api/material">
+              <div class="api-endpoint">
+                <span class="api-method post">POST</span>
+                <code class="api-path">/api/material?Action=DeleteAsset</code>
+                <button type="button" class="api-try-btn">试一试</button>
+              </div>
+              <div class="api-try-panel" hidden>
+                <input type="hidden" data-field="action" value="DeleteAsset" />
+                <label class="api-try-field"><span>API 令牌</span><input type="password" data-field="token" placeholder="sk-..." autocomplete="off" /></label>
+                <label class="api-try-field"><span>Id（必填）</span><input type="text" data-json-path="Id" placeholder="asset-example-id" /></label>
+                <label class="api-try-field"><span>请求体（JSON）</span><textarea data-field="body">{ "Id": "asset-example-id" }</textarea></label>
+                <div class="api-try-actions"><button type="button" class="api-send">发送请求</button></div>
+                <pre class="api-response"><code></code></pre>
+              </div>
+            </div>
+          </section>
+
+          <h2>在视频生成中使用素材</h2>
+          <p>素材状态为 <code>Active</code> 后，可用 <code>asset://&lt;素材 ID&gt;</code> 引用素材。</p>
+          <pre><code>{
+  "model": "doubao-seedance-2-0-260128",
+  "content": [
+    {
+      "type": "image_url",
+      "image_url": { "url": "asset://asset-example-id" },
+      "role": "reference_image"
+    },
+    { "type": "text", "text": "让图中的猫动起来，在草地上奔跑" }
+  ],
+  "resolution": "720p",
+  "duration": 5
+}</code></pre>
+
+          <h2>常见错误</h2>
+          <table class="table">
+            <thead><tr><th>Error.Code</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><code>InternalError</code></td><td>服务暂时不可用，请稍后重试。</td></tr>
+              <tr><td><code>InvalidRequest</code></td><td>请求参数缺失或格式不正确。</td></tr>
+              <tr><td><code>AccessDenied</code></td><td>API 令牌无权访问该资源。</td></tr>
+              <tr><td><code>ResourceNotFound</code></td><td>指定的素材组或素材不存在。</td></tr>
+              <tr><td><code>LimitExceeded</code></td><td>请求频率过高，请降低调用频率。</td></tr>
+            </tbody>
+          </table>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

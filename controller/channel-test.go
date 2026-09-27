@@ -84,6 +84,7 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 		constant.ChannelTypeVidu,
 		constant.ChannelTypeTaskPlugin,
 		constant.ChannelTypeSeedance,
+		constant.ChannelTypeSeedanceAPI,
 	}
 	if lo.Contains(unsupportedTestChannelTypes, channel.Type) {
 		channelTypeName := constant.GetChannelTypeName(channel.Type)

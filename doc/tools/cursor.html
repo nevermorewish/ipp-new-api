@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cursor 接入 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="在 Cursor 中配置 OpenAI API Key 与 Override OpenAI Base URL 接入寰星云科。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Tools · Cursor</p>
+            <h1>Cursor 接入</h1>
+          </header>
+
+          <div class="callout">
+            <p><strong>接入方式：</strong>Cursor 可以通过 OpenAI API Key 与 Override OpenAI Base URL 使用寰星云科的 OpenAI 兼容接口。</p>
+          </div>
+
+          <h2>前置准备</h2>
+          <ul class="list">
+            <li>已在寰星云科控制台创建 <code>default</code> 分组 API 令牌。</li>
+            <li>已确认 Cursor 中要启用的模型名称与寰星云科模型广场中的名称一致。</li>
+            <li>配置后如果已有 Cursor 窗口没有生效，可以重启 Cursor 再测试。</li>
+          </ul>
+
+          <h2>配置 Models</h2>
+          <ol class="ordered">
+            <li>打开 Cursor 设置，进入 <strong>Models</strong> 页面。</li>
+            <li>在模型列表中启用需要使用的模型；如果需要自定义模型，点击 <strong>Add Custom Model</strong> 后填写模型名。</li>
+            <li>展开 <strong>API Keys</strong> 区域，启用 <strong>OpenAI API Key</strong>，并填入寰星云科 API 令牌。</li>
+            <li>启用 <strong>Override OpenAI Base URL</strong>，把默认 URL 替换为 <code>https://api.huanxing.ai/</code>。</li>
+          </ol>
+          <figure>
+            <img src="/docs/assets/img/tools/cursor/01.png" alt="Cursor 配置 OpenAI API Key 和 Override OpenAI Base URL" />
+            <figcaption>在 Cursor Models 中填写 API Key，并覆盖 OpenAI Base URL。</figcaption>
+          </figure>
+
+          <h2>推荐填写值</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>配置项</th>
+                <th>填写内容</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>OpenAI API Key</td>
+                <td><code>sk-******</code></td>
+                <td>填写寰星云科控制台创建的 API 令牌。</td>
+              </tr>
+              <tr>
+                <td>Override OpenAI Base URL</td>
+                <td><code>https://api.huanxing.ai/</code></td>
+                <td>按 Cursor 的 OpenAI 覆盖地址输入框填写。</td>
+              </tr>
+              <tr>
+                <td>模型名称</td>
+                <td><code>claude-opus-4-8</code></td>
+                <td>示例模型名，可换成实际可用模型。</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="warning">
+            <p><strong>注意：</strong>Cursor 的模型开关只决定客户端是否展示该模型；实际能否调用成功，还取决于 API Key 所在分组是否开放对应模型。</p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

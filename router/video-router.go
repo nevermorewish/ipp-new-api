@@ -3,9 +3,13 @@ package router
 import (
 	"net/http"
 
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/controller"
 	"github.com/QuantumNous/new-api/middleware"
+	"github.com/QuantumNous/new-api/model"
 	pluginruntime "github.com/QuantumNous/new-api/pkg/jsplugin"
+	"github.com/QuantumNous/new-api/relay"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +17,11 @@ import (
 func SetVideoRouter(router *gin.Engine) {
 	seedanceArkRouter := router.Group("/api/v3/contents")
 	seedanceArkRouter.Use(middleware.RouteTag("relay"), middleware.TokenAuth(), middleware.SystemPerformanceCheck())
+	seedanceArkRouter.POST(
+		"/generations",
+		pinSeedanceNativeRoute(pluginruntime.Route{Method: http.MethodPost, Path: "/api/v3/contents/generations", Type: pluginruntime.RouteTypeSubmit, Decode: "createTask", Render: "taskCreated"}),
+		middleware.ModelRequestRateLimit(), middleware.PrepareTaskPluginRoute(), middleware.Distribute(), controller.RelayTask,
+	)
 	seedanceArkRouter.POST(
 		"/generations/tasks",
 		pinSeedanceNativeRoute(pluginruntime.Route{Method: http.MethodPost, Path: "/api/v3/contents/generations/tasks", Type: pluginruntime.RouteTypeSubmit, Decode: "createTask", Render: "taskCreated"}),
@@ -28,6 +37,8 @@ func SetVideoRouter(router *gin.Engine) {
 		pinSeedanceNativeRoute(pluginruntime.Route{Method: http.MethodGet, Path: "/api/v3/contents/generations/tasks/:task_id", Type: pluginruntime.RouteTypeQuery, Render: "taskStatus", TaskIDParam: "task_id"}),
 		middleware.PrepareTaskPluginRoute(),
 	)
+
+	seedanceArkRouter.GET("/generations/tasks/:task_id/content", controller.VideoProxy)
 
 	videoSharedRouter := router.Group("/v1")
 	videoSharedRouter.Use(middleware.RouteTag("relay"))
@@ -60,7 +71,49 @@ func pinSeedanceNativeRoute(route pluginruntime.Route) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{"code": "task_plugin_unavailable", "message": "Seedance task plugin is unavailable"}})
 			return
 		}
-		plugin, found := generation.Get("doubao")
+		pluginKey := "doubao"
+		if c.Request.Method == http.MethodPost {
+			storage, err := common.GetBodyStorage(c)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+				return
+			}
+			body, err := storage.Bytes()
+			var request struct {
+				Model string `json:"model"`
+			}
+			if err != nil || common.Unmarshal(body, &request) != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
+				return
+			}
+			if seedance, ok := generation.Get("seedanceapi"); ok {
+				for _, name := range seedance.Meta.Models {
+					if name == request.Model {
+						pluginKey = "seedanceapi"
+						break
+					}
+				}
+			}
+		} else {
+			taskID := c.Param("task_id")
+			if taskID == "" {
+				taskID = c.Query("task_id")
+			}
+			if taskID == "" {
+				taskID = c.Query("id")
+			}
+			task, found, err := model.GetByTaskId(common.GetContextKeyInt(c, constant.ContextKeyUserId), taskID)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "task lookup failed"})
+				return
+			}
+			if found {
+				if producer, ok := relay.ResolveTaskPluginForPlatform(generation, task.Platform); ok && producer.Meta.Key == "seedanceapi" {
+					pluginKey = "seedanceapi"
+				}
+			}
+		}
+		plugin, found := generation.Get(pluginKey)
 		if !found {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": gin.H{"code": "task_plugin_unavailable", "message": "Seedance task plugin is unavailable"}})
 			return

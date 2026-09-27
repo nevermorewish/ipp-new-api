@@ -1,0 +1,122 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex 配置 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="直接编辑 config.toml 与 auth.json 把 Codex 接到寰星云科。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">CLI · Codex</p>
+            <h1>Codex 配置</h1>
+          </header>
+
+          <div class="vp-tabs" data-vp-tabs>
+            <div class="vp-tabs-nav" role="tablist">
+              <button type="button" class="vp-tab-nav active" role="tab" aria-controls="codex-windows" aria-selected="true">Windows</button>
+              <button type="button" class="vp-tab-nav" role="tab" aria-controls="codex-macos" aria-selected="false">MacOS</button>
+            </div>
+            <div class="vp-tab active" id="codex-windows" role="tabpanel" aria-expanded="true">
+              <div class="vp-tab-title">Windows</div>
+              <ol><li>键盘按下“Win+R”键，输入以下内容后回车，打开你的 Codex 配置目录</li></ol>
+              <pre><code>%userprofile%\.codex</code></pre>
+              <figure><img src="/docs/assets/img/cli/006.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="2"><li>你的目录中可能会存在以下文件，不过我们用到的文件只有三个，需要配置的只有两个</li></ol>
+              <figure><img src="/docs/assets/img/cli/007.webp" alt="" /><figcaption></figcaption></figure>
+              <ul>
+                <li><p><strong>config.toml</strong>：Codex 的<strong>核心配置</strong>文件，中转服务与 MCP 等都在此文件配置</p></li>
+                <li><p><strong>auth.json</strong>：用来配置你在中转站获取的 ApiKey 秘钥</p></li>
+                <li><p><strong>AGENTS.md</strong>：用来设置 Codex 全局工作的提示词</p></li>
+              </ul>
+              <div class="hint-container important"><p class="hint-container-title">重要</p><p><strong>很多人刚安装可能没有这三个文件，你需要手动去创建这三个文件，然后写入内容</strong></p></div>
+              <ol start="3"><li>配置 Config.toml</li></ol>
+              <p>将以下配置文本复制到你的 config.toml 文件中保存</p>
+              <pre><code>disable_response_storage = true
+model = "gpt-5.2"
+model_provider = "huanxing"
+model_reasoning_effort = "xhigh"
+model_verbosity = "high"
+
+[features]
+web_search_request = true
+
+[model_providers.huanxing]
+base_url = "https://api.huanxing.ai/v1"
+name = "huanxing"
+requires_openai_auth = true
+wire_api = "responses"</code></pre>
+              <ol start="4"><li>配置 ApiKey</li></ol>
+              <p>将以下配置文本复制到你的 auth.json 文件中</p>
+              <pre><code>{
+  "OPENAI_API_KEY": "xxx"
+}</code></pre>
+              <figure><img src="/docs/assets/img/cli/008.webp" alt="" /><figcaption></figcaption></figure>
+              <p>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a> 这一步教程，我们需要在寰星云科中创建 <code>default</code> 分组令牌，然后点击右侧的复制按钮，将 key 填入“xxx”部分后保存</p>
+              <figure><img src="/docs/assets/img/cli/009.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="5"><li>测试对话</li></ol>
+              <p>在 Windows 终端输入以下命令，出现图示内容，进行对话测试，如果有回复，则配置成功，开始你的 Codex 使用之旅</p>
+              <pre><code>codex</code></pre>
+              <figure><img src="/docs/assets/img/cli/010.webp" alt="" /><figcaption></figcaption></figure>
+            </div>
+            <div class="vp-tab" id="codex-macos" role="tabpanel" aria-expanded="false">
+              <div class="vp-tab-title">MacOS</div>
+              <ol><li>在访达界面按下 “Command+Shift+G”，输入以下路径并回车，打开 Codex 配置目录</li></ol>
+              <pre><code>~/.codex</code></pre>
+              <figure><img src="/docs/assets/img/cli/011.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="2"><li>你的目录中可能会存在以下文件，不过我们用到的文件只有三个，需要配置的只有两个，其它文件可忽略</li></ol>
+              <figure><img src="/docs/assets/img/cli/012.webp" alt="" /><figcaption></figcaption></figure>
+              <ul>
+                <li><p><strong>config.toml</strong>：Codex 的核心配置文件，中转服务与 MCP 等都在此文件配置</p></li>
+                <li><p><strong>auth.json</strong>：存放中转站获取的 ApiKey 秘钥</p></li>
+                <li><p><strong>AGENTS.md</strong>：Codex 全局工作的提示词</p></li>
+              </ul>
+              <div class="hint-container important"><p class="hint-container-title">重要</p><p>初次安装若未自动生成，需要手动创建上述三个文件并写入内容</p></div>
+              <ol start="3"><li>配置 Config.toml</li></ol>
+              <p>将以下内容保存到 <code>config.toml</code></p>
+              <pre><code>model_provider = "huanxing"
+model = "gpt-5.1-codex"
+model_reasoning_effort = "high"
+network_access = "enabled"
+disable_response_storage = true
+windows_wsl_setup_acknowledged = true
+model_verbosity = "high"
+
+[features]
+web_search_request = true
+
+[model_providers.huanxing]
+base_url = "https://api.huanxing.ai/v1"
+name = "huanxing"
+requires_openai_auth = true
+wire_api = "responses"</code></pre>
+              <ol start="4"><li>配置 ApiKey</li></ol>
+              <p>将以下内容保存到 <code>auth.json</code></p>
+              <pre><code>{
+  "OPENAI_API_KEY": "xxx"
+}</code></pre>
+              <figure><img src="/docs/assets/img/cli/008.webp" alt="" /><figcaption></figcaption></figure>
+              <p>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a>，在寰星云科中创建 <code>default</code> 分组令牌，并复制 key 后填入 <code>xxx</code></p>
+              <figure><img src="/docs/assets/img/cli/009.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="5"><li>测试对话</li></ol>
+              <p>在终端输入以下命令，进入对话测试；如果有回复，则配置成功。</p>
+              <pre><code>codex</code></pre>
+              <figure><img src="/docs/assets/img/cli/010.webp" alt="" /><figcaption></figcaption></figure>
+            </div>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

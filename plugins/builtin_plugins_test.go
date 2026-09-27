@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var expectedKeys = []string{"alibaba", "doubao", "google", "hailuo", "jimeng", "kling", "sora", "sunoapi", "vertex-ai", "vidu"}
+var expectedKeys = []string{"alibaba", "doubao", "google", "hailuo", "jimeng", "kling", "seedanceapi", "sora", "sunoapi", "vertex-ai", "vidu"}
 
 func TestBuiltInVendorPluginsDeclareNativeRoutesAndLegacyChannelTypes(t *testing.T) {
 	generation := jsplugin.DefaultRegistry.Generation()
@@ -66,7 +66,8 @@ func TestBuiltInVendorPluginsDeclareNativeRoutesAndLegacyChannelTypes(t *testing
 		{51, "jimeng"},
 		{54, "doubao"},
 		{55, "sora"},
-		{62, "doubao"},
+		{64, "doubao"},
+		{66, "seedanceapi"},
 	}
 	for _, channelType := range channelTypes {
 		plugin, found := generation.GetByChannelType(channelType.value)
@@ -109,6 +110,12 @@ func TestBuiltInTaskPluginResponsesAndUsageContracts(t *testing.T) {
 					break
 				}
 			}
+			if key == "seedanceapi" {
+				assert.False(t, foundResponses, "SeedanceAPI only claims video generation")
+				_, claimed := registry.Generation().LookupEndpoint("POST", "/v1/videos", plugin.Meta.Models[0])
+				require.True(t, claimed)
+				return
+			}
 			require.True(t, foundResponses, "openai_responses claim must be present")
 			assert.Equal(t, []string{"stream", "sync", "background"}, responsesClaim.Supports)
 			for _, model := range plugin.Meta.Models {
@@ -137,6 +144,9 @@ func TestBuiltInTaskPluginResponsesAndUsageContracts(t *testing.T) {
 func TestBuiltInResponsesDecodersEchoChannelMappedAlias(t *testing.T) {
 	bodyOverrides := map[string]map[string]any{}
 	for _, key := range expectedKeys {
+		if key == "seedanceapi" {
+			continue
+		}
 		t.Run(key, func(t *testing.T) {
 			source, sourceErr := Source(key)
 			require.NoError(t, sourceErr)

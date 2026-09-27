@@ -1,0 +1,66 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex FAQ | 寰星云科 API 使用文档</title>
+    <meta name="description" content="Codex 接入寰星云科 API 的常见报错与排查思路。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">FAQ · Codex</p>
+            <h1>Codex</h1>
+          </header>
+
+          <div class="faq">
+            <details open>
+              <summary>codex 第一次启动就报 401</summary>
+              <p>多半是 <code>~/.codex/auth.json</code> 没创建或内容格式错。它必须是合法 JSON，且包含 <code>OPENAI_API_KEY</code> 字段，例如：<code>{"OPENAI_API_KEY":"sk-..."}</code>。</p>
+            </details>
+
+            <details>
+              <summary>提示 Responses API 不可用 / 路径 404</summary>
+              <p>确认 <code>base_url</code> 末尾带 <code>/v1</code>；确认 <code>wire_api = "responses"</code>；确认寰星云科该渠道开启了 Responses API 支持。可用 curl 验证：<code>curl https://api.huanxing.ai/v1/responses -H "Authorization: Bearer sk-xxx" -d '{"model":"gpt-5.4","input":"hi"}'</code>。</p>
+            </details>
+
+            <details>
+              <summary>报错 invalid character '&lt;' looking for beginning of value</summary>
+              <p>Base URL 漏写 <code>/v1</code>，或上游返回了 HTML 错误页。检查 config.toml 中的 <code>base_url</code>。</p>
+            </details>
+
+            <details>
+              <summary>提示 unknown model</summary>
+              <p>模型名拼写错，或模型未在 <code>default</code> 分组开放。到模型广场把字符串原样复制过去，并确认所在分组包含 <code>default</code>。</p>
+            </details>
+
+            <details>
+              <summary>config.toml 改了不生效</summary>
+              <p>Codex 默认会缓存 provider 配置，关掉当前 codex 进程，新开终端再启动。如果还不生效，检查路径是不是 <code>~/.codex/config.toml</code>（不是 <code>~/.codex/config</code>）。</p>
+            </details>
+
+            <details>
+              <summary>web_search_request 开了但没联网检索</summary>
+              <p>需要当前模型与上游渠道都支持联网检索。Codex 在不支持的模型上会静默忽略该选项。可换成支持 web search 的 GPT-5 / GPT-5.4 系列再测。</p>
+            </details>
+
+            <details>
+              <summary>disable_response_storage 应该开还是关</summary>
+              <p>自托管 / 中转场景下建议 <code>true</code>，避免上游帮你存请求；如果你依赖 OpenAI 的 Responses 存储能力做后续分析，可设 <code>false</code>。</p>
+            </details>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

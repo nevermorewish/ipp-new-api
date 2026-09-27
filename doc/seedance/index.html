@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>视频模型教程 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="寰星云科 Seedance 视频生成模型教程，包含标准创建任务和查询任务接口。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">Video Models</p>
+            <h1>视频模型教程</h1>
+          </header>
+          <p>视频模型采用异步任务模式：提交请求后返回任务 ID，再通过任务状态接口轮询生成进度与结果。Seedance 同时提供原生格式和 OpenAI 兼容格式：原生格式使用 <code>content</code> 数组传入多模态内容，兼容格式使用 <code>prompt</code> 及参考素材参数。</p>
+          <div class="grid two">
+            <a class="card" href="/docs/seedance/generation.html"><h3>doubao-seedance-2.0 视频生成(Seedance 原生格式)</h3><p>使用 <code>/api/v3/contents</code> 异步任务协议，支持文生视频、参考图、首尾帧、参考视频、参考音频与有声视频。</p></a>
+            <a class="card" href="/docs/seedance/generation-openai.html"><h3>doubao-seedance-2.0 视频生成(openai格式)</h3><p>使用 <code>/v1/video/generations</code> JSON 接口，通过 <code>prompt</code> 创建并查询视频任务。</p></a>
+            <a class="card" href="/docs/seedance/assets.html"><h3>素材库 API</h3><p>连接 SeedDanceAPI，管理虚拟人像与真人人像素材，并在线试用素材接口。</p></a>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

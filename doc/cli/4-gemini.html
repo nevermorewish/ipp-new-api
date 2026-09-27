@@ -1,0 +1,69 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini CLI 配置 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="直接通过环境变量把 Gemini CLI 接入寰星云科。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">CLI · Gemini</p>
+            <h1>Gemini CLI 配置</h1>
+          </header>
+
+          <div class="vp-tabs" data-vp-tabs>
+            <div class="vp-tabs-nav" role="tablist">
+              <button type="button" class="vp-tab-nav active" role="tab" aria-controls="gemini-windows" aria-selected="true">Windows</button>
+              <button type="button" class="vp-tab-nav" role="tab" aria-controls="gemini-macos" aria-selected="false">MacOS</button>
+            </div>
+            <div class="vp-tab active" id="gemini-windows" role="tabpanel" aria-expanded="true">
+              <div class="vp-tab-title">Windows</div>
+              <ol><li>键盘按下“Win+R”，输入以下内容后回车，打开 Gemini CLI 配置目录</li></ol>
+              <pre><code>%userprofile%\.gemini</code></pre>
+              <figure><img src="/docs/assets/img/cli/019.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="2"><li>如果目录下没有 <code>.env</code> 文件，请新建一个 <code>.env</code>，写入以下内容</li></ol>
+              <ul><li><strong>.env</strong>：Gemini CLI 的配置文件，主要设置自定义端点、ApiKey 跟所用模型</li></ul>
+              <figure><img src="/docs/assets/img/cli/020.webp" alt="" /><figcaption></figcaption></figure>
+              <pre><code>GOOGLE_GEMINI_BASE_URL=https://api.huanxing.ai
+GEMINI_API_KEY=xxx
+GEMINI_MODEL=gemini-2.5-pro</code></pre>
+              <figure><img src="/docs/assets/img/cli/021.png" alt="" /><figcaption></figcaption></figure>
+              <ol start="3"><li>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a>，在寰星云科中创建 <code>default</code> 分组令牌，并复制 ApiKey 后填入 <code>xxx</code></li></ol>
+              <figure><img src="/docs/assets/img/cli/026.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="4"><li>打开终端执行 <code>gemini</code>，看到交互界面并能正常回复即表示配置成功</li></ol>
+              <figure><img src="/docs/assets/img/cli/022.webp" alt="" /><figcaption></figcaption></figure>
+            </div>
+            <div class="vp-tab" id="gemini-macos" role="tabpanel" aria-expanded="false">
+              <div class="vp-tab-title">MacOS</div>
+              <ol><li>按下 “Command+Shift+G”，输入以下路径后回车，打开配置目录</li></ol>
+              <pre><code>~/.gemini</code></pre>
+              <figure><img src="/docs/assets/img/cli/023.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="2"><li>若目录中没有 <code>.env</code> 文件，创建并写入以下内容</li></ol>
+              <ul><li><strong>.env</strong>：Gemini CLI 的配置文件，主要设置自定义端点、ApiKey 跟所用模型</li></ul>
+              <figure><img src="/docs/assets/img/cli/024.webp" alt="" /><figcaption></figcaption></figure>
+              <pre><code>GOOGLE_GEMINI_BASE_URL=https://api.huanxing.ai
+GEMINI_API_KEY=xxx
+GEMINI_MODEL=gemini-2.5-pro</code></pre>
+              <ol start="3"><li>回顾 <a href="/docs/register/4-token.html">创建 API 令牌</a>，在寰星云科中创建 <code>default</code> 分组令牌，填入 <code>xxx</code></li></ol>
+              <figure><img src="/docs/assets/img/cli/026.webp" alt="" /><figcaption></figcaption></figure>
+              <ol start="4"><li>在终端运行 <code>gemini</code>，可正常进入对话并收到回复即表示配置完成</li></ol>
+              <figure><img src="/docs/assets/img/cli/022.webp" alt="" /><figcaption></figcaption></figure>
+            </div>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

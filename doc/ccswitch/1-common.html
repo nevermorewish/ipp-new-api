@@ -1,0 +1,121 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CC-Switch 通用步骤 | 寰星云科 API 使用文档</title>
+    <meta name="description" content="CC-Switch 下载安装、首次打开、新增供应商与切换的通用步骤。" />
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+    <div class="shell">
+      <aside class="sidebar" data-mount="sidebar"></aside>
+      <main class="content">
+        <nav class="breadcrumb" data-mount="breadcrumb"></nav>
+        <article class="page">
+          <header class="page-heading">
+            <p class="eyebrow">CC-Switch · 通用</p>
+            <h1>通用步骤</h1>
+          </header>
+
+          <h3 id="cc-switch介绍">CC-Switch介绍</h3>
+          <div class="ccswitch-intro" align="center">
+            <h3>Claude Code / Codex / Gemini CLI 全方位辅助工具</h3>
+            <p class="ccswitch-badges">
+              <img src="/docs/assets/img/ccswitch/version.svg" alt="Version" /><br />
+              <img src="/docs/assets/img/ccswitch/typescript-trending.svg" alt="Trending" /><br />
+              <img src="/docs/assets/img/ccswitch/platform.svg" alt="Platform" /><br />
+              <img src="/docs/assets/img/ccswitch/tauri.svg" alt="Built with Tauri" /><br />
+              <img src="/docs/assets/img/ccswitch/downloads.svg" alt="Downloads" />
+            </p>
+            <p class="ccswitch-trend">
+              <img src="/docs/assets/img/ccswitch/trendshift.svg" alt="farion1231%2Fcc-switch | Trendshift" width="250" height="55" />
+            </p>
+            <p>下载地址：<code>https://github.com/farion1231/cc-switch/releases/latest</code></p>
+            <p><strong>从供应商切换器到 AI CLI 一体化管理平台</strong></p>
+            <p><strong>统一管理 Claude Code、Codex 与 Gemini CLI 的供应商配置、MCP 服务器、Skills 扩展和系统提示词。</strong></p>
+          </div>
+
+          <p>使用 CC-Switch，您可以：</p>
+          <ul class="ccswitch-feature-list">
+            <li>✅ 一键切换 API 配置 - 在多个 API 提供商之间快速切换</li>
+            <li>✅ 可视化配置管理 - 通过图形界面轻松管理所有配置</li>
+            <li>✅ MCP 服务器管理 - 管理 Model Context Protocol 服务器</li>
+            <li>✅ 系统托盘快捷操作 - 通过托盘菜单快速切换</li>
+          </ul>
+
+          <h3 id="软件下载">软件下载</h3>
+          <div class="vp-tabs" data-vp-tabs>
+            <div class="vp-tabs-nav" role="tablist">
+              <button type="button" class="vp-tab-nav active" role="tab" aria-controls="ccswitch-windows" aria-selected="true">Windows</button>
+              <button type="button" class="vp-tab-nav" role="tab" aria-controls="ccswitch-macos" aria-selected="false">MacOS</button>
+              <button type="button" class="vp-tab-nav" role="tab" aria-controls="ccswitch-linux" aria-selected="false">Linux</button>
+            </div>
+            <div class="vp-tab active" id="ccswitch-windows" role="tabpanel" aria-expanded="true">
+              <div class="vp-tab-title">Windows</div>
+              <ol>
+                <li><p>打开 <code>https://github.com/farion1231/cc-switch/releases/latest</code>，进入 CC-Switch 的 Github Release 页面</p></li>
+                <li><p>鼠标滚动到最下方选择适合自己版本的安装包，windows 系统推荐下载普通 msi 后缀的安装包进行安装</p></li>
+              </ol>
+              <figure>
+                <img src="/docs/assets/img/ccswitch/001.webp" alt="" />
+                <figcaption></figcaption>
+              </figure>
+              <ol start="3">
+                <li>安装后运行 CC-Switch 主程序，界面如下。</li>
+              </ol>
+              <figure>
+                <img src="/docs/assets/img/ccswitch/002.webp" alt="" />
+                <figcaption></figcaption>
+              </figure>
+            </div>
+            <div class="vp-tab" id="ccswitch-macos" role="tabpanel" aria-expanded="false">
+              <div class="vp-tab-title">MacOS</div>
+              <ul>
+                <li><p>MacOS 安装推荐使用 HomeBrew</p></li>
+                <li><p>开启终端后，分别运行以下命令：</p></li>
+              </ul>
+              <pre><code class="language-bash"># 添加 tap 源
+brew tap farion1231/ccswitch
+
+# 安装 CC-Switch
+brew install --cask cc-switch</code></pre>
+              <ul>
+                <li>安装完成后，在“启动台”或“应用程序”文件夹中找到 CC-Switch 并启动。</li>
+              </ul>
+              <figure>
+                <img src="/docs/assets/img/ccswitch/002.webp" alt="" />
+                <figcaption></figcaption>
+              </figure>
+            </div>
+            <div class="vp-tab" id="ccswitch-linux" role="tabpanel" aria-expanded="false">
+              <div class="vp-tab-title">Linux</div>
+              <div class="hint-container important">
+                <p class="hint-container-title">重要</p>
+                <p>以下命令中的文件名包含占位符版本号 x.x.x，请访问 <code>https://github.com/farion1231/cc-switch/releases/latest</code> 页面查看最新版本，并替换为实际的版本号和完整文件名。</p>
+              </div>
+              <p>Debian/Ubuntu 系统：</p>
+              <pre><code class="language-bash"># 下载 .deb 包
+wget https://github.com/farion1231/cc-switch/releases/latest/download/cc-switch_x.x.x_amd64.deb
+
+# 安装
+sudo dpkg -i cc-switch_x.x.x_amd64.deb</code></pre>
+            </div>
+          </div>
+
+          <h3 id="环境检查">环境检查</h3>
+          <div class="hint-container warning">
+            <p class="hint-container-title">注意</p>
+            <p><strong>请你最好进行此步的环境检查步骤！！！</strong><br />如果你有经验，能确认你的 Nodejs 环境以及 cc、codex、gemini 的 cli 安装没问题，配置目录也都存在，可以忽略这一步，直接进入后续的 CC Switch 配置</p>
+            <p>点击右侧传送门查看 <a href="/docs/register/5-env.html">如何进行环境检查？</a></p>
+          </div>
+        </article>
+        <nav class="page-nav" data-mount="prevnext"></nav>
+      </main>
+    </div>
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

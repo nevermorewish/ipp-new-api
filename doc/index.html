@@ -1,0 +1,91 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="寰星云科 API 使用文档：账号注册、模型分组、CC-Switch、CLI 配置、进阶玩法与常见问题一站式说明。"
+    />
+    <title>寰星云科 API 使用文档</title>
+    <link rel="icon" href="/docs/logo.png" />
+    <link rel="stylesheet" href="/docs/styles.css" />
+  </head>
+  <body>
+    <div data-mount="topbar"></div>
+
+    <div class="shell">
+      <aside class="sidebar" aria-label="文档目录" data-mount="sidebar"></aside>
+
+      <main class="content">
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">寰星云科科技有限公司</p>
+            <h1>寰星云科 API 使用文档</h1>
+            <p>
+              本文档用于快速完成账号注册、额度购买、API 令牌创建，以及 Claude Code、Codex、
+              Gemini CLI、CC-Switch 等常用开发工具的接入。所有章节都按真实操作顺序排列，按导航逐步阅读即可。
+            </p>
+          </div>
+          <div class="hero-panel" aria-label="常用地址">
+            <span>默认站点地址</span>
+            <code>https://api.huanxing.ai</code>
+            <span>OpenAI 兼容接口</span>
+            <code>https://api.huanxing.ai/v1</code>
+            <span>文档入口</span>
+            <code>/docs/</code>
+          </div>
+        </section>
+
+        <section class="page">
+          <div class="section-heading">
+            <p>Overview</p>
+            <h2>从这里开始</h2>
+          </div>
+          <p>
+            如果你是第一次使用寰星云科 API，建议按下列顺序阅读：完成账号准备 →
+            理解模型与令牌分组 → 在客户端工具中完成配置。所有页面都默认以
+            <code>https://api.huanxing.ai</code> 作为默认 API Base URL。
+          </p>
+          <div class="grid two">
+            <a class="card" href="/docs/register/3-quota.html">
+              <h3>1. 快速开始</h3>
+              <p>购买额度、创建 API 令牌、检查环境、安装 CLI 工具。</p>
+            </a>
+            <a class="card" href="/docs/token/1-intro.html">
+              <h3>2. 模型与令牌</h3>
+              <p>了解模型广场、令牌分组与 default 分组下的可用模型范围。</p>
+            </a>
+            <a class="card" href="/docs/ccswitch/1-common.html">
+              <h3>3. CC-Switch 接入</h3>
+              <p>用图形化工具一次管理 Claude Code、Codex、Gemini 的多套配置。</p>
+            </a>
+            <a class="card" href="/docs/register/5-env.html">
+              <h3>4. CLI 直接配置</h3>
+              <p>不依赖 CC-Switch，直接修改 Claude Code、Codex、Gemini CLI 的配置文件。</p>
+            </a>
+            <a class="card" href="/docs/tools/workbuddy.html">
+              <h3>5. 工具接入</h3>
+              <p>WorkBuddy、Cursor、TRAE 等第三方工具的 OpenAI 兼容接口配置。</p>
+            </a>
+            <a class="card" href="/docs/paint/GPTImage.html">
+              <h3>6. 绘图模型</h3>
+              <p>使用 GPT-Image-2 等绘图模型生成图片。</p>
+            </a>
+            <a class="card" href="/docs/advanced/DeepSeekClaudeCode.html">
+              <h3>7. 进阶玩法</h3>
+              <p>DeepSeek、GPT 等跨模型接入 Claude Code。</p>
+            </a>
+            <a class="card" href="/docs/faq/CC.html">
+              <h3>8. 常见问题</h3>
+              <p>Claude Code、Codex、Gemini CLI 常见报错与排查思路。</p>
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div data-mount="footer"></div>
+    <script src="/docs/app.js"></script>
+  </body>
+</html>

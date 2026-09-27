@@ -63,6 +63,7 @@ const (
 	ChannelTypeSGLang         = 63
 	ChannelTypeSeedance       = 64
 	ChannelTypeOpenAIGPT      = 65
+	ChannelTypeSeedanceAPI    = 66
 	ChannelTypeDummy          // this one is only for count, do not add any channel after this
 
 )
@@ -136,6 +137,7 @@ var ChannelBaseURLs = []string{
 	"",                                          //63
 	"https://api.huanxing.ai",                   //64
 	"https://api.openai.com",                    //65
+	"",                                          //66 SeedanceAPI: deployment-specific signing secret and URL
 }
 
 func GetChannelBaseURL(channelType int) string {
@@ -208,6 +210,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeSGLang:         "SGLang",
 	ChannelTypeSeedance:       "Seedance",
 	ChannelTypeOpenAIGPT:      "OpenAI-GPT",
+	ChannelTypeSeedanceAPI:    "SeedanceAPI",
 }
 
 func GetChannelTypeName(channelType int) string {
