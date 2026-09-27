@@ -5,6 +5,7 @@ import (
 	"maps"
 	"math"
 	"sort"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
@@ -12,34 +13,32 @@ import (
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/setting/config"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/samber/lo"
 )
 
 const (
-	BillingModeRatio      = "ratio"
-	BillingModeTieredExpr = "tiered_expr"
-	BillingModeField      = "billing_mode"
-	BillingExprField      = "billing_expr"
-	maxTaskExprSmokeTests = 64
+	BillingModeRatio        = "ratio"
+	BillingModeTieredExpr   = "tiered_expr"
+	BillingModeField        = "billing_mode"
+	BillingExprField        = "billing_expr"
+	PluginBillingExprOption = "billing_setting.plugin_billing_expr"
+	maxTaskExprSmokeTests   = 64
 )
 
 // BillingSetting is managed by config.GlobalConfig.Register.
-// DB keys: billing_setting.billing_mode, billing_setting.billing_expr
+// DB keys: billing_setting.billing_mode, billing_setting.billing_expr,
+// billing_setting.plugin_billing_expr
 type BillingSetting struct {
-	BillingMode map[string]string `json:"billing_mode"`
-	BillingExpr map[string]string `json:"billing_expr"`
+	BillingMode       map[string]string `json:"billing_mode"`
+	BillingExpr       map[string]string `json:"billing_expr"`
+	PluginBillingExpr map[string]string `json:"plugin_billing_expr"`
 }
 
 var billingSetting = BillingSetting{
-	BillingMode: make(map[string]string),
-	BillingExpr: make(map[string]string),
-}
-
-var defaultTaskBillingExpr = map[string]string{
-	"doubao-seedance-2.0":      `u("resolution") == "1080p" && u("video_input") == "video" ? tier("1080p_video", u("tokens") * 21.7 / 1000000) : u("resolution") == "1080p" ? tier("1080p", u("tokens") * 35.7 / 1000000) : u("resolution") == "4k" && u("video_input") == "video" ? tier("4k_video", u("tokens") * 11.2 / 1000000) : u("resolution") == "4k" ? tier("4k", u("tokens") * 18.2 / 1000000) : u("video_input") == "video" ? tier("video", u("tokens") * 19.6 / 1000000) : tier("base", u("tokens") * 32.2 / 1000000)`,
-	"doubao-seedance-2.0-fast": `u("video_input") == "video" ? tier("video", u("tokens") * 15.4 / 1000000) : tier("base", u("tokens") * 25.9 / 1000000)`,
-	"doubao-seedance-2.0-mini": `u("video_input") == "video" ? tier("video", u("tokens") * 9.8 / 1000000) : tier("base", u("tokens") * 16.1 / 1000000)`,
-	"doubao-seedance-2.5":      `u("resolution") == "1080p" && u("video_input") == "video" ? tier("1080p_video", u("tokens") * 32.2 / 1000000) : u("resolution") == "1080p" ? tier("1080p", u("tokens") * 53.9 / 1000000) : u("video_input") == "video" ? tier("video", u("tokens") * 29.4 / 1000000) : tier("base", u("tokens") * 49 / 1000000)`,
+	BillingMode:       make(map[string]string),
+	BillingExpr:       make(map[string]string),
+	PluginBillingExpr: make(map[string]string),
 }
 
 func init() {
@@ -54,7 +53,15 @@ func GetBillingMode(model string) string {
 	if mode, ok := billingSetting.BillingMode[model]; ok {
 		return mode
 	}
-	if _, ok := defaultTaskBillingExpr[model]; ok {
+	if _, ok := builtinBillingExpr[model]; ok {
+		// Existing administrator-configured legacy prices take precedence over
+		// a newly introduced built-in expression unless a mode was explicit.
+		if ratio_setting.HasConfiguredModelRatio(model) {
+			return BillingModeRatio
+		}
+		if _, configured := ratio_setting.GetModelPrice(model, false); configured {
+			return BillingModeRatio
+		}
 		return BillingModeTieredExpr
 	}
 	return BillingModeRatio
@@ -64,24 +71,104 @@ func GetBillingExpr(model string) (string, bool) {
 	if expr, ok := billingSetting.BillingExpr[model]; ok {
 		return expr, true
 	}
-	expr, ok := defaultTaskBillingExpr[model]
-	return expr, ok
+	if GetBillingMode(model) == BillingModeTieredExpr {
+		expr, ok := builtinBillingExpr[model]
+		return expr, ok
+	}
+	return "", false
+}
+
+func GetBuiltinBillingExpr(model string) (string, bool) {
+	expression, ok := builtinBillingExpr[model]
+	return expression, ok
+}
+
+func PluginBillingExprKey(pluginKey, model string) string {
+	return pluginKey + "::" + model
+}
+
+func SplitPluginBillingExprKey(key string) (plugin, model string, ok bool) {
+	plugin, model, ok = strings.Cut(key, "::")
+	if !ok || !jsplugin.ValidPluginKey(plugin) || strings.TrimSpace(model) == "" {
+		return "", "", false
+	}
+	return plugin, model, true
+}
+
+func GetPluginBillingExprCopy() map[string]string {
+	return maps.Clone(billingSetting.PluginBillingExpr)
+}
+
+func GetPluginBillingExpr(pluginKey, model string) (string, bool) {
+	expression, ok := billingSetting.PluginBillingExpr[PluginBillingExprKey(pluginKey, model)]
+	return expression, ok
+}
+
+// ResolveTaskBillingExpr selects the executing plugin's override before the
+// model expression, retaining the model alias fallback and explicit modes.
+func ResolveTaskBillingExpr(pluginKey, model, mappedModel string) (string, bool) {
+	if pluginKey != "" {
+		if expr, ok := GetPluginBillingExpr(pluginKey, model); ok {
+			return expr, true
+		}
+		if mappedModel != "" && mappedModel != model {
+			if expr, ok := GetPluginBillingExpr(pluginKey, mappedModel); ok {
+				return expr, true
+			}
+		}
+	}
+	if GetBillingMode(model) == BillingModeTieredExpr {
+		return GetBillingExpr(model)
+	}
+	if mappedModel != "" && mappedModel != model && GetBillingMode(mappedModel) == BillingModeTieredExpr {
+		expression, ok := GetBillingExpr(mappedModel)
+		return expression, ok && strings.TrimSpace(expression) != ""
+	}
+	return "", false
+}
+
+// TaskExprCompatible checks the schema contract even for usage references in
+// branches that the current request would not evaluate.
+func TaskExprCompatible(expression string, schema map[string]jsplugin.UsageFieldSchema) bool {
+	if strings.TrimSpace(expression) == "" {
+		return false
+	}
+	if _, err := billingexpr.CompileFromCache(expression); err != nil {
+		return false
+	}
+	for key := range billingexpr.UsedUsageKeys(expression) {
+		if _, exists := schema[key]; !exists {
+			return false
+		}
+	}
+	return !billingexpr.UsesFixedPricing(expression)
+}
+
+func GetBuiltinBillingExprCopy() map[string]string {
+	return lo.Assign(builtinBillingExpr)
 }
 
 func GetBillingModeCopy() map[string]string {
-	result := make(map[string]string, len(defaultTaskBillingExpr)+len(billingSetting.BillingMode))
-	for model := range defaultTaskBillingExpr {
-		result[model] = BillingModeTieredExpr
+	modes := lo.Assign(billingSetting.BillingMode)
+	for model := range builtinBillingExpr {
+		if _, configured := modes[model]; !configured && GetBillingMode(model) == BillingModeTieredExpr {
+			modes[model] = BillingModeTieredExpr
+		}
 	}
-	maps.Copy(result, billingSetting.BillingMode)
-	return result
+	return modes
 }
 
 func GetBillingExprCopy() map[string]string {
-	result := make(map[string]string, len(defaultTaskBillingExpr)+len(billingSetting.BillingExpr))
-	maps.Copy(result, defaultTaskBillingExpr)
-	maps.Copy(result, billingSetting.BillingExpr)
-	return result
+	expressions := lo.Assign(billingSetting.BillingExpr)
+	for model := range builtinBillingExpr {
+		if _, configured := expressions[model]; configured {
+			continue
+		}
+		if expression, ok := GetBillingExpr(model); ok {
+			expressions[model] = expression
+		}
+	}
+	return expressions
 }
 
 func GetPricingSyncData(base map[string]any) map[string]any {
@@ -122,6 +209,9 @@ func smokeTestExpr(exprStr string) error {
 		{P: 1000, C: 1000, Len: 1000},
 		{P: 100000, C: 100000, Len: 100000},
 		{P: 1000000, C: 1000000, Len: 1000000},
+		{P: 300, C: 100, Len: 1000, CR: 100, Img: 400, ImgCR: 200},
+		{P: 800, C: 50, Len: 1000, AI: 200, AO: 50},
+		{Len: math.MaxInt32, ImgCR: math.MaxInt32},
 	}
 
 	for _, v := range vectors {
@@ -144,6 +234,9 @@ func smokeTestExpr(exprStr string) error {
 func SmokeTestTaskExpr(exprStr string, schema map[string]jsplugin.UsageFieldSchema) error {
 	if _, err := billingexpr.CompileFromCache(exprStr); err != nil {
 		return err
+	}
+	if billingexpr.UsesFixedPricing(exprStr) {
+		return fmt.Errorf("fixed pricing is not supported for task usage expressions")
 	}
 	for key := range billingexpr.UsedUsageKeys(exprStr) {
 		if _, declared := schema[key]; !declared {
@@ -224,9 +317,7 @@ func taskUsageSmokeVectors(schema map[string]jsplugin.UsageFieldSchema) []map[st
 		}
 		if index == len(dimensions) {
 			vector := make(map[string]any, len(current))
-			for key, value := range current {
-				vector[key] = value
-			}
+			maps.Copy(vector, current)
 			vectors = append(vectors, vector)
 			return
 		}

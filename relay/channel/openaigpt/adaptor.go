@@ -65,9 +65,26 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	streamOptions := request.StreamOptions
 	// Preserve caller parameters across the shared adaptor. The optional
 	// OpenAI-GPT temperature filter runs on final bodies after overrides.
-	temperature := request.Temperature
-	topP := request.TopP
-	logProbs := request.LogProbs
+	var temperature *float64
+	if request.Temperature != nil {
+		value := *request.Temperature
+		temperature = &value
+	}
+	var topP *float64
+	if request.TopP != nil {
+		value := *request.TopP
+		topP = &value
+	}
+	var logProbs *bool
+	if request.LogProbs != nil {
+		value := *request.LogProbs
+		logProbs = &value
+	}
+	var topLogProbs *int
+	if request.TopLogProbs != nil {
+		value := *request.TopLogProbs
+		topLogProbs = &value
+	}
 	converted, err := a.openaiAdaptor.ConvertOpenAIRequest(c, info, request)
 	if err != nil {
 		return nil, err
@@ -77,6 +94,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		convertedRequest.Temperature = temperature
 		convertedRequest.TopP = topP
 		convertedRequest.LogProbs = logProbs
+		convertedRequest.TopLogProbs = topLogProbs
 	}
 	return converted, nil
 }

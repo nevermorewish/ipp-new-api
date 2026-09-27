@@ -19,12 +19,10 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import {
   Code2,
-  Download,
   Eye,
   FileSpreadsheet,
   RotateCcw,
   Save,
-  Upload,
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
@@ -33,6 +31,7 @@ import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 
 import { JsonCodeEditor } from '@/components/json-code-editor'
+import { LearnMore } from '@/components/learn-more'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -46,12 +45,15 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { getEnabledModels } from '@/features/channels/api'
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
+import { handleServerError } from '@/lib/handle-server-error'
+import { requireServerSuccess } from '@/lib/server-error-message'
 
 import {
   SettingsForm,
   SettingsSwitchContent,
   SettingsSwitchItem,
 } from '../components/settings-form-layout'
+import { SettingsPageActionsPortal } from '../components/settings-page-context'
 import {
   buildModelPricingExportRows,
   createModelPricingWorkbook,
@@ -61,12 +63,11 @@ import {
   ModelRatioVisualEditor,
   type ModelRatioVisualEditorHandle,
 } from './model-ratio-visual-editor'
-import { formatJsonForTextarea } from './utils'
 
 type ModelFormValues = {
   ModelPrice: string
   ModelRatio: string
-  OriginalModelPrice?: string
+  OriginalModelPrice: string
   CacheRatio: string
   CreateCacheRatio: string
   CompletionRatio: string
@@ -76,12 +77,13 @@ type ModelFormValues = {
   ExposeRatioEnabled: boolean
   BillingMode: string
   BillingExpr: string
+  PluginBillingExpr: string
 }
 
 type ModelRatioFormProps = {
-  form: UseFormReturn<any>
-  savedValues: any
-  onSave: (values: any) => Promise<void>
+  form: UseFormReturn<ModelFormValues>
+  savedValues: ModelFormValues
+  onSave: (values: ModelFormValues) => Promise<void>
   onReset: () => void
   isSaving: boolean
   isResetting: boolean
@@ -91,7 +93,6 @@ type ModelRatioFormProps = {
 type ModelJsonFieldName =
   | 'ModelPrice'
   | 'ModelRatio'
-  | 'OriginalModelPrice'
   | 'CacheRatio'
   | 'CreateCacheRatio'
   | 'CompletionRatio'
@@ -114,12 +115,6 @@ const modelJsonFields: Array<{
     name: 'ModelRatio',
     labelKey: 'Model ratio',
     descriptionKey: 'JSON map of model → multiplier applied to quota billing.',
-  },
-  {
-    name: 'OriginalModelPrice',
-    labelKey: 'Original model prices',
-    descriptionKey:
-      'Optional direct USD prices per 1M tokens. Used only to display list prices and discounts.',
   },
   {
     name: 'CacheRatio',
@@ -156,82 +151,6 @@ const modelJsonFields: Array<{
   },
 ]
 
-const MODEL_PRICING_FIELDS = [
-  'ModelPrice',
-  'ModelRatio',
-  'OriginalModelPrice',
-  'CacheRatio',
-  'CreateCacheRatio',
-  'CompletionRatio',
-  'ImageRatio',
-  'AudioRatio',
-  'AudioCompletionRatio',
-  'BillingMode',
-  'BillingExpr',
-] as const satisfies ReadonlyArray<keyof ModelFormValues>
-
-type ModelPricingField = (typeof MODEL_PRICING_FIELDS)[number]
-
-type ModelPricingExport = {
-  type: 'new-api-model-pricing'
-  version: 1
-  exported_at: string
-  data: Record<ModelPricingField, unknown>
-}
-
-function parseJsonValue(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return {}
-  return JSON.parse(trimmed)
-}
-
-function stringifyImportedJsonValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return formatJsonForTextarea(value)
-  }
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return JSON.stringify(value, null, 2)
-  }
-  return JSON.stringify(value ?? {}, null, 2)
-}
-
-function getImportedPricingData(
-  parsed: unknown
-): Partial<Record<ModelPricingField, unknown>> {
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Invalid model pricing import file')
-  }
-
-  const record = parsed as Record<string, unknown>
-  const nested = record.data ?? record.pricing ?? record.model_pricing
-  const source =
-    nested && typeof nested === 'object' && !Array.isArray(nested)
-      ? (nested as Record<string, unknown>)
-      : record
-  const result: Partial<Record<ModelPricingField, unknown>> = {}
-
-  for (const field of MODEL_PRICING_FIELDS) {
-    if (Object.hasOwn(source, field)) {
-      result[field] = source[field]
-      continue
-    }
-    let legacyKey: string | undefined
-    if (field === 'BillingMode') {
-      legacyKey = 'billing_setting.billing_mode'
-    } else if (field === 'BillingExpr') {
-      legacyKey = 'billing_setting.billing_expr'
-    }
-    if (legacyKey && Object.hasOwn(source, legacyKey)) {
-      result[field] = source[legacyKey]
-    }
-  }
-
-  if (Object.keys(result).length === 0) {
-    throw new Error('Import file does not contain model pricing data')
-  }
-  return result
-}
-
 function ModelJsonTextareaField(props: {
   form: UseFormReturn<ModelFormValues>
   name: ModelJsonFieldName
@@ -247,7 +166,7 @@ function ModelJsonTextareaField(props: {
           <FormLabel>{props.label}</FormLabel>
           <FormControl>
             <JsonCodeEditor
-              value={field.value ?? ''}
+              value={field.value}
               onChange={(value) => field.onChange(value)}
               name={field.name}
               onBlur={field.onBlur}
@@ -277,12 +196,11 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   const isUnsetVariant = variant === 'unset'
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
   const visualEditorRef = useRef<ModelRatioVisualEditorHandle>(null)
-  const importInputRef = useRef<HTMLInputElement | null>(null)
   const { models: pricingModels } = usePricingData(!isUnsetVariant)
 
   const enabledModelsQuery = useQuery({
     queryKey: ['enabled-models'],
-    queryFn: getEnabledModels,
+    queryFn: async () => requireServerSuccess(await getEnabledModels()),
     enabled: isUnsetVariant,
   })
 
@@ -295,8 +213,17 @@ export const ModelRatioForm = memo(function ModelRatioForm({
 
   useEffect(() => {
     if (!enabledModelsError) return
-    toast.error(enabledModelsErrorMessage || t('Failed to load enabled models'))
-  }, [enabledModelsError, enabledModelsErrorMessage, t])
+    handleServerError(
+      enabledModelsQuery.error ?? enabledModelsQuery.data,
+      t('Failed to load enabled models')
+    )
+  }, [
+    enabledModelsError,
+    enabledModelsErrorMessage,
+    enabledModelsQuery.error,
+    enabledModelsQuery.data,
+    t,
+  ])
 
   const handleFieldChange = useCallback(
     (field: keyof ModelFormValues, value: string) => {
@@ -312,71 +239,6 @@ export const ModelRatioForm = memo(function ModelRatioForm({
     setEditMode((prev) => (prev === 'visual' ? 'json' : 'visual'))
   }, [])
 
-  const handleExportModelPricing = useCallback(() => {
-    try {
-      const data = Object.fromEntries(
-        MODEL_PRICING_FIELDS.map((field) => [
-          field,
-          parseJsonValue(form.getValues(field)),
-        ])
-      ) as Record<ModelPricingField, unknown>
-      const payload: ModelPricingExport = {
-        type: 'new-api-model-pricing',
-        version: 1,
-        exported_at: new Date().toISOString(),
-        data,
-      }
-      const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
-        type: 'application/json',
-      })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `model-pricing-${new Date().toISOString().slice(0, 10)}.json`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-      toast.success(t('Model pricing exported successfully'))
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? t(error.message)
-          : t('Failed to export model pricing')
-      )
-    }
-  }, [form, t])
-
-  const handleImportModelPricing = useCallback(
-    async (file: File) => {
-      try {
-        const imported = getImportedPricingData(JSON.parse(await file.text()))
-        for (const field of MODEL_PRICING_FIELDS) {
-          if (!Object.hasOwn(imported, field)) continue
-          const value = imported[field]
-          form.setValue(field, stringifyImportedJsonValue(value), {
-            shouldDirty: true,
-            shouldValidate: true,
-          })
-        }
-        toast.success(
-          t(
-            'Model pricing imported. Review the changes, then click Save model prices to apply them.'
-          )
-        )
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? t(error.message)
-            : t('Failed to import model pricing')
-        )
-      } finally {
-        if (importInputRef.current) importInputRef.current.value = ''
-      }
-    },
-    [form, t]
-  )
-
   const handleExportPricingExcel = useCallback(() => {
     try {
       const snapshots = buildModelSnapshots({
@@ -391,10 +253,10 @@ export const ModelRatioForm = memo(function ModelRatioForm({
         audioCompletionRatio: form.getValues('AudioCompletionRatio'),
         billingMode: form.getValues('BillingMode'),
         billingExpr: form.getValues('BillingExpr'),
+        pluginBillingExpr: form.getValues('PluginBillingExpr'),
       })
       const rows = buildModelPricingExportRows(snapshots, pricingModels)
-      const workbook = createModelPricingWorkbook(rows)
-      const workbookData = XLSX.write(workbook, {
+      const workbookData = XLSX.write(createModelPricingWorkbook(rows), {
         bookType: 'xlsx',
         type: 'array',
       })
@@ -429,89 +291,91 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   }, [editMode, form, onSave])
 
   return (
-    <div className='space-y-6'>
-      {!isUnsetVariant && (
-        <div className='flex flex-wrap justify-end gap-2'>
-          <input
-            ref={importInputRef}
-            type='file'
-            accept='application/json,.json'
-            className='hidden'
-            onChange={(event) => {
-              const file = event.target.files?.[0]
-              if (file) void handleImportModelPricing(file)
-            }}
-          />
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            onClick={() => importInputRef.current?.click()}
-          >
-            <Upload data-icon='inline-start' />
-            {t('Import model pricing')}
-          </Button>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            onClick={handleExportModelPricing}
-          >
-            <Download data-icon='inline-start' />
-            {t('Export model pricing')}
-          </Button>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            onClick={handleExportPricingExcel}
-          >
-            <FileSpreadsheet data-icon='inline-start' />
-            {t('Export pricing Excel')}
-          </Button>
-          <Button
-            type='button'
-            variant='destructive'
-            size='sm'
-            onClick={onReset}
-            disabled={isResetting}
-          >
-            <RotateCcw data-icon='inline-start' />
-            {t('Reset prices')}
-          </Button>
-          <Button
-            type='button'
-            size='sm'
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            <Save data-icon='inline-start' />
-            {isSaving ? t('Saving...') : t('Save model prices')}
-          </Button>
-          <Button variant='outline' size='sm' onClick={toggleEditMode}>
-            {editMode === 'visual' ? (
-              <>
-                <Code2 className='mr-2 h-4 w-4' />
-                {t('Switch to JSON')}
-              </>
-            ) : (
-              <>
-                <Eye className='mr-2 h-4 w-4' />
-                {t('Switch to Visual')}
-              </>
+    <Form {...form}>
+      <div className='flex min-h-0 flex-1 flex-col gap-6'>
+        {!isUnsetVariant && (
+          <div className='flex shrink-0 flex-wrap items-center justify-end gap-2'>
+            <SettingsPageActionsPortal>
+              <FormField
+                control={form.control}
+                name='ExposeRatioEnabled'
+                render={({ field }) => (
+                  <SettingsSwitchItem className='gap-2 py-0'>
+                    <SettingsSwitchContent>
+                      <FormLabel>{t('Expose ratio API')}</FormLabel>
+                      <FormDescription className='sr-only'>
+                        {t(
+                          'Allow clients to query configured prices via `/api/ratio`.'
+                        )}
+                      </FormDescription>
+                    </SettingsSwitchContent>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <LearnMore contentProps={{ side: 'bottom', align: 'end' }}>
+                      {t(
+                        'Allow clients to query configured prices via `/api/ratio`.'
+                      )}
+                    </LearnMore>
+                  </SettingsSwitchItem>
+                )}
+              />
+            </SettingsPageActionsPortal>
+            <Button
+              type='button'
+              variant='destructive'
+              size='sm'
+              onClick={onReset}
+              disabled={isResetting}
+            >
+              <RotateCcw data-icon='inline-start' />
+              {t('Reset prices')}
+            </Button>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={handleExportPricingExcel}
+            >
+              <FileSpreadsheet data-icon='inline-start' />
+              {t('Export pricing Excel')}
+            </Button>
+            {editMode === 'json' && (
+              <Button
+                type='button'
+                size='sm'
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                <Save data-icon='inline-start' />
+                {isSaving ? t('Saving...') : t('Save model prices')}
+              </Button>
             )}
-          </Button>
-        </div>
-      )}
+            <Button variant='outline' size='sm' onClick={toggleEditMode}>
+              {editMode === 'visual' ? (
+                <>
+                  <Code2 className='mr-2 h-4 w-4' />
+                  {t('Switch to JSON')}
+                </>
+              ) : (
+                <>
+                  <Eye className='mr-2 h-4 w-4' />
+                  {t('Switch to Visual')}
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
-      <Form {...form}>
         {editMode === 'visual' ? (
-          <div className='space-y-6'>
+          <div className='flex min-h-0 flex-1 flex-col gap-6'>
             <ModelRatioVisualEditor
               ref={visualEditorRef}
               savedModelPrice={savedValues.ModelPrice}
               savedModelRatio={savedValues.ModelRatio}
-              savedOriginalModelPrice={savedValues.OriginalModelPrice || '{}'}
               savedCacheRatio={savedValues.CacheRatio}
               savedCreateCacheRatio={savedValues.CreateCacheRatio}
               savedCompletionRatio={savedValues.CompletionRatio}
@@ -520,9 +384,9 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               savedAudioCompletionRatio={savedValues.AudioCompletionRatio}
               savedBillingMode={savedValues.BillingMode}
               savedBillingExpr={savedValues.BillingExpr}
+              savedPluginBillingExpr={savedValues.PluginBillingExpr}
               modelPrice={form.watch('ModelPrice')}
               modelRatio={form.watch('ModelRatio')}
-              originalModelPrice={form.watch('OriginalModelPrice') || '{}'}
               cacheRatio={form.watch('CacheRatio')}
               createCacheRatio={form.watch('CreateCacheRatio')}
               completionRatio={form.watch('CompletionRatio')}
@@ -531,6 +395,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               audioCompletionRatio={form.watch('AudioCompletionRatio')}
               billingMode={form.watch('BillingMode')}
               billingExpr={form.watch('BillingExpr')}
+              pluginBillingExpr={form.watch('PluginBillingExpr')}
               candidateModelNames={
                 isUnsetVariant ? enabledModelsQuery.data?.data : undefined
               }
@@ -544,37 +409,13 @@ export const ModelRatioForm = memo(function ModelRatioForm({
                 const fieldMap: Record<string, keyof ModelFormValues> = {
                   'billing_setting.billing_mode': 'BillingMode',
                   'billing_setting.billing_expr': 'BillingExpr',
+                  'billing_setting.plugin_billing_expr': 'PluginBillingExpr',
                 }
                 const formField =
                   fieldMap[field] || (field as keyof ModelFormValues)
                 handleFieldChange(formField, value)
               }}
             />
-
-            {!isUnsetVariant && (
-              <FormField
-                control={form.control}
-                name='ExposeRatioEnabled'
-                render={({ field }) => (
-                  <SettingsSwitchItem>
-                    <SettingsSwitchContent>
-                      <FormLabel>{t('Expose ratio API')}</FormLabel>
-                      <FormDescription>
-                        {t(
-                          'Allow clients to query configured ratios via `/api/ratio`.'
-                        )}
-                      </FormDescription>
-                    </SettingsSwitchContent>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </SettingsSwitchItem>
-                )}
-              />
-            )}
           </div>
         ) : (
           <SettingsForm onSubmit={form.handleSubmit(onSave)}>
@@ -589,32 +430,9 @@ export const ModelRatioForm = memo(function ModelRatioForm({
                 />
               ))}
             </div>
-
-            <FormField
-              control={form.control}
-              name='ExposeRatioEnabled'
-              render={({ field }) => (
-                <SettingsSwitchItem>
-                  <SettingsSwitchContent>
-                    <FormLabel>{t('Expose ratio API')}</FormLabel>
-                    <FormDescription>
-                      {t(
-                        'Allow clients to query configured ratios via `/api/ratio`.'
-                      )}
-                    </FormDescription>
-                  </SettingsSwitchContent>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </SettingsSwitchItem>
-              )}
-            />
           </SettingsForm>
         )}
-      </Form>
-    </div>
+      </div>
+    </Form>
   )
 })

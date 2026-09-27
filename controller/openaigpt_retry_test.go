@@ -27,7 +27,7 @@ func TestOpenAIGPTCapabilityRetryHonorsBudgetAndPins(t *testing.T) {
 				service.GetChannelConstraints(ctx).AddPin(constraintdto.ChannelPin{ChannelId: 7})
 			}
 			apiErr := types.NewErrorWithStatusCode(errors.New("unsupported tool"), types.ErrorCodeChannelOpenAIResponsesUnsupported, 400)
-			require.Equal(t, tc.want, shouldRetry(ctx, apiErr, tc.remaining))
+			require.Equal(t, tc.want, service.ShouldRetryRelayError(ctx, apiErr, tc.remaining))
 		})
 	}
 }

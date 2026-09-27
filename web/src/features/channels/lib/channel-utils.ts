@@ -22,7 +22,6 @@ import { formatTimestampToDate } from '@/lib/format'
 import {
   CHANNEL_STATUS_CONFIG,
   CHANNEL_TYPES,
-  CHANNEL_TYPE_OPENAI_GPT,
   MULTI_KEY_STATUS_CONFIG,
   RESPONSE_TIME_CONFIG,
   RESPONSE_TIME_THRESHOLDS,
@@ -49,13 +48,14 @@ export function getChannelTypeIcon(type: number): string {
   const TYPE_TO_ICON: Record<number, string> = {
     // OpenAI family
     1: 'OpenAI', // OpenAI
-    [CHANNEL_TYPE_OPENAI_GPT]: 'OpenAI',
     6: 'OpenAI', // OpenAIMax
     7: 'OpenAI', // OhMyGPT
     8: 'OpenAI', // Custom
     58: 'NewAPI', // Advanced Custom
     59: 'Sub2API', // Sub2API
     60: 'NewAPI', // New API
+    62: 'Vllm', // vLLM
+    63: 'SGLang', // SGLang
     3: 'Azure', // Azure
 
     // Anthropic
@@ -104,8 +104,7 @@ export function getChannelTypeIcon(type: number): string {
     52: 'Vidu', // Vidu
     36: 'Suno', // SunoAPI
     55: 'OpenAI', // Sora
-    54: 'Doubao', // DoubaoVideo
-    62: 'Doubao', // Seedance
+    54: 'Doubao', // Doubao
     56: 'Replicate', // Replicate
 
     // Tools & Platforms
