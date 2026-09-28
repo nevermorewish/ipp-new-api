@@ -67,7 +67,7 @@ func newDoubaoPlugin(t *testing.T) (*jsplugin.Registry, *jsplugin.LoadedPlugin) 
 
 func TestDoubaoVideoDuration(t *testing.T) {
 	_, plugin := newDoubaoPlugin(t)
-	const modelName = "doubao-seedance-2-0-mini-260615"
+	const modelName = "doubao-seedance-2.0-mini"
 	for _, tc := range []struct {
 		name    string
 		params  map[string]any
@@ -385,9 +385,9 @@ func TestDoubaoSeedanceUsageFacts(t *testing.T) {
 	}{
 		{[]string{pro10, "doubao-seedance-1-0-lite-t2v", "doubao-seedance-1-0-lite-i2v"}, []string{"480p", "720p", "1080p"}, []string{"resolution", "tokens"}},
 		{[]string{pro15}, []string{"480p", "720p", "1080p"}, []string{"generate_audio", "resolution", "tokens"}},
-		{[]string{v20}, []string{"480p", "720p", "1080p", "4k"}, []string{"resolution", "tokens", "video_input"}},
-		{[]string{fast20, mini20}, []string{"480p", "720p"}, []string{"resolution", "tokens", "video_input"}},
-		{[]string{v25}, []string{"480p", "720p", "1080p"}, []string{"resolution", "tokens", "video_input"}},
+		{[]string{v20, "doubao-seedance-2.0"}, []string{"480p", "720p", "1080p", "4k"}, []string{"resolution", "tokens", "video_input"}},
+		{[]string{fast20, mini20, "doubao-seedance-2.0-fast", "doubao-seedance-2.0-mini"}, []string{"480p", "720p"}, []string{"resolution", "tokens", "video_input"}},
+		{[]string{v25, "doubao-seedance-2.5"}, []string{"480p", "720p", "1080p"}, []string{"resolution", "tokens", "video_input"}},
 	}
 	profiled := make([]string, 0, len(plugin.Meta.Models))
 	for _, family := range families {

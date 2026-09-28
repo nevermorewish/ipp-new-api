@@ -12,6 +12,13 @@ const VIDEO_MODELS = {
   "doubao-seedance-2-0-fast-260128": { resolutions: ["480p", "720p"], videoInput: true },
   "doubao-seedance-2-0-mini-260615": { resolutions: ["480p", "720p"], videoInput: true },
   "doubao-seedance-2-5-260628": { resolutions: ["480p", "720p", "1080p"], videoInput: true },
+  // Legacy Ark-compatible gateways expose these names with Bearer auth.
+  // They may also be served by the signed SeedanceAPI plugin; the channel
+  // determines which driver and authentication scheme handles the request.
+  "doubao-seedance-2.0": { resolutions: ["480p", "720p", "1080p", "4k"], videoInput: true },
+  "doubao-seedance-2.0-fast": { resolutions: ["480p", "720p"], videoInput: true },
+  "doubao-seedance-2.0-mini": { resolutions: ["480p", "720p"], videoInput: true },
+  "doubao-seedance-2.5": { resolutions: ["480p", "720p", "1080p"], videoInput: true },
 };
 // Every Ark resolution tier; an endpoint ID reached through channel mapping
 // without a declared profile keeps them all.
@@ -246,7 +253,7 @@ export const meta = {
     en: "Volcengine Doubao Seedance video generation and Seedream image generation",
     zh: "火山引擎豆包 Seedance 视频生成与 Seedream 图片生成",
   },
-  version: "1.1.1",
+  version: "1.1.2",
   author: { name: "QuantumNous" },
   channelTypes: [54, 45, 64], // VolcEngine-type channels serve Ark video models with the same wire format
   models: Object.keys(VIDEO_MODELS).concat(Object.keys(IMAGE_MODELS)),
