@@ -65,6 +65,124 @@ func newDoubaoPlugin(t *testing.T) (*jsplugin.Registry, *jsplugin.LoadedPlugin) 
 	return registry, plugin
 }
 
+func TestDoubaoVideoDuration(t *testing.T) {
+	_, plugin := newDoubaoPlugin(t)
+	const modelName = "doubao-seedance-2-0-mini-260615"
+	for _, tc := range []struct {
+		name    string
+		params  map[string]any
+		seconds float64
+		wantErr string
+	}{
+		{"duration ten", map[string]any{"duration": 10}, 10, ""},
+		{"duration fifteen", map[string]any{"duration": 15}, 15, ""},
+		{"seconds string", map[string]any{"seconds": "9"}, 9, ""},
+		{"metadata duration", map[string]any{"metadata": map[string]any{"duration": 10}}, 10, ""},
+		{"metadata seconds", map[string]any{"metadata": map[string]any{"seconds": "10"}}, 10, ""},
+		{"matching aliases", map[string]any{"seconds": "10", "duration": 10, "metadata": map[string]any{"duration": 10}}, 10, ""},
+		{"unspecified", map[string]any{}, 0, ""},
+		{"maximum safety bound", map[string]any{"duration": relaycommon.MaxTaskDurationSeconds}, relaycommon.MaxTaskDurationSeconds, ""},
+		{"conflicting aliases", map[string]any{"seconds": "5", "duration": 10}, 0, "conflicting duration"},
+		{"conflicting metadata", map[string]any{"duration": 10, "metadata": map[string]any{"duration": 15}}, 0, "conflicting duration"},
+		{"oversized hidden alias", map[string]any{"seconds": "10", "duration": relaycommon.MaxTaskDurationSeconds + 1}, 0, "between 1 and 3600"},
+		{"oversized metadata", map[string]any{"seconds": "10", "metadata": map[string]any{"duration": relaycommon.MaxTaskDurationSeconds + 1}}, 0, "between 1 and 3600"},
+		{"fractional duration", map[string]any{"duration": 10.5}, 0, "integer"},
+		{"partial numeric string", map[string]any{"seconds": "10seconds"}, 0, "integer"},
+		{"negative", map[string]any{"duration": -1}, 0, "between 1 and 3600"},
+		{"zero", map[string]any{"duration": 0}, 0, "between 1 and 3600"},
+		{"boolean", map[string]any{"duration": true}, 0, "integer"},
+		{"null", map[string]any{"duration": nil}, 0, "integer"},
+		{"empty string", map[string]any{"seconds": " "}, 0, "integer"},
+	} {
+		for _, format := range []string{"json", "multipart", "native", "responses"} {
+			t.Run(tc.name+"/"+format, func(t *testing.T) {
+				metadata := map[string]any{"resolution": "720p"}
+				if supplied, ok := tc.params["metadata"].(map[string]any); ok {
+					maps.Copy(metadata, supplied)
+				}
+				request := map[string]any{"model": modelName, "prompt": "a running fox", "images": []any{"https://cdn.example/frame.png"}}
+				maps.Copy(request, tc.params)
+				request["metadata"] = metadata
+				body := map[string]any{"kind": "json", "value": request}
+				export, path := "protocols", []string{"openai_video", "decodeRequest"}
+				switch format {
+				case "multipart":
+					metadata["content"] = []any{map[string]any{"type": "image_url", "image_url": map[string]any{"url": "https://cdn.example/frame.png"}}}
+					fields := map[string]any{}
+					for key, value := range request {
+						var text string
+						if str, ok := value.(string); ok {
+							text = str
+						} else {
+							encoded, err := common.Marshal(value)
+							require.NoError(t, err)
+							text = string(encoded)
+						}
+						fields[key] = []string{text}
+					}
+					// References use metadata.content on the multipart protocol.
+					delete(fields, "images")
+					body = map[string]any{"kind": "multipart", "fields": fields}
+				case "native":
+					request["content"] = []any{map[string]any{"type": "text", "text": "a running fox"}}
+					request["resolution"] = "720p"
+					export, path = "native", []string{"createTask"}
+				case "responses":
+					request["input"] = "a running fox"
+					path = []string{"openai_responses", "decodeRequest"}
+				}
+				value, err := plugin.Engine.CallPath(t.Context(), export, path, map[string]any{"model": modelName, "body": body})
+				if tc.wantErr != "" {
+					require.ErrorContains(t, err, tc.wantErr)
+					// Driver hooks must also reject invalid requests when called by
+					// the legacy task route without a protocol decoder.
+					for _, hook := range []string{"buildSubmitRequest", "extractUsage"} {
+						_, err = plugin.Engine.Call(t.Context(), hook, map[string]any{"model": modelName, "requestBody": request})
+						require.ErrorContains(t, err, tc.wantErr)
+					}
+					return
+				}
+				require.NoError(t, err)
+				resolved := alibabaObject(t, value)
+				info := &relaycommon.RelayInfo{
+					ChannelMeta:     &relaycommon.ChannelMeta{ChannelBaseUrl: doubaoBaseURL, UpstreamModelName: modelName},
+					OriginModelName: modelName,
+					TaskRelayInfo:   &relaycommon.TaskRelayInfo{PublicTaskID: "task_public"},
+				}
+				adaptor := taskplugin.New(plugin)
+				adaptor.Init(info)
+				c, _ := gin.CreateTestContext(httptest.NewRecorder())
+				requestPath := "/v1/videos"
+				if format == "json" {
+					requestPath = "/v1/video/generations"
+				}
+				c.Request = httptest.NewRequest(http.MethodPost, requestPath, nil)
+				c.Set("task_request", resolved["requestBody"])
+				require.Nil(t, adaptor.ValidateRequestAndSetAction(c, info))
+				reader, err := adaptor.BuildRequestBody(c, info)
+				require.NoError(t, err)
+				encoded, err := io.ReadAll(reader)
+				require.NoError(t, err)
+				var upstream map[string]any
+				require.NoError(t, common.Unmarshal(encoded, &upstream))
+				if tc.seconds == 0 {
+					assert.NotContains(t, upstream, "duration")
+				} else {
+					assert.Equal(t, tc.seconds, upstream["duration"])
+				}
+				assert.NotContains(t, upstream, "seconds")
+				facts, err := adaptor.ExtractUsageFactsValidated(c, info)
+				require.NoError(t, err)
+				wantTokens := tc.seconds * 21600
+				if tc.seconds == 0 {
+					wantTokens = 324000 // Existing reservation for unspecified duration.
+				}
+				assert.Equal(t, wantTokens, alibabaObject(t, facts)["tokens"])
+			})
+		}
+	}
+}
+
 func decodeDoubaoImage(t *testing.T, registry *jsplugin.Registry, plugin *jsplugin.LoadedPlugin, body map[string]any) (map[string]any, error) {
 	t.Helper()
 	binding, found := registry.Generation().LookupDeclaredRoute(http.MethodPost, doubaoImageRoute)
