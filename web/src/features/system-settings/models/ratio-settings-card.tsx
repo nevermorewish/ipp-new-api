@@ -390,11 +390,22 @@ export function RatioSettingsCard({
         const visibilityChanged =
           normalized.ExposeRatioEnabled !==
           modelNormalizedDefaults.current.ExposeRatioEnabled
-        if (!changes.length && !visibilityChanged) {
+        const originalPriceChanged =
+          normalized.OriginalModelPrice !==
+          modelNormalizedDefaults.current.OriginalModelPrice
+        if (!changes.length && !visibilityChanged && !originalPriceChanged) {
           toast.info(t('No model price changes to save'))
           return
         }
-        await savePricing.mutateAsync(changes)
+        if (changes.length) {
+          await savePricing.mutateAsync(changes)
+        }
+        if (originalPriceChanged) {
+          await updateOption.mutateAsync({
+            key: 'OriginalModelPrice',
+            value: normalized.OriginalModelPrice,
+          })
+        }
         if (visibilityChanged) {
           await updateOption.mutateAsync({
             key: 'ExposeRatioEnabled',

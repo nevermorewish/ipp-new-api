@@ -180,3 +180,26 @@ describe('audit log sidebar entry', () => {
     expect(titles).toContain('Audit Logs')
   })
 })
+
+describe('analytics sidebar entry', () => {
+  it('shows User Analytics for the default administrator sidebar', () => {
+    const { result } = sidebarFor()
+    expect(
+      result.current
+        .flatMap((group) => group.items)
+        .find((item) => item.url === '/analytics')
+    ).toMatchObject({
+      title: 'User Analytics',
+      url: '/analytics',
+    })
+  })
+
+  it('respects the administrator analytics toggle', () => {
+    const { result } = sidebarFor({ admin: { enabled: true, analytics: false } })
+    expect(
+      result.current
+        .flatMap((group) => group.items)
+        .some((item) => item.url === '/analytics')
+    ).toBe(false)
+  })
+})

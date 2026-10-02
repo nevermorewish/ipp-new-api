@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import {
   Activity,
+  BarChart3,
   Box,
   ClipboardList,
   CreditCard,
@@ -146,6 +147,11 @@ export function useSidebarData(): SidebarData {
             title: t('Users'),
             url: '/users',
             icon: Users,
+          },
+          {
+            title: t('User Analytics'),
+            url: '/analytics',
+            icon: BarChart3,
           },
           {
             title: t('Redemption Codes'),

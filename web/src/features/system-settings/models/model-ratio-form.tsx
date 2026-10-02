@@ -93,6 +93,7 @@ type ModelRatioFormProps = {
 type ModelJsonFieldName =
   | 'ModelPrice'
   | 'ModelRatio'
+  | 'OriginalModelPrice'
   | 'CacheRatio'
   | 'CreateCacheRatio'
   | 'CompletionRatio'
@@ -115,6 +116,12 @@ const modelJsonFields: Array<{
     name: 'ModelRatio',
     labelKey: 'Model ratio',
     descriptionKey: 'JSON map of model → multiplier applied to quota billing.',
+  },
+  {
+    name: 'OriginalModelPrice',
+    labelKey: 'Original model prices',
+    descriptionKey:
+      'Optional direct USD prices per 1M tokens. Used only to display list prices and discounts.',
   },
   {
     name: 'CacheRatio',

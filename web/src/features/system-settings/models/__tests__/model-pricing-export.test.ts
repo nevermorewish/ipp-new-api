@@ -8,7 +8,10 @@ import {
   createModelPricingWorkbook,
   MODEL_PRICING_EXPORT_HEADERS,
 } from '../model-pricing-export'
-import type { ModelPricingSnapshot } from '../model-pricing-snapshots'
+import {
+  buildModelSnapshots,
+  type ModelPricingSnapshot,
+} from '../model-pricing-snapshots'
 
 const snapshot = (
   values: Partial<ModelPricingSnapshot>
@@ -23,6 +26,30 @@ const pricingModel = (model_name: string, vendor_name: string): PricingModel =>
   ({ model_name, vendor_name }) as PricingModel
 
 describe('model pricing Excel export', () => {
+  it('keeps original model prices in the pricing snapshots', () => {
+    const rows = buildModelSnapshots({
+      modelPrice: '{}',
+      modelRatio: '{"gpt-5":0.5}',
+      originalModelPrice: '{"gpt-5":{"input":10,"output":50}}',
+      cacheRatio: '{}',
+      createCacheRatio: '{}',
+      completionRatio: '{"gpt-5":2}',
+      imageRatio: '{}',
+      audioRatio: '{}',
+      audioCompletionRatio: '{}',
+      billingMode: '{}',
+      billingExpr: '{}',
+    })
+
+    expect(rows).toContainEqual(
+      expect.objectContaining({
+        name: 'gpt-5',
+        originalInputPrice: '10',
+        originalOutputPrice: '50',
+      })
+    )
+  })
+
   it('sorts vendors and calculates all four discounts', () => {
     const rows = buildModelPricingExportRows(
       [
