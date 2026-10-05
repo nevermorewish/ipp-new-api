@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import {
   Activity,
   BarChart3,
+  Bot,
   Box,
   ClipboardList,
   CreditCard,
@@ -137,6 +138,11 @@ export function useSidebarData(): SidebarData {
             title: t('Channels'),
             url: '/channels',
             icon: Radio,
+          },
+          {
+            title: t('Robot monitoring'),
+            url: '/admin/channels/bot-monitor',
+            icon: Bot,
           },
           {
             title: t('Models'),

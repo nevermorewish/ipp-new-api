@@ -251,6 +251,44 @@ func SetApiRouter(router *gin.Engine) {
 			ratioSyncRoute.GET("/channels", controller.GetSyncableChannels)
 			ratioSyncRoute.POST("/fetch", controller.FetchUpstreamRatios)
 		}
+		botMonitorRobotRoute := apiRouter.Group("/admin/monitor-robots")
+		botMonitorRobotRoute.Use(middleware.AdminAuth())
+		{
+			botMonitorRobotRoute.GET("", controller.ListBotMonitorRobots)
+			botMonitorRobotRoute.POST("", controller.CreateBotMonitorRobot)
+			botMonitorRobotRoute.POST("/conversations/query", controller.QueryBotMonitorRobotConversations)
+			botMonitorRobotRoute.PUT("/:id", controller.UpdateBotMonitorRobot)
+			botMonitorRobotRoute.DELETE("/:id", controller.DeleteBotMonitorRobot)
+			botMonitorRobotRoute.GET("/:id/conversations", controller.ListBotMonitorRobotConversations)
+			botMonitorRobotRoute.POST("/:id/test", controller.TestBotMonitorRobot)
+		}
+		botMonitorBindingRoute := apiRouter.Group("/admin/monitor-bindings")
+		botMonitorBindingRoute.Use(middleware.AdminAuth())
+		{
+			botMonitorBindingRoute.GET("", controller.ListBotMonitorBindings)
+			botMonitorBindingRoute.POST("", controller.CreateBotMonitorBinding)
+			botMonitorBindingRoute.PUT("/:id", controller.UpdateBotMonitorBinding)
+			botMonitorBindingRoute.DELETE("/:id", controller.DeleteBotMonitorBinding)
+			botMonitorBindingRoute.GET("/channel-options", controller.ListBotMonitorChannelOptions)
+		}
+		botMonitorBalanceBindingRoute := apiRouter.Group("/admin/monitor-balance-bindings")
+		botMonitorBalanceBindingRoute.Use(middleware.AdminAuth())
+		{
+			botMonitorBalanceBindingRoute.GET("", controller.ListBotMonitorBalanceBindings)
+			botMonitorBalanceBindingRoute.POST("", controller.CreateBotMonitorBalanceBinding)
+			botMonitorBalanceBindingRoute.PUT("/:id", controller.UpdateBotMonitorBalanceBinding)
+			botMonitorBalanceBindingRoute.DELETE("/:id", controller.DeleteBotMonitorBalanceBinding)
+			botMonitorBalanceBindingRoute.GET("/user-options", controller.ListBotMonitorUserOptions)
+		}
+		botMonitorLatencyBindingRoute := apiRouter.Group("/admin/monitor-latency-bindings")
+		botMonitorLatencyBindingRoute.Use(middleware.AdminAuth())
+		{
+			botMonitorLatencyBindingRoute.GET("", controller.ListBotMonitorLatencyBindings)
+			botMonitorLatencyBindingRoute.POST("", controller.CreateBotMonitorLatencyBinding)
+			botMonitorLatencyBindingRoute.PUT("/:id", controller.UpdateBotMonitorLatencyBinding)
+			botMonitorLatencyBindingRoute.DELETE("/:id", controller.DeleteBotMonitorLatencyBinding)
+			botMonitorLatencyBindingRoute.GET("/model-options", controller.ListBotMonitorLatencyModelOptions)
+		}
 		analyticsRoute := apiRouter.Group("/admin")
 		analyticsRoute.Use(middleware.AdminAuth())
 		{

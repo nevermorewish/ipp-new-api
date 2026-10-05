@@ -73,6 +73,7 @@ import { Route as AuthenticatedSystemSettingsSecurityIndexRouteImport } from './
 import { Route as AuthenticatedSystemSettingsSecuritySectionRouteImport } from './routes/_authenticated/system-settings/security/$section'
 import { Route as AuthenticatedSystemSettingsSiteIndexRouteImport } from './routes/_authenticated/system-settings/site/index'
 import { Route as AuthenticatedSystemSettingsSiteSectionRouteImport } from './routes/_authenticated/system-settings/site/$section'
+import { Route as AuthenticatedAdminChannelsBotMonitorIndexRouteImport } from './routes/_authenticated/admin/channels/bot-monitor/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -428,6 +429,12 @@ const AuthenticatedSystemSettingsSiteSectionRoute =
     path: '/site/$section',
     getParentRoute: () => AuthenticatedSystemSettingsRouteRoute,
   } as any)
+const AuthenticatedAdminChannelsBotMonitorIndexRoute =
+  AuthenticatedAdminChannelsBotMonitorIndexRouteImport.update({
+    id: '/admin/channels/bot-monitor/',
+    path: '/admin/channels/bot-monitor/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -492,6 +499,7 @@ export interface FileRoutesByFullPath {
   '/system-settings/request-policies/': typeof AuthenticatedSystemSettingsRequestPoliciesIndexRoute
   '/system-settings/security/': typeof AuthenticatedSystemSettingsSecurityIndexRoute
   '/system-settings/site/': typeof AuthenticatedSystemSettingsSiteIndexRoute
+  '/admin/channels/bot-monitor/': typeof AuthenticatedAdminChannelsBotMonitorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -555,6 +563,7 @@ export interface FileRoutesByTo {
   '/system-settings/request-policies': typeof AuthenticatedSystemSettingsRequestPoliciesIndexRoute
   '/system-settings/security': typeof AuthenticatedSystemSettingsSecurityIndexRoute
   '/system-settings/site': typeof AuthenticatedSystemSettingsSiteIndexRoute
+  '/admin/channels/bot-monitor': typeof AuthenticatedAdminChannelsBotMonitorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -622,6 +631,7 @@ export interface FileRoutesById {
   '/_authenticated/system-settings/request-policies/': typeof AuthenticatedSystemSettingsRequestPoliciesIndexRoute
   '/_authenticated/system-settings/security/': typeof AuthenticatedSystemSettingsSecurityIndexRoute
   '/_authenticated/system-settings/site/': typeof AuthenticatedSystemSettingsSiteIndexRoute
+  '/_authenticated/admin/channels/bot-monitor/': typeof AuthenticatedAdminChannelsBotMonitorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -688,6 +698,7 @@ export interface FileRouteTypes {
     | '/system-settings/request-policies/'
     | '/system-settings/security/'
     | '/system-settings/site/'
+    | '/admin/channels/bot-monitor/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -751,6 +762,7 @@ export interface FileRouteTypes {
     | '/system-settings/request-policies'
     | '/system-settings/security'
     | '/system-settings/site'
+    | '/admin/channels/bot-monitor'
   id:
     | '__root__'
     | '/'
@@ -817,6 +829,7 @@ export interface FileRouteTypes {
     | '/_authenticated/system-settings/request-policies/'
     | '/_authenticated/system-settings/security/'
     | '/_authenticated/system-settings/site/'
+    | '/_authenticated/admin/channels/bot-monitor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1288,6 +1301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSystemSettingsSiteSectionRouteImport
       parentRoute: typeof AuthenticatedSystemSettingsRouteRoute
     }
+    '/_authenticated/admin/channels/bot-monitor/': {
+      id: '/_authenticated/admin/channels/bot-monitor/'
+      path: '/admin/channels/bot-monitor'
+      fullPath: '/admin/channels/bot-monitor/'
+      preLoaderRoute: typeof AuthenticatedAdminChannelsBotMonitorIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -1404,6 +1424,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedUsageLogsIndexRoute: typeof AuthenticatedUsageLogsIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
   AuthenticatedWalletIndexRoute: typeof AuthenticatedWalletIndexRoute
+  AuthenticatedAdminChannelsBotMonitorIndexRoute: typeof AuthenticatedAdminChannelsBotMonitorIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1432,6 +1453,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsageLogsIndexRoute: AuthenticatedUsageLogsIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
   AuthenticatedWalletIndexRoute: AuthenticatedWalletIndexRoute,
+  AuthenticatedAdminChannelsBotMonitorIndexRoute:
+    AuthenticatedAdminChannelsBotMonitorIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

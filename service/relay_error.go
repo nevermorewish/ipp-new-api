@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -66,6 +67,27 @@ func ProcessChannelError(c *gin.Context, channelError types.ChannelError, err *t
 		return
 	}
 	logger.LogError(c, fmt.Sprintf("channel error (channel #%d, status code: %d): %s", channelError.ChannelId, err.StatusCode, common.LocalLogPreview(err.MaskSensitiveErrorWithStatusCode())))
+	alert := FeishuChannelErrorAlert{
+		ChannelID: channelError.ChannelId, ChannelName: channelError.ChannelName, ChannelType: channelError.ChannelType,
+		StatusCode: err.StatusCode, ErrorType: err.GetErrorType(), ErrorCode: err.GetErrorCode(),
+		Message: err.MaskSensitiveErrorWithStatusCode(), RequestID: c.GetString(common.RequestIdKey),
+		UpstreamID: c.GetString(common.UpstreamRequestIdKey), ModelName: c.GetString("original_model"),
+		UserGroup: c.GetString("group"), TokenName: c.GetString("token_name"),
+		UseChannels:   append([]string(nil), c.GetStringSlice("use_channel")...),
+		IsMultiKey:    common.GetContextKeyBool(c, constant.ContextKeyChannelIsMultiKey),
+		MultiKeyIndex: common.GetContextKeyInt(c, constant.ContextKeyChannelMultiKeyIndex),
+	}
+	if c.Request != nil && c.Request.URL != nil {
+		alert.RequestPath = c.Request.URL.Path
+	}
+	gopool.Go(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		if notifyErr := SendBotMonitorChannelErrorAlerts(ctx, alert); notifyErr != nil {
+			common.SysLog("failed to send robot monitor channel error alert: " + notifyErr.Error())
+		}
+	})
+
 	if ShouldDisableChannel(err) && channelError.AutoBan {
 		reason := err.MaskSensitiveErrorWithStatusCode()
 		gopool.Go(func() {

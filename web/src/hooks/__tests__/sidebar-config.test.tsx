@@ -203,3 +203,17 @@ describe('analytics sidebar entry', () => {
     ).toBe(false)
   })
 })
+
+describe('bot monitor sidebar entry', () => {
+  it('includes Robot monitoring by default and links to the bot monitor route', () => {
+    const { result } = sidebarFor()
+    const item = result.current
+      .flatMap((group) => group.items)
+      .find((entry) => entry.title === 'Robot monitoring')
+
+    expect(item).toMatchObject({
+      title: 'Robot monitoring',
+      url: '/admin/channels/bot-monitor',
+    })
+  })
+})

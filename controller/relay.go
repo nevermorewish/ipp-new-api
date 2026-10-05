@@ -124,6 +124,9 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
+	stopFirstTokenWatch := service.StartBotMonitorFirstTokenWatch(c.Request.Context(), relayInfo)
+	defer stopFirstTokenWatch()
+
 	defer func() {
 		recovered := recover()
 		resultErr := newAPIError

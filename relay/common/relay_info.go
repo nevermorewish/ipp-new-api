@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -82,16 +83,17 @@ type TokenCountMeta struct {
 }
 
 type RelayInfo struct {
-	TokenId           int
-	TokenKey          string
-	TokenGroup        string
-	UserId            int
-	UsingGroup        string // 使用的分组，当auto跨分组重试时，会变动
-	UserGroup         string // 用户所在分组
-	TokenUnlimited    bool
-	StartTime         time.Time
-	FirstResponseTime time.Time
-	isFirstResponse   bool
+	TokenId                int
+	TokenKey               string
+	TokenGroup             string
+	UserId                 int
+	UsingGroup             string // 使用的分组，当auto跨分组重试时，会变动
+	UserGroup              string // 用户所在分组
+	TokenUnlimited         bool
+	StartTime              time.Time
+	FirstResponseTime      time.Time
+	isFirstResponse        bool
+	firstResponseUnixMilli int64
 	//SendLastReasoningResponse bool
 	IsStream               bool
 	IsGeminiBatchEmbedding bool
@@ -954,14 +956,18 @@ func (info *RelayInfo) ConvOptions() *convmeta.Options {
 }
 
 func (info *RelayInfo) SetFirstResponseTime() {
-	if info.isFirstResponse {
-		info.FirstResponseTime = time.Now()
+	if info == nil {
+		return
+	}
+	now := time.Now()
+	if atomic.CompareAndSwapInt64(&info.firstResponseUnixMilli, 0, now.UnixMilli()) {
+		info.FirstResponseTime = now
 		info.isFirstResponse = false
 	}
 }
 
 func (info *RelayInfo) HasSendResponse() bool {
-	return info.FirstResponseTime.After(info.StartTime)
+	return info != nil && atomic.LoadInt64(&info.firstResponseUnixMilli) > 0
 }
 
 type OriginTaskRef struct {

@@ -370,6 +370,10 @@ func migrateDB() error {
 		&SystemTaskLock{},
 		&CasbinRule{},
 		&AuthzRole{},
+		&BotMonitorRobot{},
+		&BotMonitorBinding{},
+		&BotMonitorLatencyBinding{},
+		&BotMonitorBalanceBinding{},
 	)
 	if err != nil {
 		return err

@@ -206,3 +206,11 @@ func parseHTTPStatusCodeToken(token string) (StatusCodeRange, error) {
 	}
 	return StatusCodeRange{Start: code, End: code}, nil
 }
+
+func HTTPStatusCodeRangesToString(ranges []StatusCodeRange) string {
+	return statusCodeRangesToString(ranges)
+}
+
+func MatchHTTPStatusCodeRanges(ranges []StatusCodeRange, code int) bool {
+	return shouldMatchStatusCodeRanges(ranges, code)
+}
