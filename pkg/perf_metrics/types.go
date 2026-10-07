@@ -88,6 +88,27 @@ type bucketKey struct {
 	bucketTs int64
 }
 
+type modelBucketKey struct {
+	model    string
+	bucketTs int64
+}
+
+type RangeBucketPoint struct {
+	ModelName    string `json:"model_name"`
+	BucketTs     int64  `json:"bucket_ts"`
+	RequestCount int64  `json:"request_count"`
+	ErrorCount   int64  `json:"error_count"`
+	AvgLatencyMs int64  `json:"avg_latency_ms"`
+	AvgTtftMs    int64  `json:"avg_ttft_ms"`
+	TtftCount    int64  `json:"ttft_count"`
+	HasTtft      bool   `json:"has_ttft"`
+}
+
+type RangeAllResult struct {
+	Items         []RangeBucketPoint `json:"items"`
+	BucketSeconds int64              `json:"bucket_seconds"`
+}
+
 type counters struct {
 	requestCount   int64
 	successCount   int64

@@ -78,6 +78,37 @@ type PerfMetricSummaryBucket struct {
 	GenerationMs   int64  `json:"generation_ms"`
 }
 
+type PerfMetricRangeRow struct {
+	ModelName      string `json:"model_name"`
+	BucketTs       int64  `json:"bucket_ts"`
+	RequestCount   int64  `json:"request_count"`
+	SuccessCount   int64  `json:"success_count"`
+	TotalLatencyMs int64  `json:"total_latency_ms"`
+	TtftSumMs      int64  `json:"ttft_sum_ms"`
+	TtftCount      int64  `json:"ttft_count"`
+}
+
+// GetPerfMetricsRangeAll returns per-model, per-bucket aggregates across all
+// models for the given time range, summed across the given groups.
+func GetPerfMetricsRangeAll(startTs int64, endTs int64, groups []string) ([]PerfMetricRangeRow, error) {
+	var rows []PerfMetricRangeRow
+	query := DB.Model(&PerfMetric{}).
+		Select("model_name, bucket_ts, SUM(request_count) as request_count, SUM(success_count) as success_count, SUM(total_latency_ms) as total_latency_ms, SUM(ttft_sum_ms) as ttft_sum_ms, SUM(ttft_count) as ttft_count").
+		Where("bucket_ts >= ? AND bucket_ts <= ?", startTs, endTs)
+	if groups != nil {
+		if len(groups) == 0 {
+			return rows, nil
+		}
+		query = query.Where(commonGroupCol+" IN ?", groups)
+	}
+	err := query.
+		Group("model_name, bucket_ts").
+		Having("SUM(request_count) > 0").
+		Order("bucket_ts, model_name").
+		Find(&rows).Error
+	return rows, err
+}
+
 func GetPerfMetricsSummaryAll(startTs int64, endTs int64, groups []string) ([]PerfMetricSummary, error) {
 	var summaries []PerfMetricSummary
 	query := DB.Model(&PerfMetric{}).

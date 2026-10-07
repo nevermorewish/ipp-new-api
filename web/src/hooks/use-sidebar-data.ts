@@ -160,6 +160,11 @@ export function useSidebarData(): SidebarData {
             icon: BarChart3,
           },
           {
+            title: t('Model Analytics'),
+            url: '/model-analytics',
+            icon: Activity,
+          },
+          {
             title: t('Redemption Codes'),
             url: '/redemption-codes',
             icon: Ticket,

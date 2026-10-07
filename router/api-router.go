@@ -293,6 +293,7 @@ func SetApiRouter(router *gin.Engine) {
 		analyticsRoute.Use(middleware.AdminAuth())
 		{
 			analyticsRoute.GET("/user-analytics", controller.GetUserAnalytics)
+			analyticsRoute.GET("/model-analytics", controller.GetModelAnalytics)
 			analyticsRoute.GET("/user-analytics/export", controller.ExportUserAnalytics)
 		}
 		taskPluginRoute := apiRouter.Group("/plugin/task")

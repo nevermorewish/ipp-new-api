@@ -182,6 +182,26 @@ describe('audit log sidebar entry', () => {
 })
 
 describe('analytics sidebar entry', () => {
+  it('shows Model Analytics for legacy sidebar configurations', () => {
+    const { result } = sidebarFor()
+    expect(
+      result.current
+        .flatMap((group) => group.items)
+        .find((item) => item.url === '/model-analytics')
+    ).toMatchObject({ title: 'Model Analytics', url: '/model-analytics' })
+  })
+
+  it('hides Model Analytics when the administrator or user disables analytics', () => {
+    const admin = sidebarFor({ admin: { enabled: true, analytics: false } })
+    const user = sidebarFor(undefined, { admin: { analytics: false } })
+    for (const sidebar of [admin, user]) {
+      expect(
+        sidebar.result.current
+          .flatMap((group) => group.items)
+          .some((item) => item.url === '/model-analytics')
+      ).toBe(false)
+    }
+  })
   it('shows User Analytics for the default administrator sidebar', () => {
     const { result } = sidebarFor()
     expect(
@@ -195,7 +215,9 @@ describe('analytics sidebar entry', () => {
   })
 
   it('respects the administrator analytics toggle', () => {
-    const { result } = sidebarFor({ admin: { enabled: true, analytics: false } })
+    const { result } = sidebarFor({
+      admin: { enabled: true, analytics: false },
+    })
     expect(
       result.current
         .flatMap((group) => group.items)

@@ -261,6 +261,78 @@ func QuerySummaryAll(hours int, groups []string) (SummaryAllResult, error) {
 	return SummaryAllResult{Summary: summarize(all), WindowStart: startTs, WindowEnd: endTs, Models: models}, nil
 }
 
+// QueryRangeAll returns per-model, per-bucket aggregates across all models
+// for the given time range, merging flushed DB rows with live hot buckets.
+func QueryRangeAll(startTs int64, endTs int64, groups []string) (RangeAllResult, error) {
+	bucketSeconds := perf_metrics_setting.GetBucketSeconds()
+	allowedGroups := allowedGroupSet(groups)
+
+	merged := map[modelBucketKey]counters{}
+	rows, err := model.GetPerfMetricsRangeAll(startTs, endTs, groups)
+	if err != nil {
+		return RangeAllResult{}, err
+	}
+	for _, row := range rows {
+		merged[modelBucketKey{model: row.ModelName, bucketTs: row.BucketTs}] = counters{
+			requestCount:   row.RequestCount,
+			successCount:   row.SuccessCount,
+			totalLatencyMs: row.TotalLatencyMs,
+			ttftSumMs:      row.TtftSumMs,
+			ttftCount:      row.TtftCount,
+		}
+	}
+
+	hotBuckets.Range(func(key, value any) bool {
+		k := key.(bucketKey)
+		if k.bucketTs < startTs || k.bucketTs > endTs {
+			return true
+		}
+		if allowedGroups != nil {
+			if _, ok := allowedGroups[k.group]; !ok {
+				return true
+			}
+		}
+		snap := value.(*atomicBucket).snapshot()
+		if snap.requestCount == 0 {
+			return true
+		}
+		mk := modelBucketKey{model: k.model, bucketTs: k.bucketTs}
+		cur := merged[mk]
+		cur.requestCount += snap.requestCount
+		cur.successCount += snap.successCount
+		cur.totalLatencyMs += snap.totalLatencyMs
+		cur.ttftSumMs += snap.ttftSumMs
+		cur.ttftCount += snap.ttftCount
+		merged[mk] = cur
+		return true
+	})
+
+	items := make([]RangeBucketPoint, 0, len(merged))
+	for k, v := range merged {
+		if v.requestCount == 0 {
+			continue
+		}
+		items = append(items, RangeBucketPoint{
+			ModelName:    k.model,
+			BucketTs:     k.bucketTs,
+			RequestCount: v.requestCount,
+			ErrorCount:   v.requestCount - v.successCount,
+			AvgLatencyMs: avg(v.totalLatencyMs, v.requestCount),
+			AvgTtftMs:    avg(v.ttftSumMs, v.ttftCount),
+			TtftCount:    v.ttftCount,
+			HasTtft:      v.ttftCount > 0,
+		})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].BucketTs == items[j].BucketTs {
+			return items[i].ModelName < items[j].ModelName
+		}
+		return items[i].BucketTs < items[j].BucketTs
+	})
+
+	return RangeAllResult{Items: items, BucketSeconds: bucketSeconds}, nil
+}
+
 func mergeModelTotals(totals map[string]counters, modelName string, value counters) {
 	if value.requestCount == 0 {
 		return
