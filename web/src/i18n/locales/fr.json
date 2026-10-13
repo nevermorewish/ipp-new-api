@@ -1,5 +1,7 @@
 {
   "translation": {
+    "KVV adaptation": "Compatibilité KVV",
+    "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.": "Applique la validation KVV, les valeurs de raisonnement par défaut et la compatibilité des outils dynamiques aux requêtes kimi-k3. Désactivez la transmission directe du corps au niveau global et du canal.",
     "360": "360",
     "1000": "1000",
     "10000": "10000",

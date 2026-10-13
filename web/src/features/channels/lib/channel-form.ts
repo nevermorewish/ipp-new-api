@@ -264,6 +264,7 @@ export const channelFormSchema = z
     // Channel extra settings (stored in setting JSON, not sent directly)
     force_format: z.boolean().optional(),
     thinking_to_content: z.boolean().optional(),
+    moonshot_kvv_enabled: z.boolean().optional(),
     proxy: z
       .string()
       .optional()
@@ -460,6 +461,7 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   // Channel extra settings
   force_format: false,
   thinking_to_content: false,
+  moonshot_kvv_enabled: false,
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
   http2_connection_shards: 1,
@@ -506,6 +508,7 @@ export function transformChannelToFormDefaults(
     task_extend_plugin_keys: [] as string[],
     force_format: false,
     thinking_to_content: false,
+    moonshot_kvv_enabled: false,
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
     http2_connection_shards: 1,
@@ -527,6 +530,7 @@ export function transformChannelToFormDefaults(
         task_extend_plugin_keys: readTaskExtendPluginKeys(channel.type, parsed),
         force_format: parsed.force_format || false,
         thinking_to_content: parsed.thinking_to_content || false,
+        moonshot_kvv_enabled: parsed.moonshot_kvv_enabled === true,
         proxy: parsed.proxy || '',
         http_protocol: protocol,
         http2_connection_shards: protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
@@ -666,6 +670,10 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
         : undefined,
     force_format: formData.force_format || false,
     thinking_to_content: formData.thinking_to_content || false,
+    moonshot_kvv_enabled:
+      formData.type === 25 && formData.moonshot_kvv_enabled === true
+        ? true
+        : undefined,
     proxy: formData.proxy?.trim() || '',
     pass_through_body_enabled:
       formData.type !== CHANNEL_TYPE_ADVANCED_CUSTOM &&
@@ -738,8 +746,10 @@ function buildSettingsJSON(formData: ChannelFormValues): string {
   }
 
   if (formData.type === CHANNEL_TYPE_OPENAI_GPT) {
-    settingsObj.remove_gpt_temperature = formData.remove_gpt_temperature === true
-    settingsObj.remove_azure_gpt_encryption = formData.remove_azure_gpt_encryption === true
+    settingsObj.remove_gpt_temperature =
+      formData.remove_gpt_temperature === true
+    settingsObj.remove_azure_gpt_encryption =
+      formData.remove_azure_gpt_encryption === true
   } else {
     delete settingsObj.remove_gpt_temperature
     delete settingsObj.remove_azure_gpt_encryption
