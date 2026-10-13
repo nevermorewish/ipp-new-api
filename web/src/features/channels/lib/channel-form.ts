@@ -264,12 +264,14 @@ export const channelFormSchema = z
     // Channel extra settings (stored in setting JSON, not sent directly)
     force_format: z.boolean().optional(),
     thinking_to_content: z.boolean().optional(),
+    moonshot_kvv_enabled: z.boolean().optional(),
     proxy: z
       .string()
       .optional()
       .refine(isOptionalProxyURL, ERROR_MESSAGES.INVALID_PROXY),
     http_protocol: z.enum(['auto', 'http1']).optional(),
     http2_connection_shards: z.number().int().optional(),
+    tls_insecure_skip_verify: z.boolean().optional(),
     pass_through_body_enabled: z.boolean().optional(),
     responses_websocket_enabled: z.boolean().optional(),
     system_prompt: z.string().optional(),
@@ -460,9 +462,11 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   // Channel extra settings
   force_format: false,
   thinking_to_content: false,
+  moonshot_kvv_enabled: false,
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
   http2_connection_shards: 1,
+  tls_insecure_skip_verify: false,
   pass_through_body_enabled: false,
   responses_websocket_enabled: false,
   system_prompt: '',
@@ -506,9 +510,11 @@ export function transformChannelToFormDefaults(
     task_extend_plugin_keys: [] as string[],
     force_format: false,
     thinking_to_content: false,
+    moonshot_kvv_enabled: false,
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
     http2_connection_shards: 1,
+    tls_insecure_skip_verify: false,
     pass_through_body_enabled: false,
     responses_websocket_enabled: false,
     system_prompt: '',
@@ -527,9 +533,11 @@ export function transformChannelToFormDefaults(
         task_extend_plugin_keys: readTaskExtendPluginKeys(channel.type, parsed),
         force_format: parsed.force_format || false,
         thinking_to_content: parsed.thinking_to_content || false,
+        moonshot_kvv_enabled: parsed.moonshot_kvv_enabled === true,
         proxy: parsed.proxy || '',
         http_protocol: protocol,
         http2_connection_shards: protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
+        tls_insecure_skip_verify: parsed.tls_insecure_skip_verify === true,
         pass_through_body_enabled: parsed.pass_through_body_enabled || false,
         responses_websocket_enabled:
           parsed.responses_websocket_enabled === true,
@@ -666,6 +674,10 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
         : undefined,
     force_format: formData.force_format || false,
     thinking_to_content: formData.thinking_to_content || false,
+    moonshot_kvv_enabled:
+      formData.type === 25 && formData.moonshot_kvv_enabled === true
+        ? true
+        : undefined,
     proxy: formData.proxy?.trim() || '',
     pass_through_body_enabled:
       formData.type !== CHANNEL_TYPE_ADVANCED_CUSTOM &&
@@ -688,6 +700,9 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
     settingObj.http_protocol = HTTP_PROTOCOL_HTTP1
   } else if (shards > 1) {
     settingObj.http2_connection_shards = shards
+  }
+  if (formData.tls_insecure_skip_verify === true) {
+    settingObj.tls_insecure_skip_verify = true
   }
 
   return JSON.stringify(settingObj)
@@ -738,8 +753,10 @@ function buildSettingsJSON(formData: ChannelFormValues): string {
   }
 
   if (formData.type === CHANNEL_TYPE_OPENAI_GPT) {
-    settingsObj.remove_gpt_temperature = formData.remove_gpt_temperature === true
-    settingsObj.remove_azure_gpt_encryption = formData.remove_azure_gpt_encryption === true
+    settingsObj.remove_gpt_temperature =
+      formData.remove_gpt_temperature === true
+    settingsObj.remove_azure_gpt_encryption =
+      formData.remove_azure_gpt_encryption === true
   } else {
     delete settingsObj.remove_gpt_temperature
     delete settingsObj.remove_azure_gpt_encryption

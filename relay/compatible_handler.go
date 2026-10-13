@@ -11,6 +11,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/relay/channel/moonshot"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -76,7 +77,12 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	adaptor.Init(info)
 
 	passThroughGlobal := model_setting.GetGlobalSettings().PassThroughRequestEnabled
+	kvvEnabled := moonshot.KVVEnabled(info)
+	if kvvEnabled && (passThroughGlobal || info.ChannelSetting.PassThroughBodyEnabled) {
+		return types.NewErrorWithStatusCode(fmt.Errorf("Moonshot KVV adaptation requires global and channel body passthrough to be disabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
 	if info.RelayMode == relayconstant.RelayModeChatCompletions &&
+		!kvvEnabled &&
 		!passThroughGlobal &&
 		!info.ChannelSetting.PassThroughBodyEnabled &&
 		service.ShouldChatCompletionsUseResponsesGlobal(info.ChannelId, info.ChannelType, info.OriginModelName) {
@@ -90,7 +96,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 		var containsAudioRatios = ratio_setting.ContainsAudioRatio(info.OriginModelName) || ratio_setting.ContainsAudioCompletionRatio(info.OriginModelName)
 
 		if containAudioTokens && containsAudioRatios {
-			service.PostAudioConsumeQuota(c, info, usage, "")
+			service.PostAudioConsumeQuota(c, info, usage, nil)
 		} else {
 			service.PostTextConsumeQuota(c, info, usage, nil)
 		}
@@ -140,6 +146,22 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 			}
 		}
 
+		// Channel overrides and system prompts must satisfy the same opt-in
+		// contract as client input; validate the body actually sent upstream.
+		if kvvEnabled {
+			var finalRequest dto.GeneralOpenAIRequest
+			if err := common.Unmarshal(jsonData, &finalRequest); err != nil {
+				return types.NewErrorWithStatusCode(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+			}
+			converted, err := adaptor.ConvertOpenAIRequest(c, info, &finalRequest)
+			if err != nil {
+				return newConvertRequestFailedError(c, info, err)
+			}
+			jsonData, err = common.Marshal(converted)
+			if err != nil {
+				return types.NewError(err, types.ErrorCodeJsonMarshalFailed, types.ErrOptionWithSkipRetry())
+			}
+		}
 		logger.LogDebug(c, "text request body: %s", jsonData)
 
 		body, closer, err := relaycommon.NewOutboundJSONBody(jsonData)
@@ -273,7 +295,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	var containsAudioRatios = ratio_setting.ContainsAudioRatio(info.OriginModelName) || ratio_setting.ContainsAudioCompletionRatio(info.OriginModelName)
 
 	if containAudioTokens && containsAudioRatios {
-		service.PostAudioConsumeQuota(c, info, usage.(*dto.Usage), "")
+		service.PostAudioConsumeQuota(c, info, usage.(*dto.Usage), nil)
 	} else {
 		service.PostTextConsumeQuota(c, info, usage.(*dto.Usage), nil)
 	}

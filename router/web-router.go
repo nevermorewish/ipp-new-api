@@ -12,7 +12,6 @@ import (
 	"github.com/QuantumNous/new-api/controller"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/gin-contrib/gzip"
-	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,23 +36,29 @@ type WebAssets struct {
 
 func SetWebRouter(router *gin.Engine, assets WebAssets, pluginDispatcher gin.HandlerFunc) {
 	frontendFS := common.EmbedFolder(assets.BuildFS, "web/dist")
+	compress := gzip.Gzip(gzip.DefaultCompression)
 
 	docsFS, err := fs.Sub(assets.DocsFS, "doc")
 	if err != nil {
 		panic(err)
 	}
-	docsRouter := router.Group("/docs", middleware.RouteTag("web"), gzip.Gzip(gzip.DefaultCompression), middleware.GlobalWebRateLimit())
+	docsRouter := router.Group("/docs", middleware.RouteTag("web"), gzip.Gzip(gzip.DefaultCompression), middleware.GlobalWebRateLimit(frontendFS))
 	docsRouter.GET("", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/docs/") })
 	docsRouter.GET("/*filepath", serveDocs(docsFS))
 
 	router.NoRoute(
 		pluginDispatcher,
 		middleware.RouteTag("web"),
-		gzip.Gzip(gzip.DefaultCompression),
+		func(c *gin.Context) {
+			// ServeFrontendFiles sends build files already compressed.
+			if !frontendFS.Exists("/", c.Request.URL.Path) {
+				compress(c)
+			}
+		},
 		middleware.AccessTokenAudit(),
-		middleware.GlobalWebRateLimit(),
+		middleware.GlobalWebRateLimit(frontendFS),
 		middleware.Cache(),
-		static.Serve("/", frontendFS),
+		middleware.ServeFrontendFiles(frontendFS),
 		func(c *gin.Context) {
 			if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") || strings.HasPrefix(c.Request.RequestURI, "/assets") {
 				controller.RelayNotFound(c)

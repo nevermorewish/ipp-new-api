@@ -296,9 +296,11 @@ const SENSITIVE_FORM_FIELDS = [
   'azure_responses_version',
   'force_format',
   'thinking_to_content',
+  'moonshot_kvv_enabled',
   'proxy',
   'http_protocol',
   'http2_connection_shards',
+  'tls_insecure_skip_verify',
   'pass_through_body_enabled',
   'responses_websocket_enabled',
   'system_prompt',
@@ -1898,6 +1900,35 @@ export function ChannelMutateDrawer({
     />
   )
 
+  const kvvFields = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_kvv_enabled'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('KVV adaptation')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
   const thinkingFields = (
     <FormField
       control={form.control}
@@ -2156,6 +2187,32 @@ export function ChannelMutateDrawer({
           </FormItem>
         )
       }}
+    />
+  )
+
+  const tlsInsecureSkipVerifyFields = (
+    <FormField
+      control={form.control}
+      name='tls_insecure_skip_verify'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Skip Upstream TLS Verification')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Accept upstream certificates that fail validation, such as self-signed ones. Only enable for trusted internal upstreams.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          </FormControl>
+        </FormItem>
+      )}
     />
   )
 
@@ -4658,6 +4715,7 @@ export function ChannelMutateDrawer({
                 {formatFields}
                 {ollamaOpenAIChatFields}
                 {thinkingFields}
+                {kvvFields}
                 {currentType !== CHANNEL_TYPE_ADVANCED_CUSTOM &&
                   passthroughFields}
                 {systemPromptFields}
@@ -4690,6 +4748,7 @@ export function ChannelMutateDrawer({
                 {proxyFields}
                 {httpProtocolFields}
                 {httpShardsFields}
+                {tlsInsecureSkipVerifyFields}
               </fieldset>
             </div>
             {upstreamModelDetectionFields}

@@ -59,6 +59,7 @@ const CONFIGURATION_BLOCKS = {
     fields: [
       'force_format',
       'thinking_to_content',
+      'moonshot_kvv_enabled',
       'pass_through_body_enabled',
       'responses_websocket_enabled',
       'ollama_openai_chat',
@@ -84,6 +85,7 @@ const CONFIGURATION_BLOCKS = {
       'proxy',
       'http_protocol',
       'http2_connection_shards',
+      'tls_insecure_skip_verify',
       'disable_task_polling_sleep',
     ],
   },
@@ -152,6 +154,7 @@ export function getChannelConfigurationState(
     requestProcessing: Boolean(
       (values.type === 1 && values.force_format) ||
       values.thinking_to_content ||
+      (values.type === 25 && values.moonshot_kvv_enabled) ||
       (values.type !== CHANNEL_TYPE_ADVANCED_CUSTOM &&
         values.pass_through_body_enabled) ||
       (supportsResponsesWebSocket(values.type) &&
@@ -175,6 +178,7 @@ export function getChannelConfigurationState(
       values.proxy?.trim() ||
       (values.http_protocol && values.http_protocol !== 'auto') ||
       (values.http2_connection_shards ?? 1) > 1 ||
+      values.tls_insecure_skip_verify ||
       values.disable_task_polling_sleep
     ),
     upstreamModelDetection:

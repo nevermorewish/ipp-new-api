@@ -30,6 +30,72 @@ type imageReservation struct {
 	held, limit int
 }
 
+func TestMoonshotKVVWireContract(t *testing.T) {
+	service.InitHttpClient()
+	global := model_setting.GetGlobalSettings()
+	previous := global.PassThroughRequestEnabled
+	t.Cleanup(func() { global.PassThroughRequestEnabled = previous })
+	for _, tc := range []struct {
+		name                                            string
+		enabled, stream, passthrough, globalPassthrough bool
+		override                                        any
+		status                                          int
+	}{
+		{name: "enabled", enabled: true},
+		{name: "enabled stream", enabled: true, stream: true},
+		{name: "disabled"},
+		{name: "disabled stream", stream: true},
+		{name: "channel passthrough conflict", enabled: true, passthrough: true, status: 400},
+		{name: "global passthrough conflict", enabled: true, globalPassthrough: true, status: 400},
+		{name: "override cannot bypass validation", enabled: true, override: 2, status: 400},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			global.PassThroughRequestEnabled = tc.globalPassthrough
+			received := make(chan []byte, 1)
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, err := io.ReadAll(r.Body)
+				if err == nil {
+					received <- body
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadGateway)
+				_, _ = io.WriteString(w, `{"error":{"message":"fixture upstream failure","type":"upstream_error"}}`)
+			}))
+			t.Cleanup(upstream.Close)
+			body := `{"model":"kimi-k3","thinking":{"type":"disabled"},"messages":[{"role":"system","content":"","tools":[{"type":"function","function":{"name":"weather","strict":false,"parameters":{"type":"object"}}}]},{"role":"user","content":"weather?"}]}`
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(body, &request))
+			request.Stream = common.GetPointer(tc.stream)
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body))
+			common.SetContextKey(c, constant.ContextKeyChannelType, constant.ChannelTypeMoonshot)
+			common.SetContextKey(c, constant.ContextKeyOriginalModel, "kimi-k3")
+			common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, upstream.URL)
+			common.SetContextKey(c, constant.ContextKeyChannelSetting, dto.ChannelSettings{MoonshotKVVEnabled: tc.enabled, PassThroughBodyEnabled: tc.passthrough})
+			if tc.override != nil {
+				common.SetContextKey(c, constant.ContextKeyChannelParamOverride, map[string]any{"n": tc.override})
+			}
+			info := &relaycommon.RelayInfo{Request: &request, OriginModelName: "kimi-k3", RelayMode: relayconstant.RelayModeChatCompletions, RequestURLPath: c.Request.URL.Path}
+			apiErr := TextHelper(c, info)
+			require.NotNil(t, apiErr)
+			if tc.status != 0 {
+				assert.Equal(t, tc.status, apiErr.StatusCode)
+				assert.True(t, types.IsSkipRetryError(apiErr))
+				assert.Empty(t, received)
+				return
+			}
+			assert.Equal(t, 502, apiErr.StatusCode)
+			require.Len(t, received, 1)
+			wire := <-received
+			assert.Equal(t, tc.stream, gjson.GetBytes(wire, "stream").Bool())
+			assert.Equal(t, !tc.enabled, gjson.GetBytes(wire, "messages.0.content").Exists())
+			assert.JSONEq(t, gjson.Get(body, "messages.0.tools").Raw, gjson.GetBytes(wire, "messages.0.tools").Raw)
+			assert.Equal(t, "disabled", gjson.GetBytes(wire, "thinking.type").String())
+			assert.Equal(t, tc.enabled, gjson.GetBytes(wire, "reasoning_effort").Exists())
+		})
+	}
+}
+
 func (s *imageReservation) Reserve(quota int) error {
 	if quota > s.limit {
 		return errors.New("insufficient image quota")
