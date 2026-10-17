@@ -44,6 +44,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import type { TaskPluginOption } from '../../api'
 import {
   CHANNEL_TYPE_OLLAMA,
+  CHANNEL_TYPE_OPENAI_GPT,
   CHANNEL_TYPE_SGLANG,
   CHANNEL_TYPE_VLLM,
 } from '../../constants'
@@ -1470,6 +1471,38 @@ test('restoring routing defaults clears the configured indicator for both the bl
   })
   expect(tab).toHaveAccessibleName(/Configured/)
   expect(within(block).getByRole('img', { name: 'Configured' })).toBeVisible()
+})
+
+test('OpenAI-GPT compatibility switches are available in the channel editor and persist changes', async () => {
+  editingChannel = {
+    ...editingChannel,
+    type: CHANNEL_TYPE_OPENAI_GPT,
+    settings: JSON.stringify({
+      remove_gpt_temperature: true,
+      remove_azure_gpt_encryption: false,
+    }),
+  }
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  const user = userEvent.setup()
+  render(<ConfigurationHarness currentRow={editingChannel} />)
+  await screen.findByDisplayValue('Existing channel')
+  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+  const temperature = screen.getByRole('switch', {
+    name: 'Remove temperature for GPT-5 and GPT-6',
+  })
+  expect(temperature).toHaveAttribute('aria-checked', 'true')
+  const azure = screen.getByRole('switch', { name: 'Azure GPT compatibility' })
+  expect(azure).toHaveAttribute('aria-checked', 'false')
+  await user.click(azure)
+  await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+  await waitFor(() => expect(put).toHaveBeenCalled())
+  const payload = put.mock.calls[0]?.[1] as { settings: string }
+  expect(JSON.parse(payload.settings)).toMatchObject({
+    remove_gpt_temperature: true,
+    remove_azure_gpt_encryption: true,
+  })
 })
 
 test.each([false, true])(

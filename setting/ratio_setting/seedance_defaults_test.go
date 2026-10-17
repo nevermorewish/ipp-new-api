@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSeedanceDefaultsUseOfficialOriginalPricesAtSevenTenths(t *testing.T) {
+func TestSeedanceDefaultsRetainOriginalPriceMetadata(t *testing.T) {
 	tests := []struct {
 		model         string
 		originalPrice float64
@@ -27,9 +27,9 @@ func TestSeedanceDefaultsUseOfficialOriginalPricesAtSevenTenths(t *testing.T) {
 			assert.Equal(t, test.originalPrice, *original.Input)
 			assert.Equal(t, test.originalPrice, *original.Output)
 
-			ratio, ok := defaultModelRatio[test.model]
-			require.True(t, ok)
-			assert.InDelta(t, 0.7, ratio*2/test.originalPrice, 1e-12)
+			// Task tiers are supplied by billing_setting; a seeded legacy ratio
+			// would mask them as an administrator override.
+			assert.NotContains(t, defaultModelRatio, test.model)
 		})
 	}
 }

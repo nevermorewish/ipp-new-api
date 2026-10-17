@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	relaychannel "github.com/QuantumNous/new-api/relay/channel"
+	"github.com/QuantumNous/new-api/relay/channel/openaigpt"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -37,6 +39,40 @@ func PrepareResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, req *d
 	if err != nil {
 		return nil, nil, nil, types.NewError(fmt.Errorf("failed to copy responses request: %w", err), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
 	}
+	var inbound []byte
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+		storage, err := common.GetBodyStorage(c)
+		if err != nil {
+			return nil, nil, nil, types.NewError(err, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
+		}
+		inbound, err = storage.Bytes()
+		if err != nil {
+			return nil, nil, nil, types.NewError(err, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
+		}
+		// Normalize a local copy; retries on other channels still need the original body.
+		var changed bool
+		inbound, changed, err = openaigpt.NormalizeLegacyResponsesAliasesInBody(inbound)
+		if err != nil {
+			return nil, nil, nil, newOpenAIGPTContractError(err)
+		}
+		if err := openaigpt.ValidateInboundResponsesBody(inbound); err != nil {
+			return nil, nil, nil, newOpenAIGPTContractError(err)
+		}
+		var normalized dto.OpenAIResponsesRequest
+		if err := common.Unmarshal(inbound, &normalized); err != nil {
+			return nil, nil, nil, newOpenAIGPTContractError(err)
+		}
+		if helper.ExceedsMaxTokensLimit(normalized.MaxOutputTokens) {
+			return nil, nil, nil, newOpenAIGPTContractError(fmt.Errorf("max_output_tokens is invalid"))
+		}
+		if changed {
+			request.MaxOutputTokens = normalized.MaxOutputTokens
+			request.Reasoning = normalized.Reasoning
+		}
+		if helper.ExceedsMaxTokensLimit(request.MaxOutputTokens) {
+			return nil, nil, nil, newOpenAIGPTContractError(fmt.Errorf("max_output_tokens is invalid"))
+		}
+	}
 	if err := helper.ModelMappedHelper(c, info, request); err != nil {
 		return nil, nil, nil, types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
@@ -49,7 +85,8 @@ func PrepareResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, req *d
 		return nil, nil, nil, types.NewError(fmt.Errorf("invalid api type: %d", info.ApiType), types.ErrorCodeInvalidApiType, types.ErrOptionWithSkipRetry())
 	}
 	adaptor.Init(info)
-	if model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled {
+	passthrough := model_setting.GetGlobalSettings().PassThroughRequestEnabled || info.ChannelSetting.PassThroughBodyEnabled
+	if passthrough && info.ChannelType != constant.ChannelTypeOpenAIGPT {
 		storage, err := common.GetBodyStorage(c)
 		if err != nil {
 			return nil, nil, nil, types.NewError(err, types.ErrorCodeReadRequestBodyFailed, types.ErrOptionWithSkipRetry())
@@ -58,24 +95,49 @@ func PrepareResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, req *d
 		return adaptor, body, io.NopCloser(body), nil
 	}
 
-	convertedRequest, err := adaptor.ConvertOpenAIResponsesRequest(c, info, *request)
-	if err != nil {
-		return nil, nil, nil, newConvertRequestFailedError(c, info, err)
-	}
-	relaycommon.AppendRequestConversionFromRequest(info, convertedRequest)
-	jsonData, err := common.Marshal(convertedRequest)
-	if err != nil {
-		return nil, nil, nil, types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
-	}
-	jsonData, err = relaycommon.RemoveDisabledFields(jsonData, info.ChannelOtherSettings, info.ChannelSetting.PassThroughBodyEnabled)
-	if err != nil {
-		return nil, nil, nil, types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
-	}
-	if len(info.ParamOverride) > 0 {
-		jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
+	var jsonData []byte
+	if passthrough {
+		jsonData = inbound
+	} else {
+		convertedRequest, err := adaptor.ConvertOpenAIResponsesRequest(c, info, *request)
 		if err != nil {
-			return nil, nil, nil, newAPIErrorFromParamOverride(err)
+			return nil, nil, nil, newConvertRequestFailedError(c, info, err)
 		}
+		relaycommon.AppendRequestConversionFromRequest(info, convertedRequest)
+		jsonData, err = common.Marshal(convertedRequest)
+		if err != nil {
+			return nil, nil, nil, types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+		}
+		if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+			jsonData, err = openaigpt.PreserveResponsesStreamOptions(jsonData, inbound)
+			if err != nil {
+				return nil, nil, nil, newOpenAIGPTContractError(err)
+			}
+		}
+		jsonData, err = relaycommon.RemoveDisabledFields(jsonData, info.ChannelOtherSettings, info.ChannelSetting.PassThroughBodyEnabled)
+		if err != nil {
+			return nil, nil, nil, types.NewError(err, types.ErrorCodeConvertRequestFailed, types.ErrOptionWithSkipRetry())
+		}
+		if len(info.ParamOverride) > 0 {
+			jsonData, err = relaycommon.ApplyParamOverrideWithRelayInfo(jsonData, info)
+			if err != nil {
+				return nil, nil, nil, newAPIErrorFromParamOverride(err)
+			}
+		}
+	}
+	if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+		effectiveModel := ""
+		if passthrough {
+			effectiveModel = request.Model
+		}
+		prepared, validated, _, err := openaigpt.PrepareResponsesBody(jsonData, effectiveModel, info.ChannelOtherSettings)
+		if err != nil {
+			return nil, nil, nil, newOpenAIGPTContractError(err)
+		}
+		if helper.ExceedsMaxTokensLimit(validated.MaxOutputTokens) {
+			return nil, nil, nil, newOpenAIGPTContractError(fmt.Errorf("max_output_tokens is invalid"))
+		}
+		jsonData = prepared
 	}
 
 	logger.LogDebug(c, "requestBody: %s", jsonData)

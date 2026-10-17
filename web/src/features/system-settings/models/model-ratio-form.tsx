@@ -19,10 +19,12 @@ For commercial licensing, please contact support@quantumnous.com
 import { useQuery } from '@tanstack/react-query'
 import {
   Code2,
+  Download,
   Eye,
   FileSpreadsheet,
   RotateCcw,
   Save,
+  Upload,
 } from 'lucide-react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
@@ -57,6 +59,8 @@ import { SettingsPageActionsPortal } from '../components/settings-page-context'
 import {
   buildModelPricingExportRows,
   createModelPricingWorkbook,
+  MODEL_PRICING_BACKUP_FIELDS,
+  parseModelPricingBackup,
 } from './model-pricing-export'
 import { buildModelSnapshots } from './model-pricing-snapshots'
 import {
@@ -203,6 +207,10 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   const isUnsetVariant = variant === 'unset'
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual')
   const visualEditorRef = useRef<ModelRatioVisualEditorHandle>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
+  const [hasImportedDraft, setHasImportedDraft] = useState(false)
+  const [importRevision, setImportRevision] = useState(0)
   const { models: pricingModels } = usePricingData(!isUnsetVariant)
 
   const enabledModelsQuery = useQuery({
@@ -245,6 +253,70 @@ export const ModelRatioForm = memo(function ModelRatioForm({
   const toggleEditMode = useCallback(() => {
     setEditMode((prev) => (prev === 'visual' ? 'json' : 'visual'))
   }, [])
+
+  const handleImportModelPricing = async (file: File) => {
+    setImporting(true)
+    try {
+      const draft = parseModelPricingBackup(JSON.parse(await file.text()))
+      for (const field of MODEL_PRICING_BACKUP_FIELDS) {
+        const value = draft[field]
+        if (value !== undefined) {
+          form.setValue(field, value, {
+            shouldDirty: true,
+            shouldValidate: true,
+          })
+        }
+      }
+      setHasImportedDraft(true)
+      setImportRevision((revision) => revision + 1)
+      toast.success(
+        t(
+          'Model pricing imported. Review the changes, then click Save model prices to apply them.'
+        )
+      )
+    } catch {
+      toast.error(t('Invalid model pricing import file'))
+    } finally {
+      setImporting(false)
+      if (importInputRef.current) importInputRef.current.value = ''
+    }
+  }
+
+  const handleExportModelPricing = () => {
+    try {
+      const data = Object.fromEntries(
+        MODEL_PRICING_BACKUP_FIELDS.map((field) => [
+          field,
+          JSON.parse(form.getValues(field) || '{}'),
+        ])
+      )
+      parseModelPricingBackup(data)
+      const blob = new Blob(
+        [
+          JSON.stringify(
+            {
+              type: 'new-api-model-pricing',
+              version: 1,
+              exported_at: new Date().toISOString(),
+              data,
+            },
+            null,
+            2
+          ),
+        ],
+        { type: 'application/json' }
+      )
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `model-pricing-${new Date().toISOString().slice(0, 10)}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+      toast.success(t('Model pricing exported successfully'))
+    } catch {
+      toast.error(t('Failed to export model pricing'))
+    }
+  }
 
   const handleExportPricingExcel = useCallback(() => {
     try {
@@ -331,6 +403,36 @@ export const ModelRatioForm = memo(function ModelRatioForm({
                 )}
               />
             </SettingsPageActionsPortal>
+            <input
+              ref={importInputRef}
+              type='file'
+              accept='application/json,.json'
+              className='hidden'
+              aria-label={t('Import model pricing')}
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) void handleImportModelPricing(file)
+              }}
+            />
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              disabled={importing || isSaving}
+              onClick={() => importInputRef.current?.click()}
+            >
+              <Upload data-icon='inline-start' />
+              {t('Import model pricing')}
+            </Button>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={handleExportModelPricing}
+            >
+              <Download data-icon='inline-start' />
+              {t('Export model pricing')}
+            </Button>
             <Button
               type='button'
               variant='destructive'
@@ -350,12 +452,12 @@ export const ModelRatioForm = memo(function ModelRatioForm({
               <FileSpreadsheet data-icon='inline-start' />
               {t('Export pricing Excel')}
             </Button>
-            {editMode === 'json' && (
+            {(editMode === 'json' || hasImportedDraft) && (
               <Button
                 type='button'
                 size='sm'
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || importing}
               >
                 <Save data-icon='inline-start' />
                 {isSaving ? t('Saving...') : t('Save model prices')}
@@ -380,6 +482,7 @@ export const ModelRatioForm = memo(function ModelRatioForm({
         {editMode === 'visual' ? (
           <div className='flex min-h-0 flex-1 flex-col gap-6'>
             <ModelRatioVisualEditor
+              key={importRevision}
               ref={visualEditorRef}
               savedModelPrice={savedValues.ModelPrice}
               savedModelRatio={savedValues.ModelRatio}

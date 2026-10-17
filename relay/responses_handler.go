@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/relay/channel/openaigpt"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -65,6 +68,20 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 
 		if httpResp.StatusCode != http.StatusOK {
 			newAPIError = service.RelayErrorHandler(c.Request.Context(), httpResp, false)
+			if info.ChannelType == constant.ChannelTypeOpenAIGPT {
+				// Preparation validated the final outbound bytes, including overrides.
+				// Replay them only on failure for capability-specific error classification.
+				if reader, err := requestBody.NewReader(); err == nil {
+					var validated dto.OpenAIResponsesRequest
+					decodeErr := common.DecodeJson(reader, &validated)
+					_ = reader.Close()
+					if decodeErr == nil {
+						openaigpt.ClassifyResponsesError(newAPIError, true)
+						openaigpt.ClassifyResponsesNamespaceError(newAPIError, &validated)
+						openaigpt.ClassifyImageDataError(newAPIError, &validated)
+					}
+				}
+			}
 			// reset status code 重置状态码
 			service.ResetStatusCode(newAPIError, statusCodeMappingStr)
 			return newAPIError

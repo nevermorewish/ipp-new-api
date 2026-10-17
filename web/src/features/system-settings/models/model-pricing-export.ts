@@ -23,6 +23,65 @@ import type { PricingModel } from '@/features/pricing/types'
 
 import type { ModelPricingSnapshot, ModelRow } from './model-pricing-snapshots'
 
+export const MODEL_PRICING_BACKUP_FIELDS = [
+  'ModelPrice',
+  'ModelRatio',
+  'OriginalModelPrice',
+  'CacheRatio',
+  'CreateCacheRatio',
+  'CompletionRatio',
+  'ImageRatio',
+  'AudioRatio',
+  'AudioCompletionRatio',
+  'BillingMode',
+  'BillingExpr',
+  'PluginBillingExpr',
+] as const
+
+type ModelPricingBackupField = (typeof MODEL_PRICING_BACKUP_FIELDS)[number]
+
+// Validate the whole backup before modifying the draft, so a bad field cannot
+// leave a partially imported configuration. Older backups may omit newer fields.
+export function parseModelPricingBackup(
+  parsed: unknown
+): Partial<Record<ModelPricingBackupField, string>> {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Invalid model pricing import file')
+  }
+  const record = parsed as Record<string, unknown>
+  if (
+    (record.type !== undefined && record.type !== 'new-api-model-pricing') ||
+    (record.version !== undefined && record.version !== 1)
+  ) {
+    throw new Error('Invalid model pricing import file')
+  }
+  const source = record.data ?? record.pricing ?? record.model_pricing ?? record
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    throw new Error('Invalid model pricing import file')
+  }
+  const values = source as Record<string, unknown>
+  const aliases: Partial<Record<ModelPricingBackupField, string>> = {
+    BillingMode: 'billing_setting.billing_mode',
+    BillingExpr: 'billing_setting.billing_expr',
+    PluginBillingExpr: 'billing_setting.plugin_billing_expr',
+  }
+  const result: Partial<Record<ModelPricingBackupField, string>> = {}
+  for (const field of MODEL_PRICING_BACKUP_FIELDS) {
+    const key = Object.hasOwn(values, field) ? field : aliases[field]
+    if (!key || !Object.hasOwn(values, key)) continue
+    const raw = values[key]
+    const value: unknown = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('Invalid model pricing import file')
+    }
+    result[field] = JSON.stringify(value, null, 2)
+  }
+  if (!Object.keys(result).length) {
+    throw new Error('Invalid model pricing import file')
+  }
+  return result
+}
+
 export const MODEL_PRICING_EXPORT_HEADERS = [
   '模型名称',
   '厂商',

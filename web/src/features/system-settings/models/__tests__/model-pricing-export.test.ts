@@ -7,6 +7,7 @@ import {
   buildModelPricingExportRows,
   createModelPricingWorkbook,
   MODEL_PRICING_EXPORT_HEADERS,
+  parseModelPricingBackup,
 } from '../model-pricing-export'
 import {
   buildModelSnapshots,
@@ -24,6 +25,43 @@ const snapshot = (
 
 const pricingModel = (model_name: string, vendor_name: string): PricingModel =>
   ({ model_name, vendor_name }) as PricingModel
+
+describe('model pricing backup compatibility', () => {
+  it('accepts old option names and string maps while ignoring unrelated settings', () => {
+    expect(
+      parseModelPricingBackup({
+        ModelRatio: '{"free":0}',
+        'billing_setting.billing_mode': { model: 'tiered_expr' },
+        'billing_setting.billing_expr': { model: 'p * 2' },
+        'billing_setting.plugin_billing_expr': {
+          'doubao::model': 'u("tokens") / 1000000',
+        },
+        unrelatedSetting: 'ignored',
+      })
+    ).toEqual({
+      ModelRatio: JSON.stringify({ free: 0 }, null, 2),
+      BillingMode: JSON.stringify({ model: 'tiered_expr' }, null, 2),
+      BillingExpr: JSON.stringify({ model: 'p * 2' }, null, 2),
+      PluginBillingExpr: JSON.stringify(
+        { 'doubao::model': 'u("tokens") / 1000000' },
+        null,
+        2
+      ),
+    })
+  })
+
+  it.each([
+    null,
+    [],
+    {},
+    { version: 2, data: { ModelRatio: {} } },
+    { type: 'channel-backup', data: { ModelRatio: {} } },
+    { ModelRatio: 'broken' },
+    { ModelRatio: null },
+  ])('rejects unsupported or malformed backups: %j', (backup) => {
+    expect(() => parseModelPricingBackup(backup)).toThrow()
+  })
+})
 
 describe('model pricing Excel export', () => {
   it('keeps original model prices in the pricing snapshots', () => {

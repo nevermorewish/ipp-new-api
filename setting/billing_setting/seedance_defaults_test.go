@@ -4,11 +4,24 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSeedanceDefaultBillingUsesTokenResolutionAndVideoInput(t *testing.T) {
+	saved := billingSetting
+	savedRatios := ratio_setting.ModelRatio2JSONString()
+	savedPrices := ratio_setting.ModelPrice2JSONString()
+	t.Cleanup(func() {
+		billingSetting = saved
+		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(savedRatios))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(savedPrices))
+	})
+	billingSetting = BillingSetting{BillingMode: map[string]string{}, BillingExpr: map[string]string{}}
+	// Exercise the same ratio defaults loaded at startup, not empty maps.
+	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(ratio_setting.DefaultModelRatio2JSONString()))
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{}`))
 	tests := []struct {
 		model      string
 		resolution string
@@ -48,4 +61,20 @@ func TestSeedanceDefaultBillingUsesTokenResolutionAndVideoInput(t *testing.T) {
 			assert.Equal(t, test.wantTier, trace.MatchedTier)
 		})
 	}
+	t.Run("saved administrator prices take precedence", func(t *testing.T) {
+		model := "doubao-seedance-2.0"
+		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(`{"doubao-seedance-2.0":0}`))
+		assert.Equal(t, BillingModeRatio, GetBillingMode(model))
+		_, ok := GetBillingExpr(model)
+		assert.False(t, ok)
+		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(`{}`))
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{"doubao-seedance-2.0":0.25}`))
+		assert.Equal(t, BillingModeRatio, GetBillingMode(model))
+		billingSetting.BillingMode[model] = BillingModeTieredExpr
+		billingSetting.BillingExpr[model] = `tier("custom", u("tokens") * 3 / 1000000)`
+		expr, ok := GetBillingExpr(model)
+		require.True(t, ok)
+		assert.Equal(t, billingSetting.BillingExpr[model], expr)
+		assert.Equal(t, BillingModeTieredExpr, GetBillingMode(model))
+	})
 }

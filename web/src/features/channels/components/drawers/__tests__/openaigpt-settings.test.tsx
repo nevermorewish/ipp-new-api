@@ -21,6 +21,7 @@ import userEvent from '@testing-library/user-event'
 import { useForm } from 'react-hook-form'
 import { describe, expect, test } from 'vitest'
 
+import { CHANNEL_TYPE_OPENAI_GPT } from '../../../constants'
 import {
   CHANNEL_FORM_DEFAULT_VALUES,
   type ChannelFormValues,
@@ -34,7 +35,7 @@ function SettingsForm(props: { channelType?: number; disabled?: boolean }) {
   return (
     <OpenAIGPTSettings
       control={form.control}
-      channelType={props.channelType ?? 63}
+      channelType={props.channelType ?? CHANNEL_TYPE_OPENAI_GPT}
       disabled={props.disabled}
     />
   )

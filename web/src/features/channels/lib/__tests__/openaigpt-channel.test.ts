@@ -39,11 +39,11 @@ const form = {
 describe('OpenAI-GPT channel settings', () => {
   test('offers OpenAI-GPT independently of the existing Seedance channel', () => {
     expect(CHANNEL_TYPE_OPTIONS).toContainEqual({
-      value: 63,
+      value: CHANNEL_TYPE_OPENAI_GPT,
       label: 'OpenAI-GPT',
     })
     expect(CHANNEL_TYPE_OPTIONS).toContainEqual({
-      value: 62,
+      value: 64,
       label: 'Seedance',
     })
     expect(channelFormSchema.safeParse(form).success).toBe(true)

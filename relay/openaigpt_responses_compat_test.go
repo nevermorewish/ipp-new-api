@@ -16,6 +16,8 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting/model_setting"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
@@ -94,7 +96,9 @@ func TestOpenAIGPTAzureChatCompatibilityOutbound(t *testing.T) {
 					require.NotNil(t, TextHelper(ctx, info))
 					require.NotEmpty(t, outbound, "must reach upstream")
 					compat := channelType == constant.ChannelTypeOpenAIGPT && enabled
-					require.Equal(t, !compat, gjson.GetBytes(outbound, "temperature").Exists())
+					// The generic OpenAI adaptor also removes unsupported GPT-6
+					// sampling fields during conversion, independently of our switch.
+					require.Equal(t, !compat && (channelType == constant.ChannelTypeOpenAIGPT || passthrough), gjson.GetBytes(outbound, "temperature").Exists())
 					require.Equal(t, !compat, gjson.GetBytes(outbound, "messages.0.content.1").Exists())
 					require.Equal(t, "keep", gjson.GetBytes(outbound, "messages.0.content.0.text").String())
 					require.True(t, gjson.GetBytes(outbound, "tools.0.function.parameters.properties.message.encrypted").Bool())
@@ -169,5 +173,74 @@ func TestOpenAIGPTCompactCompatibilityRejectsUnsafeEncryptedCompaction(t *testin
 		require.Equal(t, 400, apiErr.StatusCode)
 		require.True(t, types.IsSkipRetryError(apiErr))
 		require.Contains(t, apiErr.Error(), "compaction")
+	}
+}
+
+func TestOpenAIGPTResponsesPreparationPreservesRetryBody(t *testing.T) {
+	global := model_setting.GetGlobalSettings()
+	saved := global.PassThroughRequestEnabled
+	t.Cleanup(func() { global.PassThroughRequestEnabled = saved })
+	for _, mode := range []string{"converted", "channel_passthrough", "global_passthrough"} {
+		t.Run(mode, func(t *testing.T) {
+			global.PassThroughRequestEnabled = mode == "global_passthrough"
+			body := `{"model":"client-alias","input":"hello","temperature":0.7,"max_tokens":64,"reasoning_effort":"low","stream":true,"stream_options":{"include_obfuscation":false}}`
+			ctx := newOpenAIGPTTestContext(t, "/v1/responses", body, "http://unused.invalid", mode == "channel_passthrough")
+			common.SetContextKey(ctx, constant.ContextKeyChannelType, constant.ChannelTypeOpenAIGPT)
+			common.SetContextKey(ctx, constant.ContextKeyOriginalModel, "client-alias")
+			common.SetContextKey(ctx, constant.ContextKeyChannelModelMapping, `{"client-alias":"gpt-6-astra"}`)
+			common.SetContextKey(ctx, constant.ContextKeyChannelOtherSetting, dto.ChannelOtherSettings{RemoveGPTTemperature: true, AllowIncludeObfuscation: true})
+			var request dto.OpenAIResponsesRequest
+			require.NoError(t, common.Unmarshal([]byte(body), &request))
+			info := &relaycommon.RelayInfo{Request: &request, OriginModelName: request.Model, RelayMode: relayconstant.RelayModeResponses, RelayFormat: types.RelayFormatOpenAIResponses}
+			_, prepared, closer, apiErr := PrepareResponsesRequest(ctx, info, &request)
+			require.Nil(t, apiErr)
+			defer closer.Close()
+			outbound, err := io.ReadAll(prepared)
+			require.NoError(t, err)
+			wantModel := "client-alias"
+			if mode == "converted" {
+				wantModel = "gpt-6-astra"
+			}
+			assert.Equal(t, wantModel, gjson.GetBytes(outbound, "model").String())
+			assert.False(t, gjson.GetBytes(outbound, "temperature").Exists())
+			assert.EqualValues(t, 64, gjson.GetBytes(outbound, "max_output_tokens").Int())
+			assert.Equal(t, "low", gjson.GetBytes(outbound, "reasoning.effort").String())
+			assert.Equal(t, "false", gjson.GetBytes(outbound, "stream_options.include_obfuscation").Raw)
+			assert.False(t, gjson.GetBytes(outbound, "max_tokens").Exists())
+			storage, err := common.GetBodyStorage(ctx)
+			require.NoError(t, err)
+			original, err := storage.Bytes()
+			require.NoError(t, err)
+			assert.Equal(t, body, string(original))
+			assert.Nil(t, request.MaxOutputTokens)
+		})
+	}
+}
+
+func TestOpenAIGPTResponsesPreparationRejectsInvalidLimits(t *testing.T) {
+	for _, tc := range []struct {
+		name, fields string
+		passthrough  bool
+		override     map[string]any
+	}{
+		{"legacy oversized", `,"max_tokens":18446744073686646784`, false, nil},
+		{"passthrough oversized", `,"max_output_tokens":18446744073686646784`, true, nil},
+		{"negative", `,"max_output_tokens":-1`, false, nil},
+		{"fractional legacy", `,"max_tokens":1.5`, true, nil},
+		{"override oversized", ``, false, map[string]any{"max_output_tokens": 2147483647}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := `{"model":"gpt-6-astra","input":"hello"` + tc.fields + `}`
+			ctx := newOpenAIGPTTestContext(t, "/v1/responses", body, "http://unused.invalid", tc.passthrough)
+			common.SetContextKey(ctx, constant.ContextKeyChannelType, constant.ChannelTypeOpenAIGPT)
+			common.SetContextKey(ctx, constant.ContextKeyOriginalModel, "gpt-6-astra")
+			common.SetContextKey(ctx, constant.ContextKeyChannelParamOverride, tc.override)
+			request := &dto.OpenAIResponsesRequest{Model: "gpt-6-astra"}
+			info := &relaycommon.RelayInfo{Request: request, OriginModelName: request.Model, RelayMode: relayconstant.RelayModeResponses, RelayFormat: types.RelayFormatOpenAIResponses}
+			_, _, _, apiErr := PrepareResponsesRequest(ctx, info, request)
+			require.NotNil(t, apiErr)
+			assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
+			assert.True(t, types.IsSkipRetryError(apiErr))
+		})
 	}
 }

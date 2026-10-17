@@ -20,6 +20,7 @@ import type { FieldErrors, FieldPath } from 'react-hook-form'
 
 import {
   CHANNEL_TYPE_OLLAMA,
+  CHANNEL_TYPE_OPENAI_GPT,
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
   MODEL_FETCHABLE_TYPES,
   OPENAI_FIELD_PASSTHROUGH_TYPES,
@@ -60,6 +61,8 @@ const CONFIGURATION_BLOCKS = {
       'force_format',
       'thinking_to_content',
       'moonshot_kvv_enabled',
+      'remove_gpt_temperature',
+      'remove_azure_gpt_encryption',
       'pass_through_body_enabled',
       'responses_websocket_enabled',
       'ollama_openai_chat',
@@ -155,6 +158,9 @@ export function getChannelConfigurationState(
       (values.type === 1 && values.force_format) ||
       values.thinking_to_content ||
       (values.type === 25 && values.moonshot_kvv_enabled) ||
+      (values.type === CHANNEL_TYPE_OPENAI_GPT &&
+        (values.remove_gpt_temperature ||
+          values.remove_azure_gpt_encryption)) ||
       (values.type !== CHANNEL_TYPE_ADVANCED_CUSTOM &&
         values.pass_through_body_enabled) ||
       (supportsResponsesWebSocket(values.type) &&

@@ -239,6 +239,7 @@ import {
   ChannelConfigurationStatusIndicator,
 } from './channel-configuration'
 import { ChannelProviderPicker } from './channel-provider-picker'
+import { OpenAIGPTSettings } from './openaigpt-settings'
 import {
   ChannelApiAccessSection,
   ChannelAuthSection,
@@ -297,6 +298,8 @@ const SENSITIVE_FORM_FIELDS = [
   'force_format',
   'thinking_to_content',
   'moonshot_kvv_enabled',
+  'remove_gpt_temperature',
+  'remove_azure_gpt_encryption',
   'proxy',
   'http_protocol',
   'http2_connection_shards',
@@ -4716,6 +4719,11 @@ export function ChannelMutateDrawer({
                 {ollamaOpenAIChatFields}
                 {thinkingFields}
                 {kvvFields}
+                <OpenAIGPTSettings
+                  control={form.control}
+                  channelType={currentType}
+                  disabled={sensitiveLocked || isSubmitting}
+                />
                 {currentType !== CHANNEL_TYPE_ADVANCED_CUSTOM &&
                   passthroughFields}
                 {systemPromptFields}
