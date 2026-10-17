@@ -298,7 +298,9 @@ export function Analytics() {
                     {t('Consumption ($)')}
                   </TableHead>
                   <TableHead className='text-right'>{t('Requests')}</TableHead>
-                  <TableHead className='text-right'>{t('Tokens')}</TableHead>
+                  <TableHead className='text-right'>
+                    {t('Token count')}
+                  </TableHead>
                   <TableHead className='min-w-[220px]'>
                     {t('Model Usage')}
                   </TableHead>
