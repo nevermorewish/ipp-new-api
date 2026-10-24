@@ -70,10 +70,9 @@ func TestDoubaoVideoDuration(t *testing.T) {
 	_, plugin := newDoubaoPlugin(t)
 	const modelName = "doubao-seedance-2.0-mini"
 	// Ark reads -1 as "the model picks the length" (Seedance 1.5 pro and 2.x);
-	// the host admits it for plugins that declare duration-auto@1 and the
-	// reservation then covers the longest output the model can produce. The
-	// native route forwards the caller's values verbatim and defers the bound to
-	// the host validator, while the protocol decoders normalize seconds into a
+	// reservation covers the longest output the model can produce. The
+	// native route forwards the caller's values verbatim and the driver bounds
+	// them before submission, while the protocol decoders normalize seconds into a
 	// numeric requestBody.seconds themselves.
 	type expectation struct {
 		duration any
@@ -155,7 +154,7 @@ func TestDoubaoVideoDuration(t *testing.T) {
 				kind = "native"
 			} else if format == "responses" {
 				// The Responses decoder forwards the caller's duration verbatim
-				// instead of normalizing it, so the host validator owns the bound
+				// instead of normalizing it, so the driver owns the bound
 				// and a zero duration falls back to the longest reservation.
 				kind = "passthrough"
 			}
@@ -212,7 +211,7 @@ func TestDoubaoVideoDuration(t *testing.T) {
 				c.Request = httptest.NewRequest(http.MethodPost, requestPath, nil)
 				if want.wantErr != "" {
 					// The protocol decoders reject the value themselves; the
-					// native route leaves the bound to the host validator.
+					// native route leaves the bound to the driver.
 					if err != nil {
 						require.ErrorContains(t, err, want.wantErr)
 						return

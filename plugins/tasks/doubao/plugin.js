@@ -810,6 +810,16 @@ export function buildSubmitRequest(ctx) {
   }
   const req = ctx.requestBody;
   const metadata = req.metadata || {};
+  // The host validates usage facts, so the driver must bound duration inputs
+  // before parsing them or forwarding metadata to Ark.
+  for (const value of [req.seconds, req.duration, metadata.seconds, metadata.duration]) {
+    if (value === undefined || value === null) continue;
+    if ((typeof value !== "number" && typeof value !== "string") || (typeof value === "string" && value.trim() === "") || !Number.isFinite(Number(value)))
+      throw new Error("video duration must be a number");
+    const duration = Number(value);
+    if (duration > 3600) throw new Error("video duration exceeds the host limit of 3600 seconds");
+    if (duration < 0 && duration !== -1) throw new Error("video duration must be -1 or non-negative");
+  }
   // Reject output tiers the model does not offer before any quota is reserved.
   videoResolution(ctx);
   const body = Object.assign({ model: req.model || "", content: [] }, metadata);
