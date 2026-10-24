@@ -37,6 +37,7 @@ func TestMoonshotKVVWireContract(t *testing.T) {
 	t.Cleanup(func() { global.PassThroughRequestEnabled = previous })
 	for _, tc := range []struct {
 		name                                            string
+		model, thinking                                 string
 		enabled, stream, passthrough, globalPassthrough bool
 		override                                        any
 		status                                          int
@@ -48,6 +49,9 @@ func TestMoonshotKVVWireContract(t *testing.T) {
 		{name: "channel passthrough conflict", enabled: true, passthrough: true, status: 400},
 		{name: "global passthrough conflict", enabled: true, globalPassthrough: true, status: 400},
 		{name: "override cannot bypass validation", enabled: true, override: 2, status: 400},
+		{name: "K3.1 Pro dynamic tools", model: "kimi-k3.1-pro", thinking: "enabled", enabled: true},
+		{name: "K3.1 Pro dynamic tools stream", model: "kimi-k3.1-pro", thinking: "enabled", enabled: true, stream: true},
+		{name: "K3.1 Pro requires thinking", model: "kimi-k3.1-pro", enabled: true, status: 400},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			global.PassThroughRequestEnabled = tc.globalPassthrough
@@ -63,19 +67,29 @@ func TestMoonshotKVVWireContract(t *testing.T) {
 			}))
 			t.Cleanup(upstream.Close)
 			body := `{"model":"kimi-k3","thinking":{"type":"disabled"},"messages":[{"role":"system","content":"","tools":[{"type":"function","function":{"name":"weather","strict":false,"parameters":{"type":"object"}}}]},{"role":"user","content":"weather?"}]}`
+			model := tc.model
+			if model == "" {
+				model = "kimi-k3"
+			}
+			thinking := tc.thinking
+			if thinking == "" {
+				thinking = "disabled"
+			}
+			body = strings.Replace(body, "kimi-k3", model, 1)
+			body = strings.Replace(body, "disabled", thinking, 1)
 			var request dto.GeneralOpenAIRequest
 			require.NoError(t, common.UnmarshalJsonStr(body, &request))
 			request.Stream = common.GetPointer(tc.stream)
 			c, _ := gin.CreateTestContext(httptest.NewRecorder())
 			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader(body))
 			common.SetContextKey(c, constant.ContextKeyChannelType, constant.ChannelTypeMoonshot)
-			common.SetContextKey(c, constant.ContextKeyOriginalModel, "kimi-k3")
+			common.SetContextKey(c, constant.ContextKeyOriginalModel, model)
 			common.SetContextKey(c, constant.ContextKeyChannelBaseUrl, upstream.URL)
 			common.SetContextKey(c, constant.ContextKeyChannelSetting, dto.ChannelSettings{MoonshotKVVEnabled: tc.enabled, PassThroughBodyEnabled: tc.passthrough})
 			if tc.override != nil {
 				common.SetContextKey(c, constant.ContextKeyChannelParamOverride, map[string]any{"n": tc.override})
 			}
-			info := &relaycommon.RelayInfo{Request: &request, OriginModelName: "kimi-k3", RelayMode: relayconstant.RelayModeChatCompletions, RequestURLPath: c.Request.URL.Path}
+			info := &relaycommon.RelayInfo{Request: &request, OriginModelName: model, RelayMode: relayconstant.RelayModeChatCompletions, RequestURLPath: c.Request.URL.Path}
 			apiErr := TextHelper(c, info)
 			require.NotNil(t, apiErr)
 			if tc.status != 0 {
@@ -90,7 +104,7 @@ func TestMoonshotKVVWireContract(t *testing.T) {
 			assert.Equal(t, tc.stream, gjson.GetBytes(wire, "stream").Bool())
 			assert.Equal(t, !tc.enabled, gjson.GetBytes(wire, "messages.0.content").Exists())
 			assert.JSONEq(t, gjson.Get(body, "messages.0.tools").Raw, gjson.GetBytes(wire, "messages.0.tools").Raw)
-			assert.Equal(t, "disabled", gjson.GetBytes(wire, "thinking.type").String())
+			assert.Equal(t, thinking, gjson.GetBytes(wire, "thinking.type").String())
 			assert.Equal(t, tc.enabled, gjson.GetBytes(wire, "reasoning_effort").Exists())
 		})
 	}

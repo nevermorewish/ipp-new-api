@@ -652,6 +652,7 @@
     "Apply disable rules to upstream request errors and scheduled or bulk health checks": "上流リクエストのエラーと定期または一括ヘルスチェックに無効化ルールを適用します",
     "Apply Filters": "フィルターを適用",
     "Apply IP Filter to Resolved Domains": "解決されたドメインにIPフィルターを適用",
+    "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.": "kimi-k3 と kimi-k3.1-pro のチャットリクエストに KVV パラメーター検証、思考の既定設定、動的ツールの互換処理を適用します。K3.1 Pro では思考を有効にする必要があります。使用前にグローバル設定とチャネル設定のリクエスト本文透過転送を無効にしてください。",
     "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.": "kimi-k3 のチャットに KVV パラメーター検証、思考の既定値、動的ツール互換性を適用します。全体およびチャネルの本文パススルーを無効にしてください。",
     "Apply Overwrite": "上書き適用",
     "Apply plan": "プランを適用",

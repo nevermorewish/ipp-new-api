@@ -652,6 +652,7 @@
     "Apply disable rules to upstream request errors and scheduled or bulk health checks": "將停用規則套用於上游請求錯誤，以及定時或批次健康檢查",
     "Apply Filters": "套用篩選器",
     "Apply IP Filter to Resolved Domains": "對已解析的網域套用 IP 篩選器",
+    "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.": "為 kimi-k3 和 kimi-k3.1-pro 聊天請求啟用 KVV 參數驗證、預設思考設定與動態工具相容處理。K3.1 Pro 必須開啟思考。使用前請關閉全域及渠道請求本文透傳。",
     "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.": "對 kimi-k3 對話請求啟用 KVV 參數驗證、思考預設值和動態工具相容。使用前請關閉全域及管道請求本文透傳。",
     "Apply Overwrite": "套用覆蓋",
     "Apply plan": "套用方案",

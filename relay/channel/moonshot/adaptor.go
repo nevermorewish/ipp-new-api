@@ -1,6 +1,7 @@
 package moonshot
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -55,6 +56,11 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		if info.RelayFormat == types.RelayFormatOpenAI {
 			return fmt.Sprintf("%s/chat/completions", specialPlan.OpenAIBaseURL), nil
 		}
+		if info.RelayFormat == types.RelayFormatOpenAIResponses {
+			// This gateway forwards native Responses bodies, so keep their
+			// endpoint while resolving the special-plan alias to a real base URL.
+			return fmt.Sprintf("%s/responses", specialPlan.OpenAIBaseURL), nil
+		}
 	}
 
 	switch info.RelayFormat {
@@ -87,6 +93,9 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		if err := adaptKVVRequest(request); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
+		if strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro") && request.ReasoningEffort == "none" {
+			return nil, types.NewOpenAIError(fmt.Errorf("kimi-k3.1-pro requires thinking to be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
 	}
 	if request.Temperature != nil && isTemperatureOneOnlyModel(getUpstreamModelName(info, request.Model)) && *request.Temperature != 1.0 {
 		request.Temperature = common.GetPointer[float64](1.0)
@@ -113,6 +122,19 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {
+	// Normalize the final body so passthrough, protocol conversion and channel
+	// parameter overrides all use the same independent tool-schema documents.
+	if requestBody != nil {
+		payload, err := io.ReadAll(requestBody)
+		if err != nil {
+			return nil, fmt.Errorf("read Moonshot tool schemas: %w", err)
+		}
+		normalized, _, err := normalizeKimiToolSchemaRefsBody(payload)
+		if err != nil {
+			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
+		requestBody = bytes.NewReader(normalized)
+	}
 	return channel.DoApiRequest(a, c, info, requestBody)
 }
 

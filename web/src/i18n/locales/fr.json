@@ -652,6 +652,7 @@
     "Apply disable rules to upstream request errors and scheduled or bulk health checks": "Appliquer les règles aux erreurs en amont et aux contrôles périodiques ou groupés",
     "Apply Filters": "Appliquer les filtres",
     "Apply IP Filter to Resolved Domains": "Appliquer le filtre IP aux domaines résolus",
+    "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.": "Applique la validation KVV, les réglages de raisonnement par défaut et la compatibilité des outils dynamiques aux requêtes de chat kimi-k3 et kimi-k3.1-pro. K3.1 Pro exige le raisonnement. Désactivez la transmission directe du corps au niveau global et du canal avant utilisation.",
     "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.": "Applique la validation KVV, les valeurs de raisonnement par défaut et la compatibilité des outils dynamiques aux requêtes kimi-k3. Désactivez la transmission directe du corps au niveau global et du canal.",
     "Apply Overwrite": "Appliquer l'écrasement",
     "Apply plan": "Appliquer le plan",

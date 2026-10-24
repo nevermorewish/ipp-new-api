@@ -1915,7 +1915,7 @@ export function ChannelMutateDrawer({
             <FormLabel>{t('KVV adaptation')}</FormLabel>
             <FormDescription>
               {t(
-                'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.'
+                'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.'
               )}
             </FormDescription>
           </div>

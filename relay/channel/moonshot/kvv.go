@@ -20,7 +20,8 @@ func KVVEnabled(info *relaycommon.RelayInfo) bool {
 		info.RelayMode == relayconstant.RelayModeChatCompletions &&
 		info.ChannelType == constant.ChannelTypeMoonshot &&
 		info.ChannelSetting.MoonshotKVVEnabled &&
-		strings.EqualFold(info.UpstreamModelName, "kimi-k3")
+		(strings.EqualFold(info.UpstreamModelName, "kimi-k3") ||
+			strings.EqualFold(info.UpstreamModelName, "kimi-k3.1-pro"))
 }
 
 var kvvToolName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_-]{0,255}$`)
