@@ -98,6 +98,10 @@ func TestKVVThinkingAndSwitch(t *testing.T) {
 		{"template false", `{"chat_template_kwargs":{"thinking":false,"custom":7}}`, "disabled", "none"},
 		{"reasoning none", `{"reasoning_effort":"none"}`, "disabled", "none"},
 		{"reasoning low", `{"reasoning_effort":"low"}`, "enabled", "low"},
+		{"minimal alias", `{"reasoning_effort":"minimal"}`, "enabled", "low"},
+		{"medium alias", `{"reasoning_effort":"medium"}`, "enabled", "high"},
+		{"xhigh alias", `{"reasoning_effort":"xhigh"}`, "enabled", "max"},
+		{"explicit medium alias", `{"thinking":{"effort":"medium"}}`, "enabled", "high"},
 		{"explicit effort wins", `{"thinking":{"type":"enabled","effort":"low"},"reasoning_effort":"max"}`, "enabled", "low"},
 		{"disabled ignores effort and keep", `{"thinking":{"type":"disabled","keep":"none","effort":"high"},"reasoning_effort":"max"}`, "disabled", "none"},
 		{"explicit type wins", `{"thinking":{"type":"enabled"},"chat_template_kwargs":{"thinking":false}}`, "enabled", "max"},
@@ -162,6 +166,39 @@ func TestKVVScopeAndDisabledRequests(t *testing.T) {
 			wire, err := common.Marshal(converted)
 			require.NoError(t, err)
 			assert.JSONEq(t, body, string(wire))
+		})
+	}
+}
+
+func TestKVVOpenAIClientMessageCompatibility(t *testing.T) {
+	for _, tc := range []struct {
+		name, messages, want string
+	}{
+		{"developer instructions", `[{"role":"developer","content":"Be concise"},{"role":"user","content":"hello"}]`, `[{"role":"system","content":"Be concise"},{"role":"user","content":"hello"}]`},
+		{"empty system placeholder", `[{"role":"system","content":""},{"role":"user","content":"hello"}]`, `[{"role":"user","content":"hello"}]`},
+		{"null developer placeholder", `[{"role":"developer","content":null},{"role":"user","content":"hello"}]`, `[{"role":"user","content":"hello"}]`},
+		{"empty user retained", `[{"role":"user","content":""}]`, `[{"role":"user","content":""}]`},
+		{"tool result retained", `[{"role":"tool","content":"","tool_call_id":"call_1"}]`, `[{"role":"tool","content":"","tool_call_id":"call_1"}]`},
+		{"named system retained", `[{"role":"system","content":"","name":"context"},{"role":"user","content":"hello"}]`, `[{"role":"system","content":"","name":"context"},{"role":"user","content":"hello"}]`},
+		{"tool call retained", `[{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"lookup","arguments":"{}"}}]}]`, `[{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"lookup","arguments":"{}"}}]}]`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, enabled := range []bool{false, true} {
+				var request dto.GeneralOpenAIRequest
+				require.NoError(t, common.UnmarshalJsonStr(`{"model":"kimi-k3.1-pro","messages":`+tc.messages+`}`, &request))
+				info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+					ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro", ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: enabled},
+				}}
+				converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+				require.NoError(t, err)
+				wire, err := common.Marshal(converted)
+				require.NoError(t, err)
+				want := tc.messages
+				if enabled {
+					want = tc.want
+				}
+				assert.JSONEq(t, want, gjson.GetBytes(wire, "messages").Raw)
+			}
 		})
 	}
 }

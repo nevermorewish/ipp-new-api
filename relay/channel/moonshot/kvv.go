@@ -42,6 +42,29 @@ func adaptKVVRequest(request *dto.GeneralOpenAIRequest) error {
 	if v := request.N; v != nil && *v != 1 {
 		return fmt.Errorf("n must be 1 for kimi-k3")
 	}
+	// OpenAI clients may send developer instructions and empty system
+	// placeholders. Kimi uses system for both instruction roles and rejects
+	// empty content; preserve every message that carries tools or metadata.
+	messages := make([]dto.Message, 0, len(request.Messages))
+	for _, message := range request.Messages {
+		if message.Role == "developer" {
+			message.Role = "system"
+		}
+		emptyContent := message.Content == nil
+		if content, ok := message.Content.(string); ok {
+			emptyContent = content == ""
+		}
+		if message.Role == "system" && emptyContent && len(request.Messages) > 1 &&
+			len(message.Tools) == 0 && len(message.ToolCalls) == 0 && message.ToolCallId == "" &&
+			message.Name == nil && message.Prefix == nil && message.ReasoningContent == nil &&
+			message.Reasoning == nil && len(message.Annotations) == 0 {
+			continue
+		}
+		messages = append(messages, message)
+	}
+	if len(messages) > 0 {
+		request.Messages = messages
+	}
 
 	names := make(map[string]bool)
 	for _, tool := range request.Tools {
@@ -135,6 +158,12 @@ func adaptKVVThinking(request *dto.GeneralOpenAIRequest) error {
 			}
 		}
 		switch effort {
+		case "minimal":
+			effort = "low"
+		case "medium":
+			effort = "high"
+		case "xhigh":
+			effort = "max"
 		case "low", "high", "max":
 		default:
 			return fmt.Errorf("reasoning effort must be low, high or max")
