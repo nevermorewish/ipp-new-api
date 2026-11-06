@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
@@ -20,6 +21,83 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
 )
+
+func TestMessagesRequestURL(t *testing.T) {
+	for _, base := range []string{"https://api.moonshot.cn", "https://api.moonshot.cn/", "https://proxy.example/moonshot/"} {
+		t.Run(base, func(t *testing.T) {
+			url, err := (&Adaptor{}).GetRequestURL(&relaycommon.RelayInfo{
+				RelayFormat: types.RelayFormatClaude,
+				ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: base},
+			})
+			require.NoError(t, err)
+			assert.Equal(t, strings.TrimRight(base, "/")+"/v1/messages", url)
+		})
+	}
+}
+
+func TestMessagesNativeRoundTrip(t *testing.T) {
+	service.InitHttpClient()
+	originalTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() { constant.StreamingTimeout = originalTimeout })
+	const responseBody = `{"id":"msg_kimi","type":"message","role":"assistant","model":"kimi-k3","content":[{"type":"text","text":"Hello"}],"stop_reason":"end_turn","usage":{"input_tokens":12,"output_tokens":3,"cache_read_input_tokens":8}}`
+	const streamBody = "event: message_start\ndata: " + `{"type":"message_start","message":{"id":"msg_kimi","type":"message","role":"assistant","model":"kimi-k3","content":[],"usage":{"input_tokens":12,"output_tokens":0,"cache_read_input_tokens":8}}}` + "\n\n" +
+		"event: content_block_start\ndata: " + `{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}` + "\n\n" +
+		"event: content_block_delta\ndata: " + `{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}` + "\n\n" +
+		"event: content_block_stop\ndata: " + `{"type":"content_block_stop","index":0}` + "\n\n" +
+		"event: message_delta\ndata: " + `{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":3}}` + "\n\n" +
+		"event: message_stop\ndata: " + `{"type":"message_stop"}` + "\n\n"
+	for _, stream := range []bool{false, true} {
+		t.Run(fmt.Sprintf("stream=%t", stream), func(t *testing.T) {
+			var received []byte
+			var receivedPath, authorization string
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				received, _ = io.ReadAll(r.Body)
+				receivedPath, authorization = r.URL.Path, r.Header.Get("Authorization")
+				if stream {
+					w.Header().Set("Content-Type", "text/event-stream")
+					_, _ = io.WriteString(w, streamBody)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, responseBody)
+			}))
+			defer upstream.Close()
+			body := fmt.Sprintf(`{"model":"kimi-k3","max_tokens":4096,"stream":%t,"system":"Be concise","messages":[{"role":"user","content":"Hi"}],"tools":[{"name":"lookup","input_schema":{"type":"object","properties":{"query":{"type":"string"}}}}]}`, stream)
+			var request dto.ClaudeRequest
+			require.NoError(t, common.UnmarshalJsonStr(body, &request))
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", strings.NewReader(body))
+			info := &relaycommon.RelayInfo{
+				RelayFormat: types.RelayFormatClaude, IsStream: stream, Request: &request,
+				ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: upstream.URL + "/", ApiKey: "test-key", UpstreamModelName: "kimi-k3"},
+			}
+			adaptor := &Adaptor{}
+			converted, err := adaptor.ConvertClaudeRequest(ctx, info, &request)
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			response, err := adaptor.DoRequest(ctx, info, bytes.NewReader(wire))
+			require.NoError(t, err)
+			assert.Equal(t, "/v1/messages", receivedPath)
+			assert.Equal(t, "Bearer test-key", authorization)
+			assert.JSONEq(t, body, string(received))
+			usage, apiErr := adaptor.DoResponse(ctx, response.(*http.Response), info)
+			require.Nil(t, apiErr)
+			require.IsType(t, &dto.Usage{}, usage)
+			assert.Equal(t, 12, usage.(*dto.Usage).PromptTokens)
+			assert.Equal(t, 3, usage.(*dto.Usage).CompletionTokens)
+			assert.Equal(t, 8, usage.(*dto.Usage).PromptTokensDetails.CachedTokens)
+			if stream {
+				assert.Contains(t, recorder.Body.String(), `"text":"Hello"`)
+				assert.Contains(t, recorder.Body.String(), "event: message_stop")
+			} else {
+				assert.JSONEq(t, responseBody, recorder.Body.String())
+			}
+		})
+	}
+}
 
 func TestKVVRequestContract(t *testing.T) {
 	for _, tc := range []struct {

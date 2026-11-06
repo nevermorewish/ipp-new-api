@@ -65,7 +65,7 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 
 	switch info.RelayFormat {
 	case types.RelayFormatClaude:
-		return fmt.Sprintf("%s/anthropic/v1/messages", info.ChannelBaseUrl), nil
+		return fmt.Sprintf("%s/v1/messages", strings.TrimRight(baseURL, "/")), nil
 	default:
 		if info.RelayMode == constant.RelayModeRerank {
 			return fmt.Sprintf("%s/v1/rerank", info.ChannelBaseUrl), nil
