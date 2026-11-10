@@ -300,6 +300,7 @@ const SENSITIVE_FORM_FIELDS = [
   'force_format',
   'thinking_to_content',
   'moonshot_kvv_enabled',
+  'moonshot_video_to_images',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'proxy',
@@ -1916,6 +1917,35 @@ export function ChannelMutateDrawer({
             <FormDescription>
               {t(
                 'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const videoToImagesFields = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_video_to_images'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Video to images')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Convert video URLs or uploads into sampled images for the upstream model. Requires image input support. Audio is not included.'
               )}
             </FormDescription>
           </div>
@@ -4792,6 +4822,7 @@ export function ChannelMutateDrawer({
                 {ollamaOpenAIChatFields}
                 {thinkingFields}
                 {kvvFields}
+                {videoToImagesFields}
                 <OpenAIGPTSettings
                   control={form.control}
                   channelType={currentType}

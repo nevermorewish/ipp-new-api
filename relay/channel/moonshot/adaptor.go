@@ -129,6 +129,12 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		if err != nil {
 			return nil, fmt.Errorf("read Moonshot tool schemas: %w", err)
 		}
+		if info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotVideoToImages {
+			payload, err = convertVideoBody(c.Request.Context(), payload, info.RelayFormat, extractVideoFrames)
+			if err != nil {
+				return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+			}
+		}
 		normalized, _, err := normalizeKimiToolSchemaRefsBody(payload)
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())

@@ -1652,6 +1652,57 @@ test('other providers hide and omit the Moonshot KVV setting', async () => {
   expect(JSON.parse(payload.setting).moonshot_kvv_enabled).toBeUndefined()
 })
 
+test.each([false, true])(
+  'Moonshot video switch restores %s and saves its opposite',
+  async (enabled) => {
+    editingChannel = {
+      ...editingChannel,
+      type: 25,
+      setting: JSON.stringify({ moonshot_video_to_images: enabled }),
+    }
+    const put = vi
+      .spyOn(api, 'put')
+      .mockResolvedValue({ data: { success: true } })
+    const user = userEvent.setup()
+    render(<ConfigurationHarness currentRow={editingChannel} />)
+    await screen.findByDisplayValue('Existing channel')
+    await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+    const toggle = screen.getByRole('switch', { name: 'Video to images' })
+    expect(toggle).toHaveAttribute('aria-checked', String(enabled))
+    toggle.focus()
+    await user.keyboard(' ')
+    expect(toggle).toHaveAttribute('aria-checked', String(!enabled))
+    await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+    await waitFor(() => expect(put).toHaveBeenCalled())
+    const payload = put.mock.calls[0]?.[1] as { setting: string }
+    expect(JSON.parse(payload.setting).moonshot_video_to_images === true).toBe(
+      !enabled
+    )
+  }
+)
+
+test('other providers hide and omit the Moonshot video setting', async () => {
+  editingChannel = {
+    ...editingChannel,
+    type: 1,
+    setting: '{"moonshot_video_to_images":true}',
+  }
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  const user = userEvent.setup()
+  render(<ConfigurationHarness currentRow={editingChannel} />)
+  await screen.findByDisplayValue('Existing channel')
+  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+  expect(
+    screen.queryByRole('switch', { name: 'Video to images' })
+  ).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+  await waitFor(() => expect(put).toHaveBeenCalled())
+  const payload = put.mock.calls[0]?.[1] as { setting: string }
+  expect(JSON.parse(payload.setting).moonshot_video_to_images).toBeUndefined()
+})
+
 test('request processing configuration does not mark the network category as configured', async () => {
   editingChannel = {
     ...editingChannel,

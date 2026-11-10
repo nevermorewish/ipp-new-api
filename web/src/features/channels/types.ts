@@ -85,6 +85,7 @@ export interface ChannelSettings {
   force_format?: boolean
   thinking_to_content?: boolean
   moonshot_kvv_enabled?: boolean
+  moonshot_video_to_images?: boolean
   proxy?: string
   pass_through_body_enabled?: boolean
   responses_websocket_enabled?: boolean

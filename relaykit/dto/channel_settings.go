@@ -16,6 +16,7 @@ type ChannelSettings struct {
 	ForceFormat               bool   `json:"force_format,omitempty"`
 	ThinkingToContent         bool   `json:"thinking_to_content,omitempty"`
 	MoonshotKVVEnabled        bool   `json:"moonshot_kvv_enabled,omitempty"`
+	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"`
 	Proxy                     string `json:"proxy"`
 	PassThroughBodyEnabled    bool   `json:"pass_through_body_enabled,omitempty"`
 	ResponsesWebSocketEnabled bool   `json:"responses_websocket_enabled,omitempty"`
