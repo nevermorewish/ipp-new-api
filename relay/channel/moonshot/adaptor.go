@@ -147,7 +147,9 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
-		if info != nil && info.ChannelMeta != nil && info.ChannelOtherSettings.NormalizeRequiredToolChoiceWithoutTools {
+		// KVV must return the official 400 for required without tools, so the
+		// compatibility switch never applies to a KVV request.
+		if info != nil && info.ChannelMeta != nil && info.ChannelOtherSettings.NormalizeRequiredToolChoiceWithoutTools && !KVVEnabled(info) {
 			normalized, _ = normalizeRequiredToolChoiceWithoutTools(normalized)
 		}
 		requestBody = bytes.NewReader(normalized)

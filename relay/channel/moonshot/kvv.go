@@ -72,6 +72,10 @@ func adaptKVVRequest(request *dto.GeneralOpenAIRequest) error {
 	}
 	for i := range request.Messages {
 		message := &request.Messages[i]
+		// Not every Kimi upstream rejects this, so enforce the official 400 here.
+		if message.Role == "tool" && message.ToolCallId == "" {
+			return fmt.Errorf("messages[%d].tool_call_id is required for role tool", i)
+		}
 		if len(message.Tools) == 0 {
 			continue
 		}
