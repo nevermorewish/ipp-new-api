@@ -1703,6 +1703,66 @@ test('other providers hide and omit the Moonshot video setting', async () => {
   expect(JSON.parse(payload.setting).moonshot_video_to_images).toBeUndefined()
 })
 
+test.each([false, true])(
+  'Moonshot required compatibility switch restores %s and saves its opposite',
+  async (enabled) => {
+    editingChannel = {
+      ...editingChannel,
+      type: 25,
+      settings: JSON.stringify({
+        normalize_required_tool_choice_without_tools: enabled,
+      }),
+    }
+    const put = vi
+      .spyOn(api, 'put')
+      .mockResolvedValue({ data: { success: true } })
+    const user = userEvent.setup()
+    render(<ConfigurationHarness currentRow={editingChannel} />)
+    await screen.findByDisplayValue('Existing channel')
+    await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+    const toggle = screen.getByRole('switch', {
+      name: 'Allow required tool choice without tools',
+    })
+    expect(toggle).toHaveAttribute('aria-checked', String(enabled))
+    toggle.focus()
+    await user.keyboard(' ')
+    expect(toggle).toHaveAttribute('aria-checked', String(!enabled))
+    await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+    await waitFor(() => expect(put).toHaveBeenCalled())
+    const payload = put.mock.calls[0]?.[1] as { settings: string }
+    expect(
+      JSON.parse(payload.settings)
+        .normalize_required_tool_choice_without_tools === true
+    ).toBe(!enabled)
+  }
+)
+
+test('other providers hide and omit the Moonshot required compatibility setting', async () => {
+  editingChannel = {
+    ...editingChannel,
+    type: 1,
+    settings: '{"normalize_required_tool_choice_without_tools":true}',
+  }
+  const put = vi
+    .spyOn(api, 'put')
+    .mockResolvedValue({ data: { success: true } })
+  const user = userEvent.setup()
+  render(<ConfigurationHarness currentRow={editingChannel} />)
+  await screen.findByDisplayValue('Existing channel')
+  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+  expect(
+    screen.queryByRole('switch', {
+      name: 'Allow required tool choice without tools',
+    })
+  ).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+  await waitFor(() => expect(put).toHaveBeenCalled())
+  const payload = put.mock.calls[0]?.[1] as { settings: string }
+  expect(
+    JSON.parse(payload.settings).normalize_required_tool_choice_without_tools
+  ).toBeUndefined()
+})
+
 test('request processing configuration does not mark the network category as configured', async () => {
   editingChannel = {
     ...editingChannel,

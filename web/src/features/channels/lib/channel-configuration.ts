@@ -62,6 +62,7 @@ const CONFIGURATION_BLOCKS = {
       'thinking_to_content',
       'moonshot_kvv_enabled',
       'moonshot_video_to_images',
+      'normalize_required_tool_choice_without_tools',
       'remove_gpt_temperature',
       'remove_azure_gpt_encryption',
       'pass_through_body_enabled',
@@ -159,6 +160,8 @@ export function getChannelConfigurationState(
       (values.type === 1 && values.force_format) ||
       values.thinking_to_content ||
       (values.type === 25 && values.moonshot_kvv_enabled) ||
+      (values.type === 25 &&
+        values.normalize_required_tool_choice_without_tools) ||
       (values.type === 25 && values.moonshot_video_to_images) ||
       (values.type === CHANNEL_TYPE_OPENAI_GPT &&
         (values.remove_gpt_temperature ||

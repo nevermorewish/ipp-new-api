@@ -85,6 +85,14 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *relaycommon.RelayInfo) error {
 	channel.SetupApiRequestHeader(info, c, req)
 	req.Set("Authorization", fmt.Sprintf("Bearer %s", info.ApiKey))
+	if info.RelayFormat == types.RelayFormatClaude {
+		version := c.Request.Header.Get("anthropic-version")
+		if version == "" {
+			version = "2023-06-01"
+		}
+		req.Set("anthropic-version", version)
+		claude.CommonClaudeHeadersOperation(c, req, info)
+	}
 	return nil
 }
 
@@ -138,6 +146,9 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		normalized, _, err := normalizeKimiToolSchemaRefsBody(payload)
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
+		if info != nil && info.ChannelMeta != nil && info.ChannelOtherSettings.NormalizeRequiredToolChoiceWithoutTools {
+			normalized, _ = normalizeRequiredToolChoiceWithoutTools(normalized)
 		}
 		requestBody = bytes.NewReader(normalized)
 	}

@@ -112,6 +112,9 @@ const (
 )
 
 type ChannelOtherSettings struct {
+	// NormalizeRequiredToolChoiceWithoutTools removes the OpenAI required string
+	// only when neither top-level nor message-level tools are declared.
+	NormalizeRequiredToolChoiceWithoutTools bool `json:"normalize_required_tool_choice_without_tools,omitempty"`
 	// RemoveGPTTemperature removes temperature for GPT models that reject it.
 	// It is primarily used by the OpenAI-GPT compatibility channel.
 	RemoveGPTTemperature bool `json:"remove_gpt_temperature,omitempty"`

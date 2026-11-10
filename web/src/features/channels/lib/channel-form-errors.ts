@@ -39,6 +39,7 @@ const ADVANCED_SETTINGS_FIELDS = new Set<FieldPath<ChannelFormValues>>([
   'thinking_to_content',
   'moonshot_kvv_enabled',
   'moonshot_video_to_images',
+  'normalize_required_tool_choice_without_tools',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'pass_through_body_enabled',

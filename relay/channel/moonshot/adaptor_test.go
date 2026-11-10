@@ -22,6 +22,92 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+func TestRequiredToolChoiceFinalBody(t *testing.T) {
+	service.InitHttpClient()
+	for _, tc := range []struct {
+		name, body string
+		keep       bool
+	}{
+		{"absent tools", `{"tool_choice":"required"}`, false},
+		{"null tools", `{"tools":null,"tool_choice":"required"}`, false},
+		{"empty tools", `{"tools":[],"messages":[{"role":"system","tools":[]}],"tool_choice":"required"}`, false},
+		{"global tools", `{"tools":[{"type":"function","function":{"name":"calculate"}}],"tool_choice":"required"}`, true},
+		{"dynamic tools", `{"messages":[{"role":"user","content":"Calculate"},{"role":"system","tools":[{"type":"function","function":{"name":"calculate"}}]}],"tool_choice":"required"}`, true},
+		{"malformed global tools", `{"tools":{},"tool_choice":"required"}`, true},
+		{"malformed dynamic tools", `{"messages":[{"role":"system","tools":{}}],"tool_choice":"required"}`, true},
+		{"object choice", `{"tool_choice":{"type":"any"}}`, true},
+		{"auto choice", `{"tool_choice":"auto"}`, true},
+	} {
+		for _, enabled := range []bool{false, true} {
+			for _, format := range []types.RelayFormat{types.RelayFormatOpenAI, types.RelayFormatClaude, types.RelayFormatOpenAIResponses} {
+				t.Run(fmt.Sprintf("%s/%t/%s", tc.name, enabled, format), func(t *testing.T) {
+					var received []byte
+					upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						received, _ = io.ReadAll(r.Body)
+						_, _ = io.WriteString(w, `{}`)
+					}))
+					defer upstream.Close()
+					ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+					ctx.Request = httptest.NewRequest(http.MethodPost, "/", nil)
+					info := &relaycommon.RelayInfo{RelayFormat: format, ChannelMeta: &relaycommon.ChannelMeta{
+						ChannelBaseUrl:       upstream.URL,
+						ChannelOtherSettings: dto.ChannelOtherSettings{NormalizeRequiredToolChoiceWithoutTools: enabled},
+					}}
+					// The final body is also used by passthrough and parameter overrides.
+					response, err := (&Adaptor{}).DoRequest(ctx, info, strings.NewReader(tc.body))
+					require.NoError(t, err)
+					require.NoError(t, response.(*http.Response).Body.Close())
+					if !enabled || tc.keep {
+						assert.JSONEq(t, tc.body, string(received))
+					} else {
+						assert.False(t, gjson.GetBytes(received, "tool_choice").Exists())
+						assert.Equal(t, gjson.Get(tc.body, "messages").Raw, gjson.GetBytes(received, "messages").Raw)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestKVVDynamicToolAsLastMessage(t *testing.T) {
+	service.InitHttpClient()
+	for _, model := range []string{"kimi-k3", "kimi-k3.1-pro"} {
+		for _, stream := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/%t", model, stream), func(t *testing.T) {
+				// Official KVV test_dynamic_tool_as_last_message request shape.
+				body := fmt.Sprintf(`{"model":%q,"stream":%t,"messages":[{"role":"user","content":"what is the weather in beijing?"},{"role":"system","content":"","tools":[{"type":"function","function":{"name":"get_weather","description":"Get the weather of a city.","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]}],"tool_choice":"required"}`, model, stream)
+				var received []byte
+				upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					received, _ = io.ReadAll(r.Body)
+					_, _ = io.WriteString(w, `{}`)
+				}))
+				defer upstream.Close()
+				var request dto.GeneralOpenAIRequest
+				require.NoError(t, common.UnmarshalJsonStr(body, &request))
+				ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+				ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+				info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+					ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: upstream.URL, ChannelType: constant.ChannelTypeMoonshot,
+						UpstreamModelName: model, ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true},
+						ChannelOtherSettings: dto.ChannelOtherSettings{NormalizeRequiredToolChoiceWithoutTools: true}}}
+				adaptor := &Adaptor{}
+				converted, err := adaptor.ConvertOpenAIRequest(ctx, info, &request)
+				require.NoError(t, err)
+				wire, err := common.Marshal(converted)
+				require.NoError(t, err)
+				response, err := adaptor.DoRequest(ctx, info, bytes.NewReader(wire))
+				require.NoError(t, err)
+				require.NoError(t, response.(*http.Response).Body.Close())
+				assert.Equal(t, "required", gjson.GetBytes(received, "tool_choice").String())
+				assert.Equal(t, "system", gjson.GetBytes(received, "messages.1.role").String())
+				assert.JSONEq(t, gjson.Get(body, "messages.1.tools").Raw, gjson.GetBytes(received, "messages.1.tools").Raw)
+				assert.False(t, gjson.GetBytes(received, "tools").Exists())
+				assert.Equal(t, stream, gjson.GetBytes(received, "stream").Bool())
+			})
+		}
+	}
+}
+
 func TestMessagesRequestURL(t *testing.T) {
 	for _, base := range []string{"https://api.moonshot.cn", "https://api.moonshot.cn/", "https://proxy.example/moonshot/"} {
 		t.Run(base, func(t *testing.T) {
@@ -51,9 +137,11 @@ func TestMessagesNativeRoundTrip(t *testing.T) {
 		t.Run(fmt.Sprintf("stream=%t", stream), func(t *testing.T) {
 			var received []byte
 			var receivedPath, authorization string
+			var headers http.Header
 			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				received, _ = io.ReadAll(r.Body)
 				receivedPath, authorization = r.URL.Path, r.Header.Get("Authorization")
+				headers = r.Header.Clone()
 				if stream {
 					w.Header().Set("Content-Type", "text/event-stream")
 					_, _ = io.WriteString(w, streamBody)
@@ -69,6 +157,11 @@ func TestMessagesNativeRoundTrip(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			ctx, _ := gin.CreateTestContext(recorder)
 			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", strings.NewReader(body))
+			ctx.Request.Header.Add("anthropic-beta", "beta-one")
+			ctx.Request.Header.Add("anthropic-beta", "beta-two")
+			if stream {
+				ctx.Request.Header.Set("anthropic-version", "2023-01-01")
+			}
 			info := &relaycommon.RelayInfo{
 				RelayFormat: types.RelayFormatClaude, IsStream: stream, Request: &request,
 				ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: upstream.URL + "/", ApiKey: "test-key", UpstreamModelName: "kimi-k3"},
@@ -82,6 +175,12 @@ func TestMessagesNativeRoundTrip(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "/v1/messages", receivedPath)
 			assert.Equal(t, "Bearer test-key", authorization)
+			version := "2023-06-01"
+			if stream {
+				version = "2023-01-01"
+			}
+			assert.Equal(t, version, headers.Get("anthropic-version"))
+			assert.Equal(t, "beta-one,beta-two", headers.Get("anthropic-beta"))
 			assert.JSONEq(t, body, string(received))
 			usage, apiErr := adaptor.DoResponse(ctx, response.(*http.Response), info)
 			require.Nil(t, apiErr)
