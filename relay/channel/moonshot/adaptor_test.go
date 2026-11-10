@@ -720,3 +720,126 @@ func TestKimiDoRequestRejectsDanglingRefsBeforeUpstream(t *testing.T) {
 	wrapped := types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	require.Equal(t, http.StatusBadRequest, wrapped.StatusCode)
 }
+
+func TestDynamicToolsRequiredFallback(t *testing.T) {
+	service.InitHttpClient()
+	const tool = `{"type":"function","function":{"name":"calculate","strict":false,"parameters":{"type":"object","properties":{"expression":{"type":"string"}},"required":["expression"],"x-large":9007199254740993}}}`
+	const body = `{"model":"kimi-k3.1-pro","tool_choice":"required","stream":false,"messages":[{"role":"user","content":"Calculate 23*47"},{"role":"system","content":"","tools":[` + tool + `]}],"extension":9007199254740993}`
+	const rejection = `{"error":{"message":"tool_choice 'required' requires at least one tool","type":"invalid_request_error"}}`
+	for _, tc := range []struct {
+		name            string
+		enabled, stream bool
+		status          int
+		response        string
+		wantCalls       int
+	}{
+		{"native accepted", true, false, 200, `{}`, 1},
+		{"known rejection", true, false, 400, rejection, 2},
+		{"json retry success", true, false, 400, rejection, 2},
+		{"stream rejection", true, true, 400, rejection, 2},
+		{"quoted rejection", true, false, 400, `{"error":{"message":"tool_choice \"required\" requires at least one tool"}}`, 2},
+		{"disabled", false, false, 400, rejection, 1},
+		{"unrelated error", true, false, 400, `{"error":{"message":"invalid schema"}}`, 1},
+		{"server error", true, false, 500, rejection, 1},
+		{"oversized error", true, false, 400, rejection + strings.Repeat(" ", 65536), 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			var received [][]byte
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				wire, _ := io.ReadAll(r.Body)
+				received = append(received, wire)
+				calls++
+				if calls == 1 {
+					w.WriteHeader(tc.status)
+					_, _ = io.WriteString(w, tc.response)
+					return
+				}
+				if tc.name == "json retry success" {
+					_, _ = io.WriteString(w, `{"choices":[{"finish_reason":"tool_calls","message":{"role":"assistant","tool_calls":[{"id":"call_1","type":"function","function":{"name":"calculate","arguments":"{}"}}]}}]}`)
+					return
+				}
+				if tc.stream {
+					w.Header().Set("Content-Type", "text/event-stream")
+					_, _ = io.WriteString(w, "data: {\"choices\":[{\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
+					return
+				}
+				// A repeated rejection must not cause a third request.
+				w.WriteHeader(400)
+				_, _ = io.WriteString(w, rejection)
+			}))
+			defer upstream.Close()
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions, IsStream: tc.stream, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, ChannelBaseUrl: upstream.URL, UpstreamModelName: "kimi-k3.1-pro", ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: tc.enabled},
+			}}
+			input := strings.Replace(body, `"stream":false`, fmt.Sprintf(`"stream":%t`, tc.stream), 1)
+			response, err := (&Adaptor{}).DoRequest(ctx, info, strings.NewReader(input))
+			require.NoError(t, err)
+			resp := response.(*http.Response)
+			defer resp.Body.Close()
+			result, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantCalls, calls)
+			assert.JSONEq(t, tool, gjson.GetBytes(received[0], "messages.1.tools.0").Raw)
+			assert.False(t, gjson.GetBytes(received[0], "tools").Exists())
+			if tc.wantCalls == 1 {
+				assert.Equal(t, tc.response, string(result))
+				return
+			}
+			if tc.name == "json retry success" {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				assert.Equal(t, "calculate", gjson.GetBytes(result, "choices.0.message.tool_calls.0.function.name").String())
+			} else if tc.stream {
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+				assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+				assert.Contains(t, string(result), "data: [DONE]")
+			} else {
+				assert.Equal(t, rejection, string(result))
+			}
+			assert.Equal(t, "required", gjson.GetBytes(received[1], "tool_choice").String())
+			assert.JSONEq(t, tool, gjson.GetBytes(received[1], "tools.0").Raw)
+			assert.Equal(t, 1, len(gjson.GetBytes(received[1], "messages").Array()))
+			assert.Equal(t, "Calculate 23*47", gjson.GetBytes(received[1], "messages.0.content").String())
+			assert.Equal(t, "9007199254740993", gjson.GetBytes(received[1], "extension").Raw)
+			assert.Equal(t, tc.stream, gjson.GetBytes(received[1], "stream").Bool())
+		})
+	}
+}
+
+func TestPromoteRequiredDynamicToolsContract(t *testing.T) {
+	const dynamic = `{"type":"function","function":{"name":"dynamic","parameters":{"type":"object"}}}`
+	const global = `{"type":"function","function":{"name":"global","parameters":{"type":"object"}}}`
+	for _, tc := range []struct {
+		name, body string
+		want       bool
+	}{
+		{"global and dynamic", `{"tool_choice":"required","tools":[` + global + `],"messages":[{"role":"user","content":"hello"},{"role":"system","tools":[` + dynamic + `]}]}`, true},
+		{"auto", `{"tool_choice":"auto","messages":[{"role":"user","content":"hello"},{"role":"system","tools":[` + dynamic + `]}]}`, false},
+		{"duplicate", `{"tool_choice":"required","tools":[` + dynamic + `],"messages":[{"role":"user","content":"hello"},{"role":"system","tools":[` + dynamic + `]}]}`, false},
+		{"invalid role", `{"tool_choice":"required","messages":[{"role":"user","tools":[` + dynamic + `]}]}`, false},
+		{"nonempty content", `{"tool_choice":"required","messages":[{"role":"system","content":"instructions","tools":[` + dynamic + `]}]}`, false},
+		{"null", `{"tool_choice":"required","messages":[{"role":"system","tools":null}]}`, false},
+		{"object", `{"tool_choice":"required","messages":[{"role":"system","tools":{}}]}`, false},
+		{"null item", `{"tool_choice":"required","messages":[{"role":"system","tools":[null]}]}`, false},
+		{"no conversational message", `{"tool_choice":"required","messages":[{"role":"system","tools":[` + dynamic + `]}]}`, false},
+		{"metadata", `{"tool_choice":"required","messages":[{"role":"user","content":"hello"},{"role":"system","name":"declaration","tools":[` + dynamic + `]}]}`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, ok := promoteRequiredDynamicTools([]byte(tc.body))
+			require.Equal(t, tc.want, ok)
+			if !ok {
+				return
+			}
+			assert.Equal(t, "required", gjson.GetBytes(result, "tool_choice").String())
+			if tc.name == "global and dynamic" {
+				assert.JSONEq(t, `[`+global+`,`+dynamic+`]`, gjson.GetBytes(result, "tools").Raw)
+			}
+			if tc.name == "metadata" {
+				assert.Equal(t, "declaration", gjson.GetBytes(result, "messages.1.name").String())
+				assert.False(t, gjson.GetBytes(result, "messages.1.tools").Exists())
+			}
+		})
+	}
+}

@@ -152,7 +152,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		}
 		requestBody = bytes.NewReader(normalized)
 	}
-	return channel.DoApiRequest(a, c, info, requestBody)
+	return a.doRequestWithDynamicToolFallback(c, info, requestBody)
 }
 
 func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
