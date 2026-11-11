@@ -135,11 +135,15 @@ describe('model pricing import', () => {
     })
 
     const saveButton = screen.getByRole('button', {
-      name: 'Save model prices',
+      name: /^Save model prices/,
     })
     expect(onSave).not.toHaveBeenCalled()
     await waitFor(() => expect(saveButton).toBeEnabled())
     fireEvent.click(saveButton)
+    // Price changes are confirmed before they are saved.
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Confirm and save' })
+    )
 
     await waitFor(() => {
       expect(onSave.mock.calls[0]?.[0]).toEqual(
@@ -223,10 +227,53 @@ describe('model pricing import', () => {
       )
     )
     expect(onSave).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to JSON' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save model prices' }))
+    // Save stays disabled while the draft equals the saved values.
+    expect(
+      screen.getByRole('button', { name: /^Save model prices/ })
+    ).toBeDisabled()
+    queryClient.clear()
+  })
+
+  test('saves a draft that only changes original prices', async () => {
+    const onSave = vi.fn(async (_values: ModelFormValues) => undefined)
+    const queryClient = new QueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TestForm onSave={onSave} />
+      </QueryClientProvider>
+    )
+    fireEvent.change(screen.getByLabelText('Import model pricing'), {
+      target: {
+        files: [
+          {
+            text: async () =>
+              JSON.stringify({
+                type: 'new-api-model-pricing',
+                version: 1,
+                data: {
+                  OriginalModelPrice: { 'test-model': { input: 1, output: 2 } },
+                },
+              }),
+          },
+        ],
+      },
+    })
+
+    const saveButton = screen.getByRole('button', {
+      name: /^Save model prices/,
+    })
+    await waitFor(() => expect(saveButton).toBeEnabled())
+    // Original prices are not price change rows, so no confirmation opens.
+    fireEvent.click(saveButton)
     await waitFor(() =>
-      expect(onSave.mock.calls[0]?.[0]).toEqual(defaultValues)
+      expect(onSave.mock.calls[0]?.[0]).toEqual({
+        ...defaultValues,
+        OriginalModelPrice: JSON.stringify(
+          { 'test-model': { input: 1, output: 2 } },
+          null,
+          2
+        ),
+      })
     )
     queryClient.clear()
   })
