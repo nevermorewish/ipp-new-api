@@ -420,8 +420,14 @@ func migrateClickHouseLogDB() error {
 	if err := LOG_DB.Exec(clickHouseLogCreateTableSQL(ttlDays)).Error; err != nil {
 		return err
 	}
+	// Tables created before start_time_ms existed gain it here; old rows keep 0.
+	if err := LOG_DB.Exec(clickHouseLogAddStartTimeSQL).Error; err != nil {
+		return err
+	}
 	return syncClickHouseLogTTL(ttlDays)
 }
+
+const clickHouseLogAddStartTimeSQL = "ALTER TABLE logs ADD COLUMN IF NOT EXISTS start_time_ms Int64 DEFAULT 0 AFTER created_at"
 
 func clickHouseLogTTLDays() int {
 	ttlDays := common.GetEnvOrDefault("LOG_SQL_CLICKHOUSE_TTL_DAYS", 0)
@@ -452,6 +458,7 @@ CREATE TABLE IF NOT EXISTS logs (
 	id Int64 DEFAULT 0,
 	user_id Int32 DEFAULT 0,
 	created_at Int64 DEFAULT 0,
+	start_time_ms Int64 DEFAULT 0,
 	type Int32 DEFAULT 0,
 	content String DEFAULT '',
 	username String DEFAULT '',

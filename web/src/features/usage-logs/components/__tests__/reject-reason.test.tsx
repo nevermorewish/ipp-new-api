@@ -31,6 +31,7 @@ function makeLog(other: LogOtherData): UsageLog {
     id: 1,
     user_id: 1,
     created_at: 1,
+    start_time_ms: 0,
     type: 5,
     content: 'request rejected',
     username: 'user',

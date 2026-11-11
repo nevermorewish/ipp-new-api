@@ -157,6 +157,16 @@ export function hasToolSurcharge(other: LogOtherData | null): boolean {
 }
 
 /**
+ * Log time in milliseconds: the request start when recorded, otherwise the
+ * write time. Log lists are ordered by it, so displays should match.
+ */
+export function getLogTimeMs(
+  log: Pick<UsageLog, 'created_at' | 'start_time_ms'>
+): number {
+  return log.start_time_ms > 0 ? log.start_time_ms : log.created_at * 1000
+}
+
+/**
  * Parse the 'other' field from JSON string to object
  */
 export function parseLogOther(other: string): LogOtherData | null {

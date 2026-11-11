@@ -27,6 +27,8 @@ export const usageLogSchema = z.object({
   id: z.number(),
   user_id: z.number(),
   created_at: z.number(),
+  // Request start (Unix ms); 0 for logs written before it was recorded.
+  start_time_ms: z.number().default(0),
   type: z.number(),
   content: z.string(),
   username: z.string().default(''),

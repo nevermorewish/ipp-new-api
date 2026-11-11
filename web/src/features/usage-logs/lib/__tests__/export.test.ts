@@ -26,6 +26,7 @@ const consumeLog: UsageLog = {
   id: 1,
   user_id: 7,
   created_at: new Date(2026, 9, 12, 8, 30, 5).getTime() / 1000,
+  start_time_ms: 0,
   type: 2,
   content: '',
   username: 'alice',
@@ -113,6 +114,21 @@ describe('usage log CSV export', () => {
       'req-1',
       '',
     ])
+  })
+
+  test('time cell shows the request start when it was recorded', async () => {
+    const t = await chineseTranslator()
+
+    const row = getLogCsvRow(
+      {
+        ...consumeLog,
+        start_time_ms: new Date(2026, 9, 12, 8, 29, 20, 500).getTime(),
+      },
+      false,
+      t
+    )
+
+    expect(row[0]).toBe('2026-10-12 08:29:20')
   })
 
   test('cache write cell counts OpenAI 12-hour writes once as part of the total', async () => {

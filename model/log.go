@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/types"
 
@@ -55,9 +56,10 @@ func sanitizeClickHouseLikePattern(input string) (string, error) {
 }
 
 type Log struct {
-	Id                int    `json:"id" gorm:"index:idx_created_at_id,priority:2;index:idx_user_id_id,priority:2"`
-	UserId            int    `json:"user_id" gorm:"index;index:idx_user_id_id,priority:1"`
+	Id                int    `json:"id" gorm:"index:idx_created_at_id,priority:2;index:idx_user_id_id,priority:2;index:idx_logs_start_time_id,priority:2;index:idx_logs_user_start_time_id,priority:3"`
+	UserId            int    `json:"user_id" gorm:"index;index:idx_user_id_id,priority:1;index:idx_logs_user_start_time_id,priority:1"`
 	CreatedAt         int64  `json:"created_at" gorm:"bigint;index:idx_created_at_id,priority:1;index:idx_created_at_type"`
+	StartTimeMs       int64  `json:"start_time_ms" gorm:"bigint;default:0;index:idx_logs_start_time_id,priority:1;index:idx_logs_user_start_time_id,priority:2"` // request start, Unix ms; see logListOrder
 	Type              int    `json:"type" gorm:"index:idx_created_at_type"`
 	Content           string `json:"content"`
 	Username          string `json:"username" gorm:"index;index:index_username_model_name,priority:2;default:''"`
@@ -98,11 +100,50 @@ func ensureLogRequestId(log *Log) {
 
 func createLog(log *Log) error {
 	ensureLogRequestId(log)
+	ensureLogStartTime(log)
 	return LOG_DB.Create(log).Error
 }
 
+// ensureLogStartTime stamps logs that carry no request start time with their
+// write time so every new row takes part in the start-time order.
+func ensureLogStartTime(log *Log) {
+	if log == nil || log.StartTimeMs > 0 {
+		return
+	}
+	createdAt := log.CreatedAt
+	if createdAt <= 0 {
+		createdAt = common.GetTimestamp()
+	}
+	log.StartTimeMs = createdAt * 1000
+}
+
+// requestStartTimeMs returns when the relay request was accepted, or 0 when the
+// context does not carry it.
+func requestStartTimeMs(c *gin.Context) int64 {
+	if c == nil {
+		return 0
+	}
+	start := common.GetContextKeyTime(c, constant.ContextKeyRequestStartTime)
+	if start.IsZero() {
+		return 0
+	}
+	return start.UnixMilli()
+}
+
+// logListOrder lists logs by request start time (StartTimeMs) so a burst reads in
+// send order; completion order would put its slowest requests first. Logs written
+// outside a request use their write time. Rows written before the column existed
+// hold 0 and list after all newer rows, ordered by id. ClickHouse has no
+// auto-increment id, so ties fall back to completion time and request id.
+func logListOrder(prefix string) string {
+	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
+		return clickHouseLogOrder(prefix)
+	}
+	return prefix + "start_time_ms desc, " + prefix + "id desc"
+}
+
 func clickHouseLogOrder(prefix string) string {
-	return prefix + "created_at desc, " + prefix + "request_id desc"
+	return prefix + "start_time_ms desc, " + prefix + "created_at desc, " + prefix + "request_id desc"
 }
 
 func assignDisplayLogIds(logs []*Log, startIdx int) {
@@ -136,11 +177,7 @@ func FormatRootLogs(logs []*Log) {
 }
 
 func GetLogByTokenId(tokenId int) (logs []*Log, err error) {
-	order := "id desc"
-	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		order = clickHouseLogOrder("")
-	}
-	err = LOG_DB.Model(&Log{}).Where("token_id = ?", tokenId).Order(order).Limit(common.MaxRecentItems).Find(&logs).Error
+	err = LOG_DB.Model(&Log{}).Where("token_id = ?", tokenId).Order(logListOrder("")).Limit(common.MaxRecentItems).Find(&logs).Error
 	formatUserLogs(logs, 0)
 	return logs, err
 }
@@ -293,6 +330,7 @@ func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string,
 		UserId:           userId,
 		Username:         username,
 		CreatedAt:        common.GetTimestamp(),
+		StartTimeMs:      requestStartTimeMs(c),
 		Type:             LogTypeError,
 		Content:          content,
 		PromptTokens:     0,
@@ -359,6 +397,7 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 		UserId:           userId,
 		Username:         username,
 		CreatedAt:        createdAt,
+		StartTimeMs:      requestStartTimeMs(c),
 		Type:             LogTypeConsume,
 		Content:          content,
 		PromptTokens:     params.PromptTokens,
@@ -532,11 +571,7 @@ func GetAllLogs(filter LogFilter, startIdx int, num int) (logs []*Log, total int
 	if err != nil {
 		return nil, 0, err
 	}
-	order := "logs.created_at desc, logs.id desc"
-	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		order = clickHouseLogOrder("logs.")
-	}
-	err = tx.Order(order).Limit(num).Offset(startIdx).Find(&logs).Error
+	err = tx.Order(logListOrder("logs.")).Limit(num).Offset(startIdx).Find(&logs).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -599,11 +634,7 @@ func GetUserLogs(userId int, filter LogFilter, startIdx int, num int) (logs []*L
 		common.SysError(common.LogText("failed to count user logs: %s", err.Error()))
 		return nil, 0, common.NewMessage("Failed to query logs")
 	}
-	order := "logs.id desc"
-	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		order = clickHouseLogOrder("logs.")
-	}
-	err = tx.Order(order).Limit(num).Offset(startIdx).Find(&logs).Error
+	err = tx.Order(logListOrder("logs.")).Limit(num).Offset(startIdx).Find(&logs).Error
 	if err != nil {
 		common.SysError(common.LogText("failed to search user logs: %s", err.Error()))
 		return nil, 0, common.NewMessage("Failed to query logs")
@@ -626,7 +657,7 @@ func StreamAllLogs(ctx context.Context, filter LogFilter, role int, fn func(*Log
 		visibility = logOtherVisibilityRoot
 	}
 	channelNames := make(map[int]string)
-	return streamLogs(tx, "logs.created_at desc, logs.id desc", func(log *Log) error {
+	return streamLogs(tx, func(log *Log) error {
 		if log.ChannelId != 0 {
 			name, ok := channelNames[log.ChannelId]
 			if !ok {
@@ -650,7 +681,7 @@ func StreamUserLogs(ctx context.Context, userId int, filter LogFilter, fn func(*
 		return err
 	}
 	count := 0
-	return streamLogs(tx, "logs.id desc", func(log *Log) error {
+	return streamLogs(tx, func(log *Log) error {
 		count++
 		log.Id = count
 		log.ChannelName = ""
@@ -659,11 +690,8 @@ func StreamUserLogs(ctx context.Context, userId int, filter LogFilter, fn func(*
 	})
 }
 
-func streamLogs(tx *gorm.DB, order string, fn func(*Log) error) error {
-	if common.UsingLogDatabase(common.DatabaseTypeClickHouse) {
-		order = clickHouseLogOrder("logs.")
-	}
-	rows, err := tx.Model(&Log{}).Order(order).Rows()
+func streamLogs(tx *gorm.DB, fn func(*Log) error) error {
+	rows, err := tx.Model(&Log{}).Order(logListOrder("logs.")).Rows()
 	if err != nil {
 		return err
 	}

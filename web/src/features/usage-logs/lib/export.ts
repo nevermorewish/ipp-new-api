@@ -19,7 +19,12 @@ For commercial licensing, please contact support@quantumnous.com
 import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 
 import type { UsageLog } from '../data/schema'
-import { logTokenName, parseLogOther, renderLogContent } from './format'
+import {
+  getLogTimeMs,
+  logTokenName,
+  parseLogOther,
+  renderLogContent,
+} from './format'
 import {
   getLogTypeConfig,
   isDisplayableLogType,
@@ -74,7 +79,7 @@ export function getLogCsvRow(
       : `#${log.channel}`
   }
   return [
-    formatTimestampToDate(log.created_at),
+    formatTimestampToDate(getLogTimeMs(log), 'milliseconds'),
     t(getLogTypeConfig(log.type).label),
     ...(isAdmin ? [log.username ?? ''] : []),
     logTokenName(log, t),

@@ -83,7 +83,9 @@ func TestClickHouseLogCreateTableSQL(t *testing.T) {
 	assert.Contains(t, withoutTTL, "ENGINE = MergeTree()")
 	assert.Contains(t, withoutTTL, "PARTITION BY toYYYYMM(toDateTime(created_at))")
 	assert.Contains(t, withoutTTL, "ORDER BY (created_at, request_id)")
+	assert.Contains(t, withoutTTL, "start_time_ms Int64 DEFAULT 0")
 	assert.NotContains(t, withoutTTL, "TTL ")
+	assert.Contains(t, clickHouseLogAddStartTimeSQL, "ADD COLUMN IF NOT EXISTS start_time_ms Int64 DEFAULT 0")
 
 	withTTL := clickHouseLogCreateTableSQL(30)
 	assert.Contains(t, withTTL, "ORDER BY (created_at, request_id)")
@@ -97,8 +99,8 @@ func TestClickHouseCreateTableHasTTL(t *testing.T) {
 }
 
 func TestClickHouseLogOrder(t *testing.T) {
-	assert.Equal(t, "created_at desc, request_id desc", clickHouseLogOrder(""))
-	assert.Equal(t, "logs.created_at desc, logs.request_id desc", clickHouseLogOrder("logs."))
+	assert.Equal(t, "start_time_ms desc, created_at desc, request_id desc", clickHouseLogOrder(""))
+	assert.Equal(t, "logs.start_time_ms desc, logs.created_at desc, logs.request_id desc", clickHouseLogOrder("logs."))
 }
 
 func TestBuildLogLikeConditionUsesStandardEscape(t *testing.T) {

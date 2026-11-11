@@ -32,7 +32,12 @@ import dayjs from '@/lib/dayjs'
 import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 
 import type { UsageLog } from '../data/schema'
-import { formatModelName, logTokenName, parseLogOther } from '../lib/format'
+import {
+  formatModelName,
+  getLogTimeMs,
+  logTokenName,
+  parseLogOther,
+} from '../lib/format'
 import {
   getLogTypeConfig,
   isDisplayableLogType,
@@ -89,7 +94,7 @@ export function CommonLogMobileCard<TData>(props: {
     },
     time: {
       label: t('Time'),
-      value: formatTimestampToDate(log.created_at),
+      value: formatTimestampToDate(getLogTimeMs(log), 'milliseconds'),
       visible: props.cells.has('created_at'),
     },
     user: {
@@ -181,7 +186,7 @@ export function CommonLogMobileCard<TData>(props: {
               onClick={() => setSelectedField('time')}
               className='text-muted-foreground h-auto min-h-6 px-0 py-0 text-xs font-normal whitespace-normal tabular-nums'
             >
-              {dayjs.unix(log.created_at).format('MM-DD HH:mm:ss')}
+              {dayjs(getLogTimeMs(log)).format('MM-DD HH:mm:ss')}
             </Button>
           </div>
         )}

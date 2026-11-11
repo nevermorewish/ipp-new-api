@@ -58,6 +58,7 @@ import type { UsageLog } from '../../data/schema'
 import {
   formatModelName,
   decodeBillingExprB64,
+  getLogTimeMs,
   getTieredBillingSummary,
   hasAnyCacheTokens,
   parseLogOther,
@@ -362,13 +363,12 @@ export function useCommonLogsColumns(
         header: t('Time'),
         cell: ({ row }) => {
           const log = row.original
-          const timestamp = row.getValue('created_at') as number
           const config = getLogTypeConfig(log.type)
 
           return (
             <div className='flex min-w-0 flex-col gap-0.5'>
               <span className='truncate font-mono text-xs tabular-nums'>
-                {formatTimestampToDate(timestamp)}
+                {formatTimestampToDate(getLogTimeMs(log), 'milliseconds')}
               </span>
               <StatusBadge
                 label={t(config.label)}
