@@ -1,0 +1,1842 @@
+[
+  {
+    "seq": 0,
+    "phase": "warmup",
+    "started_at": "2026-11-06T22:52:24.856+08:00",
+    "request_sha256": "8dd73f73a915c9fefa471034a604dfb49706a72e0b9e60baa9b727c7960ea975",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_kbaojc5r2dbjojm5tiy7j2tm4i7fut7q6l35tfdzy7vzccgbibkw",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 7.222,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:51:46 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061451404415698488268d9d6VKRPo34w"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 1,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:52:33.082+08:00",
+    "request_sha256": "5f73e5a17837178b586bcc7f3b6d76a9b024b67acc9dcf47f1ddeaf44fc585ae",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_ky3vy7crbnb7oyviwhgjok4xbqwuoyill5j6gxrwjs7a53b5x3d2",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.861,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:51:49 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061451476152851778268d9d6ArO4Dt8M"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 2,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:52:36.946+08:00",
+    "request_sha256": "c52a43175c137eb34787c349fad720fffee92031db57e0d5079d8ac949ad3c13",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_owdsf6ghqrjkrsvitez7lxijjbgnhihlthtg6zdml6nspobzuduf",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.884,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:51:54 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061451523220105938268d9d6PurvmaK5"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 3,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:52:41.833+08:00",
+    "request_sha256": "45bd7339798f3deab70f69d4ae704431bee3b1e054b3ab2d776f1e9dfe57c06e",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_7whj375c6tyoupk5yzovwxaz2v6hx7x4tsdykrxbjzlkg5m7rg3i",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 11.454,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:07 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061451562223136588268d9d6A1BDjK0S"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 4,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:52:54.290+08:00",
+    "request_sha256": "dc9f0f259b7aafbaed47adb3239886026d8dda48cc4e42934bc3bf88183c2219",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_3onv7rmapyhtwzmxfiwfydefkafcedik6yu7kojy64mxcvnnp4fo",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 1.696,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:10 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452086266718808268d9d6KYdYigOe"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 5,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:52:56.989+08:00",
+    "request_sha256": "20acab186c45221c9801dce95a8a53a3acff48d69d14cc313a81a148b67d355f",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_r74b6mmcyp3chaj4agbgwhucq4ib6b7vt2i6vidpdjzvweuw5nve",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 5.271,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:15 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452124874413798268d9d6GgsEwzmb"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 6,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:03.263+08:00",
+    "request_sha256": "82a0f88f4d098b527ea1182fd78c48128ea94c5c271af6dfaa6f8cfc40c58d3f",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_2pjahqeovuulq5itmi7iv4qzczstdn7t5e4air4awvii7hvjzpep",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.794,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:20 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452178901356228268d9d6Nx5NNAcO"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 7,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:07.060+08:00",
+    "request_sha256": "58521ff5572e00b7a8ab34b97544e26463baa294bfe19a9ba55f3bc438a22ae0",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_jruxxk5bbgvgbelbr77nev3sjigtwanlwv7wgxhbaty4tp3smng4",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.416,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:24 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452228572236578268d9d6xss06j8s"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 8,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:11.480+08:00",
+    "request_sha256": "4e123648d63af6b915b215cd395e18d900bda855ded00b791ace68692f555d07",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_you5gnvtcncdudgsm6h6grwamn33i32s37offp5rl6p477yoqex6",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.058,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:28 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452261737620048268d9d67bxe8iRl"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 9,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:15.541+08:00",
+    "request_sha256": "0497c31171d31441dee42ced683acea7630796797be2f30c5b6f271a3bf28a7c",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_2643cfctxobqcsn2umkn3sx34dxeyu2sfuqffqbxtrfucqvbcasw",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.942,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:34 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452329171577778268d9d6pYcnuqNU"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 10,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:21.487+08:00",
+    "request_sha256": "204b557a977584d2ec908e1c57b0f4a685e8dd5508ec36d5dc4fd6d1ea52492c",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_xultgul5ed3jh5v66n65a43fpjvhpyccrpqsnjhgr6owabnkla5v",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.814,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:39 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452358448990578268d9d6zMvdH0UY"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 11,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:26.303+08:00",
+    "request_sha256": "5de7b8e39c58ec91f420e3dfcb6afc72108725e15826c6b2f409e69a0e3a2337",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_6wxymprwchupoqx6unvmyn4zshbqc5otmp7uia3ouvt4ondlik5x",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.697,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:43 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452406378675888268d9d6FlxtrdDs"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 12,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:30.004+08:00",
+    "request_sha256": "58ba4bc819858c2ef4e5e0f8976d7667e16009e1dcf8ef9dc8ac7c33ba9c9213",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_kommszcie6b34y74uia2voplekqmmhjlevgboa6g7lt4zz6umexn",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.017,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:45 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452443938197648268d9d6PYs0gLb7"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 13,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:33.025+08:00",
+    "request_sha256": "0b8590ee3358843b8b0f401b56ac8bd35fad1a6a273beda2eac06066a5b90cb9",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_zpsdmb4ljps5bpeojqsgozky4ouen4h4eqnl7xy5lqu7dzkhkv7i",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 6.102,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:53 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452478389602668268d9d68t2Z2j21"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 14,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:40.130+08:00",
+    "request_sha256": "5f98d4b3fac1779df6eba5cf7e232aa3a98ec64830cb953e78374be0b8c2ee73",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_relbb4pkdrcdqgbd6e7yxj22imyphzn7y67j4w5gicdynyatdbag",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.764,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:52:58 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061452544678829848268d9d66keLV7eU"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 15,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:45.898+08:00",
+    "request_sha256": "4b8bc7f9888bad6260c5c1563b1fd3250f15163a3f247f12fd481a08a307cdd2",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_eske3fx2t7f6ftjfqu5r7qkug2hpfsj2ltksmvxppkxukorhodfj",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.06,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:01 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453002415594808268d9d6bQzZVdNJ"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 16,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:48.961+08:00",
+    "request_sha256": "d81facbc91e648494393ffb8b158f7767ddb6def364ccc34ccd64bb8e093b872",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_rkziixanxk5lz6j57gvrkcwk5d7e2aqotlh6cekz6iit6muombal",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.433,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:07 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453046218693248268d9d6hput21s4"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 17,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:54.397+08:00",
+    "request_sha256": "83f9cf420100a434a9157d7b854870c79ad6b67a54a5fc82351ce2ac2f6c0062",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_ss2f2z7eyzhmlmjtosgo5x2bmhwzy5ciqrv4rhkuyzrou23jn2al",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.558,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:12 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453087814395468268d9d6YKiytOuH"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 18,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:53:58.959+08:00",
+    "request_sha256": "6352386e27d1673d8273dfbb835c4017ced8d545592b7c0617bbcd903a5a5dd8",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_p77amf37fmv2r6svf42jvo6clixwmgxubqjl7klmfytpmgxv65xd",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.604,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:15 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453133301835508268d9d67lv6VJaK"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 19,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:02.566+08:00",
+    "request_sha256": "cd2e47b08b11104b61a138d30bd84f76b7b4b75e69429caa6522c28ba56c3fae",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_y7kdbi2bgkbe4ovvw3ddjmrbvdqjfqdpi7ezbcbp5ah46pkcvgcc",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 6.221,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:22 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453171809941408268d9d693CA8udn"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 20,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:09.791+08:00",
+    "request_sha256": "151d81c55579b7f02da3c7320afc0a076db7930ba1b99fa75aee3b9da1fec37f",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_z7gm44qfqus664q6fxljnflkagblkrg2nnwdi4oirmyxpcugr4z5",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.496,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:26 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453241239070138268d9d6iqJ8f8ks"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 21,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:13.291+08:00",
+    "request_sha256": "0d7e477157826f8d4eb8ee862dff19e1e6c06527dcfac78fa3fe1263248134bc",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_54kjflpvytwapgr37gc5uefh2dnongem2jug47jhgryzahe3illo",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.782,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:30 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453277908134838268d9d6EgS85LPq"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 22,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:17.077+08:00",
+    "request_sha256": "f468b6562800f636d0efcad16674ffa59e969e8c4def01f326f8bae1cb776bd7",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_hc2olgl2a3ft3zlinggpzo5hk4w364duggukkbobi6szdwkvjiqz",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.921,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:34 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453314193411538268d9d6lEg2VBAW"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 23,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:21.002+08:00",
+    "request_sha256": "3e635bb9ff273f188b1356bb90e4da9334d6ad36cc9ff07b418100f9d309a688",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_a52kbo6wfd4q7lbbvyhzkswkq5t7nts4nzyrqjtdnwjqbmftddfb",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.687,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:37 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453353313235198268d9d6xI7Vnpbj"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 24,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:24.693+08:00",
+    "request_sha256": "734fc29e16d4ed2b0c46bda6b1c87c9ce0bc2fc88506ab8cfe678a4bb694235d",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_yeiwhd6fz46pxjwnuf6mazyf36umvc4eukhnur73berns52wn2by",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.056,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:40 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453390804255518268d9d6kLhZMGMN"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 25,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:27.754+08:00",
+    "request_sha256": "2d41f05f5783c2d17b913fc8850dc4849a40e9a721c2e2263f8a152af32f981f",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_f6a4a2ilmcnbwhuh6qdz65kenvmfhrli3ia32a7npcgiiey4ek6a",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 1.693,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:43 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453420840544338268d9d6KP0ajd5T"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 26,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:30.450+08:00",
+    "request_sha256": "ce04213010a44206b25e206b7eab73272509c7f1647092a003ada54551682a0d",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_bxvgjld3jmv7px43xquhxqkp4vsbfxjkjz4mpzd37tf4fojxyrwj",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.752,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:47 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453451031640278268d9d60oD94kTc"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 27,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:34.206+08:00",
+    "request_sha256": "94b10b0c324f0d84cd91d5d0e35898f1065c498e72e3c9970f1622e9ec2bf2cf",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_lvuibws3v5kmahuj4nf5fiqhj3dddnkhxl34afntk7svceoo7nor",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 8.66,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:53:56 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453548646871148268d9d6eh0cnOMJ"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 28,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:43.869+08:00",
+    "request_sha256": "79d316ef03069cc4657c2b5ec6533a49c462b548ff265902d7550646f92442f4",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_tkvtcdv6e3czkdqqhnw5gcge23xbgtb4qx5kry6w2nhoqa5o2j44",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.733,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:00 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061453586766891888268d9d6lkaDWNs0"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 29,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:47.606+08:00",
+    "request_sha256": "9b4262da06396476c3f674581fbc09ef6a5296a9519df6ad9713263624eae9a1",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_6cqjrzrogevrnyqjghv2lvyw6shwbp3vl2a6ktkxm6h2i5ijahky",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 6.86,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:08 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454030343072998268d9d6KVgDhSiB"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 30,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:55.469+08:00",
+    "request_sha256": "d696af33ac4dfe27f4f3072775ad32f6e51938b05809a26e94cb453049cceb85",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_lanm5jt5vqpz3hegmq52ybqakpmjelciowmdesypss5rqrcoudnk",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.516,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:12 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454102771952578268d9d6AchaM1q4"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 31,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:54:58.988+08:00",
+    "request_sha256": "2d048d82f7e4bc85ad86366155e8821f1c363f79d5498e1656c71759e5e9da9d",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_2a7osubp7omon3tpyhglzqlil6m6qcbzi6oovry2w25pul6yufop",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.394,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:16 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454133167427258268d9d6ufHgudSL"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 32,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:03.387+08:00",
+    "request_sha256": "876929b1609d58dc8310b9256b99af51f77de040c1115a1adf2545ecfe1024b8",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_xdowta2o66yi6nu3zt6v5mxfjhluvnkuymuglrmpp7mb65h4zhlq",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 5.039,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:22 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454199017078918268d9d6wxjktooJ"
+    },
+    "success": true,
+    "cache_read": 15293,
+    "cache_write": 0,
+    "cache_hit": true
+  },
+  {
+    "seq": 33,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:09.430+08:00",
+    "request_sha256": "94182ca48bdace6966bbb98e7b6a876b34c60370c93b475b58cad2ae77cdf5f6",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_s27ocjbfrkmud5w6uj26yo525qx4sdenszs5bypripnpptgngbrl",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 5.508,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:28 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454259316211078268d9d63cnHBOgS"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 34,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:15.943+08:00",
+    "request_sha256": "324e19c7432f4a57af36409f032ec6ac6d569595688554ffe55672b8f9df1f7f",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_5tmwdlohy6ksniqb4743z47kbfdroyaxd644lf4t77y3vfz44fbh",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.49,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:32 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454305827169838268d9d6VKKzy2Zo"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 35,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:19.437+08:00",
+    "request_sha256": "dcaf0dbbec7310a3318ab3c20871eb8e900a4d6c953e33005cc538c940da112c",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_emn5t447gepe6zif24ydcdan7luna5r6cxrwl7bv6kguvketu7md",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.517,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:35 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454339248116028268d9d6Ly6GFvBV"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 36,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:22.957+08:00",
+    "request_sha256": "b165da2ce63604725457fad256b5b11ce3a533dc523db16a0abd44d2cb4b49e8",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_4adfa5rkxdztmqjnordofroufnounyvcd4gkhcanqx2bpslznpai",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.761,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:40 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454375957025638268d9d6OkQkddr0"
+    },
+    "success": true,
+    "cache_read": 15293,
+    "cache_write": 0,
+    "cache_hit": true
+  },
+  {
+    "seq": 37,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:27.722+08:00",
+    "request_sha256": "d20e3c87a748206327c79e04fcf2c70ea4f8a0b8d56a6f9e4917105a8a7ed3a8",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_3nskknpvi6u7jy3utvgeutpjynz2btepx5wd5ji5svucgtkkd7a4",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.411,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:46 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454423994608228268d9d6udncElAJ"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 38,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:33.137+08:00",
+    "request_sha256": "f0fa21d2f948a72a05c1ef991077d37de5986d603ecd75befebeec2937d6d4ee",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_xxv5sfeonzxzuta45xhtu4ecabf3b5kvf65ojsbpqpi4zbjygsye",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 11.088,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:54:58 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454486277740008268d9d6DjUK20lZ"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 39,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:45.228+08:00",
+    "request_sha256": "12574bf90fdd8e1b8a1b7230e2ffa8cd3566e0e09b579d9a0f4fc0298bceddd6",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_zpspspf2t3s55vpnm5h5crkpjtwee2d5moevgsg7d7uivvikgxg6",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 1.677,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:01 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061454595615044878268d9d6YB7ZVyHm"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 40,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:47.909+08:00",
+    "request_sha256": "ae717e1cc537a7948f4bad3c2264ca93c806284996d3de41c533518f8b3eeaad",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_3inolgy3ctnbcfe6bqg2kkmlizl2vhtz6fwmtk7vfchn32hvo4kf",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.472,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:05 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455022397452908268d9d63mKdwe5y"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 41,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:52.385+08:00",
+    "request_sha256": "6c34c6d5d3c3f00f276ad55c6cac48a2d0ad9f91836e8631a0bb75fa21e36a23",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_o5vkdk4gsdpwvfq3lbpc73fidlchouynhrnvhaias243imaq4rqd",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.003,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:09 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455070226791798268d9d6fd9X8Gh8"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 42,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:56.392+08:00",
+    "request_sha256": "ad015ff0df2a20f7cdba5c9cfed8d78247eb6835d7b605674db8733c11da2fd6",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_dcv3ld6roora4qk6e2nv4limdvodnqx3ky3oo66pwga3dxhiv6ti",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.385,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:12 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455107757713148268d9d6soHaKBT4"
+    },
+    "success": true,
+    "cache_read": 15293,
+    "cache_write": 0,
+    "cache_hit": true
+  },
+  {
+    "seq": 43,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:55:59.781+08:00",
+    "request_sha256": "eb884daabb9c28db5322236ad294582b30158ae32d172829e01e22b10ad602c5",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_q5tdew65gq4xyotx4ijyynq3x3hlj6ez7btfokybmny6mw34nhfp",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.412,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:16 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455141597020178268d9d6mpxySosi"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 44,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:03.197+08:00",
+    "request_sha256": "23996a5087d202f52f506ec27ce3085d8b0d6cb1986ad5f9666acf888c4c137e",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_5g57s66ksjkyidxf3ij6tnfbnznjflcxgpmgsh7auct5fnlvqpz6",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.381,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:19 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455185448692548268d9d6lPrAsPEk"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 45,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:06.582+08:00",
+    "request_sha256": "214ad228f621e8b1927df23fb6dfbd6d957a5c8a0c4691db77cd61062f33000c",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_nnfpq4k4e65j6cso4pgl2zf6xms2pblumo4saa3sxrpnz2wuq77l",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.309,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:22 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455209230936348268d9d6GoGPdJCx"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 46,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:09.896+08:00",
+    "request_sha256": "37438d997476d14e45677016763d03fbd153b43b88f75787d34fcbb38fbdccf8",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_ik2oe35e6mc6ywfkkw5hc2r6zume7wv6crrhfkarut5klajuvdgw",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.898,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:27 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455260754689948268d9d6OLGDC5Yu"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 47,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:14.797+08:00",
+    "request_sha256": "b509e4356ddd06d2bc5a02716db56f56268b070201801b8841e8aa6f344cb631",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_whynf5u7xswyn5dvokfcqjtod7yfhkzkow5d5ucjptswj3k7jysj",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.502,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:31 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455294757286568268d9d6CcbakOtg"
+    },
+    "success": true,
+    "cache_read": 15293,
+    "cache_write": 0,
+    "cache_hit": true
+  },
+  {
+    "seq": 48,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:18.303+08:00",
+    "request_sha256": "4b515440eec952e92b23351004e7f683074206349b1f09341c6dc48a0b81aec5",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_23ze5265z3djedleezanlevgiprv546gwt7skxjsguntpsmhinuy",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.593,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:35 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455329670844468268d9d6PDcTHDbK"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 49,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:22.901+08:00",
+    "request_sha256": "46981146a81d451b969476767327896a9ed75b50b90855ccae305e6b038e56e6",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_aorkzldzpo5zunfzr5o7co3hemtyv5f6neqbm55fv2b646s6wmi4",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 1.633,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:38 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455373264030518268d9d6Qy35Ko6F"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  },
+  {
+    "seq": 50,
+    "phase": "measured",
+    "started_at": "2026-11-06T22:56:25.539+08:00",
+    "request_sha256": "98463e1be22a433df536de3b90acca89cc2fd9b6abab9ad65b32dfdcbe9528ba",
+    "status": 200,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_bdrk_m7jaesxar2t7sutcwazpkchzhrpw6rdz6uq2hyr4ynyvdxecfs7h",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.736,
+    "response_headers": {
+      "Server": "nginx",
+      "Date": "Fri, 06 Nov 2026 14:55:42 GMT",
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611061455411512719968268d9d6aG5VfTua"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 15293,
+    "cache_hit": false
+  }
+]

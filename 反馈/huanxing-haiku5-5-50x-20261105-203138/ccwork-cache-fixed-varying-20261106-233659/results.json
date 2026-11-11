@@ -1,0 +1,650 @@
+[
+  {
+    "case": "fixed_trial",
+    "seq": 0,
+    "phase": "warmup",
+    "started_at": "2026-11-06T23:36:59.552+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:16 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536140093618108268d9d6AHvp9iF1"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_2ic7qo4dmvniwb6miedclcpkobpsqemswgb63j45jdeoixgaanmv",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.663,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial",
+    "seq": 1,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:07.216+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:24 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536226406368988268d9d6P6SYu8OQ"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_5jeoyshgfb3klozlehh4fpzl4rdqqlmzstkmfk5d2uc62mq234kt",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.019,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial",
+    "seq": 2,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:11.237+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:27 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536256208130928268d9d6jCQdQKz9"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_67s5ibj5pcf3ccad236ryneg4mug4jaoka5do2nhrc5nt4a77mn5",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.305,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial",
+    "seq": 3,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:14.543+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:30 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536289475503438268d9d65TnIKSTn"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_hhzxdlf7yrofw5u7buhqvmeb5skqwztuy6e7h3lame7riccvhjsn",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.084,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial",
+    "seq": 4,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:17.630+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:34 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536319902574078268d9d6fnq6rsIK"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_udmydiyapxs5mlqkgo3vqn26g5yyimfia2irzzc6rtj2nuriwewj",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.772,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial",
+    "seq": 5,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:21.404+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:37 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536357519095658268d9d6UXkOqf8d"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_6mpbemkcb7c4g6y4ut7xvi3ddjhsi36wxbt3etwdilyuvh6qzhkq",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.218,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "vary_suffix",
+    "seq": 0,
+    "phase": "warmup",
+    "started_at": "2026-11-06T23:37:23.624+08:00",
+    "request_sha256": "d0a77f88c61aa13db80cb009d0e98bd70a679869cbde86ae45458c71b63279e9",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:41 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536380055666448268d9d6WRK7GYrk"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_nhhguwes225qwk7usxfj4md5jqh7hb3wvojra6txnhlrk5bxmgep",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.908,
+    "read": 0,
+    "write": 15293,
+    "input": 19
+  },
+  {
+    "case": "vary_suffix",
+    "seq": 1,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:32.534+08:00",
+    "request_sha256": "d7c81a5c3c29377a193782c4d2227fd1a7476e68ad4df732e1e72177d77b853c",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:50 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536480284019268268d9d6VTLEfodO"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_uyncbvngbhu2mxkv57jbhouzatnrmwklkm3o6boansomzjda5m2h",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.132,
+    "read": 0,
+    "write": 15293,
+    "input": 19
+  },
+  {
+    "case": "vary_suffix",
+    "seq": 2,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:37.668+08:00",
+    "request_sha256": "f500af3d3fa5c27a94a602f124646fc907407dcbff928aa5dcd2eb9041b50767",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:55 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536538388274218268d9d659kCHOSh"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_7dkm3aauoo5iep5gwec5mdwzgmwyokkhdiwiwzd5rnsoxlg6imgm",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.032,
+    "read": 0,
+    "write": 15293,
+    "input": 19
+  },
+  {
+    "case": "vary_suffix",
+    "seq": 3,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:42.703+08:00",
+    "request_sha256": "fdcf37b6fc4a7bb4e88f9c6c07af9fdca798ff17dff9e4d7f32cc668b10f5abd",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:36:58 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061536570694365928268d9d6Jaxaa6aI"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_qx2krvgcjyrdbqadfj5dbgmjotaq457hconbcnbk4qia46un3qs5",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 1.929,
+    "read": 0,
+    "write": 15293,
+    "input": 19
+  },
+  {
+    "case": "vary_suffix",
+    "seq": 4,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:45.634+08:00",
+    "request_sha256": "77a15512d46702bd332639131dc248764f9ed83ce1a40c78834a8be501df5b1d",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:01 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537000286799318268d9d6cKomEzl7"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_qovpcbmnne7526tny7qps7dnosrzxoeuwpbtmxv35fm3ocmsg2pe",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 1.945,
+    "read": 0,
+    "write": 15293,
+    "input": 19
+  },
+  {
+    "case": "vary_suffix",
+    "seq": 5,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:48.582+08:00",
+    "request_sha256": "7fdbdc5799f9abfa10cddf40c6b665bc191b568d858dc753cac6d0adb5e433b0",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 15293,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 15293,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:06 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537051220196738268d9d6xRdY7ei2"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_a3ygzmbszm5rjejg37hc2gei2uxtbslgujtbx76fal7vw4tuj4df",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 4.208,
+    "read": 0,
+    "write": 15293,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial_after",
+    "seq": 0,
+    "phase": "warmup",
+    "started_at": "2026-11-06T23:37:52.792+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:09 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537071421321038268d9d6X0s6Zcrd"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_nnynqizlw6dstgjt47zsubgb7tlsoqta6dt6eaay7y26jajrhmpr",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.157,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial_after",
+    "seq": 1,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:37:59.952+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:16 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537144663664088268d9d6viaZzJqq"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_m2lojjwx64lmw5efhaqht6sgw6mxhqwm4dpfdgnlavar2ac7kbz7",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.366,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial_after",
+    "seq": 2,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:38:03.319+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:19 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537176676176348268d9d69Kw7ST2s"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_kjkta2dudj6uh7vwfxwed2navwy3r52a7rtiiy7pptm5nsot7mys",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.297,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial_after",
+    "seq": 3,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:38:06.619+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:23 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537210191878188268d9d6Gn4ZrWGO"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_4c4qotinvjqc7ifjcppx6qnvlozlb2l7caikqgxfsjjhta3ug5ql",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.611,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial_after",
+    "seq": 4,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:38:10.232+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:27 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537256625796598268d9d6yeomAd6p"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_66xokpqhuq5nbb5cpbg223nmprzapx665pu6hqnfwjwqmamtnj7k",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 3.388,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  },
+  {
+    "case": "fixed_trial_after",
+    "seq": 5,
+    "phase": "measured",
+    "started_at": "2026-11-06T23:38:14.622+08:00",
+    "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+    "status": 200,
+    "success": true,
+    "usage": {
+      "input_tokens": 19,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 15293,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard"
+    },
+    "headers": {
+      "Date": "Fri, 06 Nov 2026 15:37:31 GMT",
+      "Content-Type": "application/json",
+      "X-Oneapi-Request-Id": "202611061537290191423748268d9d6qUCyelXQ"
+    },
+    "error": "",
+    "message_id": "msg_bdrk_ecbkpaobujvsl7f2snaxmscx3q3u3qftv7nxkaliodwoh6vt4ob2",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.917,
+    "read": 15293,
+    "write": 0,
+    "input": 19
+  }
+]

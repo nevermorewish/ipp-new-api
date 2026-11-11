@@ -1,0 +1,41 @@
+{
+  "序列": "huanxing",
+  "序号": 25,
+  "阶段": "正式测量",
+  "请求开始时间_北京时间": "2026-11-05T20:33:15.423+08:00",
+  "耗时秒": 2.131,
+  "与前一次请求开始间隔秒": 3.449,
+  "HTTP状态码": 200,
+  "响应消息ID": "msg_011CgjndnmZqnFrGuCZ3jzAE",
+  "响应模型": "claude-haiku-5-5",
+  "stop_reason": "end_turn",
+  "缓存读取令牌数": 0,
+  "缓存创建令牌数": 15293,
+  "未缓存输入令牌数": 19,
+  "输出令牌数": 4,
+  "缓存命中": false,
+  "请求体SHA256": "2d41f05f5783c2d17b913fc8850dc4849a40e9a721c2e2263f8a152af32f981f",
+  "响应体SHA256": "2124bde7a48af127f720b33647660d639ad28d9800f865edd935b62314a7efd3",
+  "响应头": {
+    "Server": "nginx",
+    "Date": "Thu, 05 Nov 2026 12:33:17 GMT",
+    "Content-Type": "text/event-stream",
+    "X-Oneapi-Request-Id": "202611051233155164954448268d9d63ngHkAKm"
+  },
+  "原始用量字段": {
+    "input_tokens": 19,
+    "cache_creation_input_tokens": 15293,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+      "ephemeral_5m_input_tokens": 15293
+    },
+    "output_tokens": 4,
+    "service_tier": "standard",
+    "inference_geo": "global",
+    "speed": "standard",
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    }
+  },
+  "错误": ""
+}

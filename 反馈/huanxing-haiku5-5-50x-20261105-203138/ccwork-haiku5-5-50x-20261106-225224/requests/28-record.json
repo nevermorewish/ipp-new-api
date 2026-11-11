@@ -1,0 +1,36 @@
+{
+  "seq": 28,
+  "phase": "measured",
+  "started_at": "2026-11-06T22:54:43.869+08:00",
+  "request_sha256": "79d316ef03069cc4657c2b5ec6533a49c462b548ff265902d7550646f92442f4",
+  "status": 200,
+  "usage": {
+    "input_tokens": 19,
+    "cache_creation_input_tokens": 15293,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+      "ephemeral_5m_input_tokens": 15293
+    },
+    "output_tokens": 4,
+    "service_tier": "standard",
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    }
+  },
+  "completed": true,
+  "error": "",
+  "message_id": "msg_bdrk_tkvtcdv6e3czkdqqhnw5gcge23xbgtb4qx5kry6w2nhoqa5o2j44",
+  "model": "claude-haiku-5-5",
+  "stop_reason": "end_turn",
+  "elapsed_seconds": 2.733,
+  "response_headers": {
+    "Server": "nginx",
+    "Date": "Fri, 06 Nov 2026 14:54:00 GMT",
+    "Content-Type": "text/event-stream",
+    "X-Oneapi-Request-Id": "202611061453586766891888268d9d6lkaDWNs0"
+  },
+  "success": true,
+  "cache_read": 0,
+  "cache_write": 15293,
+  "cache_hit": false
+}

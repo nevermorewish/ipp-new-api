@@ -1,0 +1,17 @@
+{
+  "endpoint": "https://cc.ccwork.site/v1/messages",
+  "started_at": "2026-11-06T23:36:59.550+08:00",
+  "references": [
+    "https://platform.claude.com/docs/en/build-with-claude/prompt-caching",
+    "https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html"
+  ],
+  "model": "claude-haiku-5-5",
+  "stream": "varies by case",
+  "warmup_per_case": 1,
+  "measured_per_case": 5,
+  "delay_after_warmup_seconds": 5,
+  "delay_between_measured_seconds": 1,
+  "identical_body_within_case": "except vary_suffix and original_replay",
+  "ttl": "varies by case",
+  "retry": false
+}

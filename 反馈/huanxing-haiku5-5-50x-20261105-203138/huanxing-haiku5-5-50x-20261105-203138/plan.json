@@ -1,0 +1,24 @@
+{
+  "run_id": "6bd75018-1bfe-40e4-b2af-e6a8e4a8f2a9",
+  "started_at": "2026-11-05T20:31:38.715+08:00",
+  "endpoint": "https://claude.huanxing.ai/v1/messages",
+  "model": "claude-haiku-5-5",
+  "warmup_requests": 1,
+  "measured_requests": 50,
+  "wait_after_response_seconds": 1.0,
+  "sequence_concurrency": 1,
+  "within_sequence_concurrency": 1,
+  "cache_control": {
+    "type": "ephemeral",
+    "ttl": "5m"
+  },
+  "max_tokens": 32,
+  "stream": true,
+  "system_chars": 53956,
+  "system_sha256": "c0fd6ed755fbb0c7dc5a51f7806299fc9df9ddbd49f1f293f3a90eb76bc4327e",
+  "user_pattern": "New trial NNN. Reply only OK.",
+  "retry": false,
+  "finished_at": "2026-11-05T20:34:50.856+08:00",
+  "postprocessed_at": "2026-11-05T20:35:18.570+08:00",
+  "raw_dir": "requests"
+}

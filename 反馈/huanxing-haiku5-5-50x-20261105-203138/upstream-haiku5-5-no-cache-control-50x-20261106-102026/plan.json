@@ -1,0 +1,22 @@
+{
+  "run_id": "d721452d-3aee-4c87-bb95-aaf9c49ba49c",
+  "started_at": "2026-11-06T10:20:26.904+08:00",
+  "endpoint": "http://88.216.254.220:3000/v1/messages",
+  "model": "claude-haiku-5-5",
+  "warmup_requests": 1,
+  "measured_requests": 50,
+  "wait_after_response_seconds": 1.0,
+  "sequence_concurrency": 1,
+  "within_sequence_concurrency": 1,
+  "cache_control": null,
+  "max_tokens": 32,
+  "stream": true,
+  "system_chars": 53956,
+  "system_sha256": "c0fd6ed755fbb0c7dc5a51f7806299fc9df9ddbd49f1f293f3a90eb76bc4327e",
+  "user_pattern": "New trial NNN. Reply only OK.",
+  "retry": false,
+  "raw_dir": "requests",
+  "source_directory": "D:\\huanxing\\ipp-new-api\\反馈\\huanxing-haiku5-5-50x-20261105-203138\\huanxing-haiku5-5-50x-20261105-203138",
+  "request_bodies": "Original request JSON with only system[0].cache_control removed",
+  "finished_at": "2026-11-06T10:21:32.681+08:00"
+}

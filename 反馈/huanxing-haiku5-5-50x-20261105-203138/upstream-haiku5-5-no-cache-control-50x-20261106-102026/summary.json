@@ -1,0 +1,81 @@
+{
+  "endpoint": "http://88.216.254.220:3000/v1/messages",
+  "model": "claude-haiku-5-5",
+  "started_at": "2026-11-06T10:20:26.904+08:00",
+  "finished_at": "2026-11-06T10:21:32.681+08:00",
+  "elapsed_seconds": 65.776,
+  "planned_measured": 50,
+  "measured": 17,
+  "success": 16,
+  "failures": 1,
+  "hits": 0,
+  "hit_rate_all": 0.0,
+  "hit_rate_success": 0.0,
+  "miss_sequences": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "failed_sequences": [
+    17
+  ],
+  "cache_read_total": 0,
+  "cache_write_total": 0,
+  "input_total": 244992,
+  "output_total": 64,
+  "warmup": {
+    "seq": 0,
+    "phase": "warmup",
+    "started_at": "2026-11-06T10:20:26.907+08:00",
+    "request_sha256": "a6a0deed0d2f323f88be11dbf8768ca04dfcfd2e5c54f70d7832d55c8131613c",
+    "status": 200,
+    "usage": {
+      "input_tokens": 15312,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "speed": "standard",
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      }
+    },
+    "completed": true,
+    "error": "",
+    "message_id": "msg_011Cgksey4JdBf6CrtZiauut",
+    "model": "claude-haiku-5-5",
+    "stop_reason": "end_turn",
+    "elapsed_seconds": 2.502,
+    "response_headers": {
+      "Content-Type": "text/event-stream",
+      "X-Oneapi-Request-Id": "202611060219411798656808268d9d6NqM8Foab",
+      "Date": "Fri, 06 Nov 2026 02:19:43 GMT"
+    },
+    "success": true,
+    "cache_read": 0,
+    "cache_write": 0,
+    "cache_hit": false
+  },
+  "output_directory": "D:\\huanxing\\ipp-new-api\\反馈\\huanxing-haiku5-5-50x-20261105-203138\\upstream-haiku5-5-no-cache-control-50x-20261106-102026",
+  "completed_planned_run": false,
+  "stop_reason": "HTTP 403: upstream account quota insufficient at measured request 17",
+  "request_change_verified": "Only system[0].cache_control removed; all other JSON values identical"
+}

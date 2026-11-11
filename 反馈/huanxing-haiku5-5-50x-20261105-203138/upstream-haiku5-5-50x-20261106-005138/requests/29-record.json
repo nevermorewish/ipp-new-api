@@ -1,0 +1,20 @@
+{
+  "seq": 29,
+  "phase": "measured",
+  "started_at": "2026-11-06T00:53:45.376+08:00",
+  "request_sha256": "9b4262da06396476c3f674581fbc09ef6a5296a9519df6ad9713263624eae9a1",
+  "status": 200,
+  "usage": {},
+  "completed": false,
+  "error": "TimeoutError: timed out",
+  "elapsed_seconds": 49.539,
+  "response_headers": {
+    "Content-Type": "text/event-stream",
+    "X-Oneapi-Request-Id": "202611051653019252639978268d9d6EcQ7FfaU",
+    "Date": "Thu, 05 Nov 2026 16:53:06 GMT"
+  },
+  "success": false,
+  "cache_read": null,
+  "cache_write": null,
+  "cache_hit": false
+}

@@ -1,0 +1,16 @@
+{
+  "seq": 17,
+  "phase": "measured",
+  "started_at": "2026-11-06T10:21:30.851+08:00",
+  "request_sha256": "dd99154b573a27b4cddc4dc381b9d94f9c7a70f3af7597e6208295d44edec085",
+  "status": 403,
+  "usage": {},
+  "completed": false,
+  "error": "{\"error\":{\"type\":\"new_api_error\",\"message\":\"预扣费额度失败, 用户剩余额度: ＄0.000226, 需要预扣费额度: ＄0.001374 (request id: 202611060220451136571848268d9d6tpc4d0CZ)\"},\"type\":\"error\"}",
+  "elapsed_seconds": 1.829,
+  "response_headers": {},
+  "success": false,
+  "cache_read": null,
+  "cache_write": null,
+  "cache_hit": false
+}

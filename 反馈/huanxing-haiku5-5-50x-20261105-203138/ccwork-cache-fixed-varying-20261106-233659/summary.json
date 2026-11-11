@@ -1,0 +1,162 @@
+{
+  "endpoint": "https://cc.ccwork.site/v1/messages",
+  "started_at": "2026-11-06T23:36:59.550+08:00",
+  "finished_at": "2026-11-06T23:38:17.540+08:00",
+  "groups": [
+    {
+      "case": "fixed_trial",
+      "attempts": 5,
+      "success": 5,
+      "hits": 5,
+      "hit_rate_success": 1.0,
+      "hit_sequences": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cache_read_total": 76465,
+      "cache_write_total": 0,
+      "input_total": 95,
+      "warmup": {
+        "case": "fixed_trial",
+        "seq": 0,
+        "phase": "warmup",
+        "started_at": "2026-11-06T23:36:59.552+08:00",
+        "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+        "status": 200,
+        "success": true,
+        "usage": {
+          "input_tokens": 19,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15293,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 4,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard"
+        },
+        "headers": {
+          "Date": "Fri, 06 Nov 2026 15:36:16 GMT",
+          "Content-Type": "application/json",
+          "X-Oneapi-Request-Id": "202611061536140093618108268d9d6AHvp9iF1"
+        },
+        "error": "",
+        "message_id": "msg_bdrk_2ic7qo4dmvniwb6miedclcpkobpsqemswgb63j45jdeoixgaanmv",
+        "model": "claude-haiku-5-5",
+        "stop_reason": "end_turn",
+        "elapsed_seconds": 2.663,
+        "read": 15293,
+        "write": 0,
+        "input": 19
+      }
+    },
+    {
+      "case": "vary_suffix",
+      "attempts": 5,
+      "success": 5,
+      "hits": 0,
+      "hit_rate_success": 0.0,
+      "hit_sequences": [],
+      "cache_read_total": 0,
+      "cache_write_total": 76465,
+      "input_total": 95,
+      "warmup": {
+        "case": "vary_suffix",
+        "seq": 0,
+        "phase": "warmup",
+        "started_at": "2026-11-06T23:37:23.624+08:00",
+        "request_sha256": "d0a77f88c61aa13db80cb009d0e98bd70a679869cbde86ae45458c71b63279e9",
+        "status": 200,
+        "success": true,
+        "usage": {
+          "input_tokens": 19,
+          "cache_creation_input_tokens": 15293,
+          "cache_read_input_tokens": 0,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 15293,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 4,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard"
+        },
+        "headers": {
+          "Date": "Fri, 06 Nov 2026 15:36:41 GMT",
+          "Content-Type": "application/json",
+          "X-Oneapi-Request-Id": "202611061536380055666448268d9d6WRK7GYrk"
+        },
+        "error": "",
+        "message_id": "msg_bdrk_nhhguwes225qwk7usxfj4md5jqh7hb3wvojra6txnhlrk5bxmgep",
+        "model": "claude-haiku-5-5",
+        "stop_reason": "end_turn",
+        "elapsed_seconds": 3.908,
+        "read": 0,
+        "write": 15293,
+        "input": 19
+      }
+    },
+    {
+      "case": "fixed_trial_after",
+      "attempts": 5,
+      "success": 5,
+      "hits": 5,
+      "hit_rate_success": 1.0,
+      "hit_sequences": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cache_read_total": 76465,
+      "cache_write_total": 0,
+      "input_total": 95,
+      "warmup": {
+        "case": "fixed_trial_after",
+        "seq": 0,
+        "phase": "warmup",
+        "started_at": "2026-11-06T23:37:52.792+08:00",
+        "request_sha256": "b68e1ae106bb40e9cec0b2d5898b5d99232b96d1238d0cf00251c0121ca37418",
+        "status": 200,
+        "success": true,
+        "usage": {
+          "input_tokens": 19,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 15293,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 0
+          },
+          "output_tokens": 4,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "service_tier": "standard"
+        },
+        "headers": {
+          "Date": "Fri, 06 Nov 2026 15:37:09 GMT",
+          "Content-Type": "application/json",
+          "X-Oneapi-Request-Id": "202611061537071421321038268d9d6X0s6Zcrd"
+        },
+        "error": "",
+        "message_id": "msg_bdrk_nnynqizlw6dstgjt47zsubgb7tlsoqta6dt6eaay7y26jajrhmpr",
+        "model": "claude-haiku-5-5",
+        "stop_reason": "end_turn",
+        "elapsed_seconds": 2.157,
+        "read": 15293,
+        "write": 0,
+        "input": 19
+      }
+    }
+  ],
+  "completed": true,
+  "output_directory": "D:\\huanxing\\ipp-new-api\\反馈\\huanxing-haiku5-5-50x-20261105-203138\\ccwork-cache-fixed-varying-20261106-233659"
+}
