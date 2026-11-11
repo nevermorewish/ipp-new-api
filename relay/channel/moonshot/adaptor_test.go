@@ -22,6 +22,67 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+func TestMoonshotResponseTraceHeaders(t *testing.T) {
+	originalTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() { constant.StreamingTimeout = originalTimeout })
+	for _, stream := range []bool{false, true} {
+		t.Run(fmt.Sprintf("stream=%t", stream), func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			c.Header(common.RequestIdKey, "local-request")
+			body := `{"id":"chatcmpl-kimi","model":"kimi-k3.1-pro","choices":[{"index":0,"message":{"role":"assistant","content":"OK"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`
+			headers := http.Header{
+				"Content-Type": {"application/json"},
+				"X-Trace-Id":   {"trace-123"}, "Msh-Uid": {"msh-123"},
+				"X-Provider-Extension": {"extension"},
+				"X-Reasoning-Included": {"true"}, "X-Codex-Turn-State": {"turn"},
+				common.RequestIdKey: {"upstream-request"},
+			}
+			if stream {
+				body = "data: " + `{"id":"chatcmpl-kimi","model":"kimi-k3.1-pro","choices":[{"index":0,"delta":{"content":"OK"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}` + "\n\ndata: [DONE]\n\n"
+				headers.Set("Content-Type", "text/event-stream")
+				headers["X-Provider-Extension"] = []string{"first", "second"}
+				headers["Connection"] = []string{"keep-alive, X-Hop", "X-Other-Hop"}
+				for _, name := range []string{"X-Hop", "X-Other-Hop", "Keep-Alive", "Proxy-Connection", "Proxy-Authenticate", "Proxy-Authorization", "Te", "Trailer", "Upgrade"} {
+					headers.Set(name, "must-not-forward")
+				}
+				headers.Set("Content-Length", "999999")
+				headers.Set("Content-Encoding", "gzip")
+				headers.Set("Transfer-Encoding", "upstream-framing")
+			}
+			resp := &http.Response{StatusCode: http.StatusOK, Header: headers, Body: io.NopCloser(strings.NewReader(body))}
+			info := &relaycommon.RelayInfo{
+				RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+				IsStream: stream, DisablePing: true,
+				ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro"},
+			}
+			_, apiErr := (&Adaptor{}).DoResponse(c, resp, info)
+			require.Nil(t, apiErr)
+			result := recorder.Result()
+			defer result.Body.Close()
+			assert.Equal(t, http.StatusOK, result.StatusCode)
+			assert.Equal(t, "trace-123", result.Header.Get("X-Trace-Id"))
+			assert.Equal(t, "msh-123", result.Header.Get("Msh-Uid"))
+			assert.Equal(t, headers.Values("X-Provider-Extension"), result.Header.Values("X-Provider-Extension"))
+			assert.Equal(t, "true", result.Header.Get("X-Reasoning-Included"))
+			assert.Equal(t, "turn", result.Header.Get("X-Codex-Turn-State"))
+			assert.Equal(t, "local-request", result.Header.Get(common.RequestIdKey))
+			assert.Equal(t, "upstream-request", c.GetString(common.UpstreamRequestIdKey))
+			assert.Contains(t, recorder.Body.String(), "OK")
+			if stream {
+				assert.Contains(t, recorder.Body.String(), "data: [DONE]")
+				assert.Equal(t, "text/event-stream", result.Header.Get("Content-Type"))
+				assert.Equal(t, "chunked", result.Header.Get("Transfer-Encoding"))
+				for _, name := range []string{"X-Hop", "X-Other-Hop", "Keep-Alive", "Proxy-Connection", "Proxy-Authenticate", "Proxy-Authorization", "Te", "Trailer", "Upgrade", "Content-Length", "Content-Encoding"} {
+					assert.Empty(t, result.Header.Get(name), name)
+				}
+			}
+		})
+	}
+}
+
 func TestKVVKeepsRequiredToolChoice(t *testing.T) {
 	service.InitHttpClient()
 	const weather = `{"type":"function","function":{"name":"get_weather","description":"Get the weather of a city.","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}`

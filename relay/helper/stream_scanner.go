@@ -55,21 +55,40 @@ func NewStreamScanner(reader io.Reader, maxBytes ...int) *bufio.Scanner {
 	return scanner
 }
 
-func copyCodexSSEHeaders(c *gin.Context, resp *http.Response) {
+// copySSEHeaders preserves upstream metadata before the first stream write.
+// The relay decodes and rewrites SSE events, so upstream framing and encoding
+// cannot describe the downstream response.
+func copySSEHeaders(c *gin.Context, resp *http.Response) {
 	if c == nil || c.Writer == nil || resp == nil {
 		return
 	}
-	// codex
-	for _, name := range []string{"X-Reasoning-Included", "X-Codex-Turn-State"} {
-		values := resp.Header.Values(name)
+	connectionHeaders := make(map[string]bool)
+	for name, values := range resp.Header {
+		if strings.EqualFold(name, "Connection") {
+			for _, value := range values {
+				for token := range strings.SplitSeq(value, ",") {
+					connectionHeaders[strings.ToLower(strings.TrimSpace(token))] = true
+				}
+			}
+		}
+	}
+	for name, values := range resp.Header {
 		if !service.ShouldCopyUpstreamHeader(c, name, values) {
 			continue
 		}
-		for _, value := range values {
-			if value != "" {
-				c.Writer.Header().Add(name, value)
-			}
+		lower := strings.ToLower(name)
+		if connectionHeaders[lower] {
+			continue
 		}
+		switch lower {
+		case "connection", "proxy-connection", "keep-alive", "proxy-authenticate",
+			"proxy-authorization", "te", "trailer", "transfer-encoding", "upgrade",
+			"content-encoding", "content-type", "cache-control", "x-accel-buffering":
+			// SetEventStreamHeaders owns the downstream SSE headers, including
+			// when a request keepalive has already initialized them.
+			continue
+		}
+		c.Writer.Header()[http.CanonicalHeaderKey(name)] = append([]string(nil), values...)
 	}
 }
 
@@ -190,7 +209,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 	defer cleanup()
 
 	scanner.Split(bufio.ScanLines)
-	copyCodexSSEHeaders(c, resp)
+	copySSEHeaders(c, resp)
 	SetEventStreamHeaders(c)
 
 	ctx = context.WithValue(ctx, "stop_chan", stopChan)
