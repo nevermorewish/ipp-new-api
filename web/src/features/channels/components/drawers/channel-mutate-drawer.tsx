@@ -302,7 +302,6 @@ const SENSITIVE_FORM_FIELDS = [
   'thinking_to_content',
   'moonshot_kvv_enabled',
   'moonshot_video_to_images',
-  'normalize_required_tool_choice_without_tools',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'proxy',
@@ -1937,48 +1936,17 @@ export function ChannelMutateDrawer({
     />
   )
 
-  const videoToImagesFields = currentType === 25 && (
+  const mediaCompatibilityFields = currentType === 25 && (
     <FormField
       control={form.control}
       name='moonshot_video_to_images'
       render={({ field }) => (
         <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
           <div className='space-y-0.5'>
-            <FormLabel>{t('Video to images')}</FormLabel>
+            <FormLabel>{t('Media format compatibility')}</FormLabel>
             <FormDescription>
               {t(
-                'Convert video URLs or uploads into sampled images for the upstream model. Requires image input support. Audio is not included.'
-              )}
-            </FormDescription>
-          </div>
-          <FormControl>
-            <Switch
-              disabled={sensitiveLocked}
-              checked={field.value === true}
-              onCheckedChange={field.onChange}
-              onBlur={field.onBlur}
-              name={field.name}
-              ref={field.ref}
-            />
-          </FormControl>
-        </FormItem>
-      )}
-    />
-  )
-
-  const requiredToolChoiceFields = currentType === 25 && (
-    <FormField
-      control={form.control}
-      name='normalize_required_tool_choice_without_tools'
-      render={({ field }) => (
-        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
-          <div className='space-y-0.5'>
-            <FormLabel>
-              {t('Allow required tool choice without tools')}
-            </FormLabel>
-            <FormDescription>
-              {t(
-                'Remove required tool choice only when no tools are declared. Preserve dynamic tools in messages. Disabled by default for strict validation.'
+                'Convert videos to sampled images and string image_url values to object form for upstreams that reject them. Requires image input support. Audio is not included.'
               )}
             </FormDescription>
           </div>
@@ -4882,8 +4850,7 @@ export function ChannelMutateDrawer({
                 {ollamaOpenAIChatFields}
                 {thinkingFields}
                 {kvvFields}
-                {requiredToolChoiceFields}
-                {videoToImagesFields}
+                {mediaCompatibilityFields}
                 <OpenAIGPTSettings
                   control={form.control}
                   channelType={currentType}

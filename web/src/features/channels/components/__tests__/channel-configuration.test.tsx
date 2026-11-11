@@ -1653,7 +1653,7 @@ test('other providers hide and omit the Moonshot KVV setting', async () => {
 })
 
 test.each([false, true])(
-  'Moonshot video switch restores %s and saves its opposite',
+  'Moonshot media format switch restores %s and saves its opposite',
   async (enabled) => {
     editingChannel = {
       ...editingChannel,
@@ -1667,7 +1667,9 @@ test.each([false, true])(
     render(<ConfigurationHarness currentRow={editingChannel} />)
     await screen.findByDisplayValue('Existing channel')
     await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
-    const toggle = screen.getByRole('switch', { name: 'Video to images' })
+    const toggle = screen.getByRole('switch', {
+      name: 'Media format compatibility',
+    })
     expect(toggle).toHaveAttribute('aria-checked', String(enabled))
     toggle.focus()
     await user.keyboard(' ')
@@ -1681,7 +1683,7 @@ test.each([false, true])(
   }
 )
 
-test('other providers hide and omit the Moonshot video setting', async () => {
+test('other providers hide and omit the Moonshot media format setting', async () => {
   editingChannel = {
     ...editingChannel,
     type: 1,
@@ -1695,72 +1697,12 @@ test('other providers hide and omit the Moonshot video setting', async () => {
   await screen.findByDisplayValue('Existing channel')
   await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
   expect(
-    screen.queryByRole('switch', { name: 'Video to images' })
+    screen.queryByRole('switch', { name: 'Media format compatibility' })
   ).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Update Channel' }))
   await waitFor(() => expect(put).toHaveBeenCalled())
   const payload = put.mock.calls[0]?.[1] as { setting: string }
   expect(JSON.parse(payload.setting).moonshot_video_to_images).toBeUndefined()
-})
-
-test.each([false, true])(
-  'Moonshot required compatibility switch restores %s and saves its opposite',
-  async (enabled) => {
-    editingChannel = {
-      ...editingChannel,
-      type: 25,
-      settings: JSON.stringify({
-        normalize_required_tool_choice_without_tools: enabled,
-      }),
-    }
-    const put = vi
-      .spyOn(api, 'put')
-      .mockResolvedValue({ data: { success: true } })
-    const user = userEvent.setup()
-    render(<ConfigurationHarness currentRow={editingChannel} />)
-    await screen.findByDisplayValue('Existing channel')
-    await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
-    const toggle = screen.getByRole('switch', {
-      name: 'Allow required tool choice without tools',
-    })
-    expect(toggle).toHaveAttribute('aria-checked', String(enabled))
-    toggle.focus()
-    await user.keyboard(' ')
-    expect(toggle).toHaveAttribute('aria-checked', String(!enabled))
-    await user.click(screen.getByRole('button', { name: 'Update Channel' }))
-    await waitFor(() => expect(put).toHaveBeenCalled())
-    const payload = put.mock.calls[0]?.[1] as { settings: string }
-    expect(
-      JSON.parse(payload.settings)
-        .normalize_required_tool_choice_without_tools === true
-    ).toBe(!enabled)
-  }
-)
-
-test('other providers hide and omit the Moonshot required compatibility setting', async () => {
-  editingChannel = {
-    ...editingChannel,
-    type: 1,
-    settings: '{"normalize_required_tool_choice_without_tools":true}',
-  }
-  const put = vi
-    .spyOn(api, 'put')
-    .mockResolvedValue({ data: { success: true } })
-  const user = userEvent.setup()
-  render(<ConfigurationHarness currentRow={editingChannel} />)
-  await screen.findByDisplayValue('Existing channel')
-  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
-  expect(
-    screen.queryByRole('switch', {
-      name: 'Allow required tool choice without tools',
-    })
-  ).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: 'Update Channel' }))
-  await waitFor(() => expect(put).toHaveBeenCalled())
-  const payload = put.mock.calls[0]?.[1] as { settings: string }
-  expect(
-    JSON.parse(payload.settings).normalize_required_tool_choice_without_tools
-  ).toBeUndefined()
 })
 
 test('request processing configuration does not mark the network category as configured', async () => {
