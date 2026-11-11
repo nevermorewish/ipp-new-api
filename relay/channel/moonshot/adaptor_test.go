@@ -69,41 +69,55 @@ func TestRequiredToolChoiceFinalBody(t *testing.T) {
 	}
 }
 
-func TestKVVDynamicToolAsLastMessage(t *testing.T) {
+func TestKVVKeepsRequiredToolChoice(t *testing.T) {
 	service.InitHttpClient()
-	for _, model := range []string{"kimi-k3", "kimi-k3.1-pro"} {
-		for _, stream := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/%t", model, stream), func(t *testing.T) {
-				// Official KVV test_dynamic_tool_as_last_message request shape.
-				body := fmt.Sprintf(`{"model":%q,"stream":%t,"messages":[{"role":"user","content":"what is the weather in beijing?"},{"role":"system","content":"","tools":[{"type":"function","function":{"name":"get_weather","description":"Get the weather of a city.","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]}],"tool_choice":"required"}`, model, stream)
-				var received []byte
-				upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					received, _ = io.ReadAll(r.Body)
-					_, _ = io.WriteString(w, `{}`)
-				}))
-				defer upstream.Close()
-				var request dto.GeneralOpenAIRequest
-				require.NoError(t, common.UnmarshalJsonStr(body, &request))
-				ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
-				ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-				info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
-					ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: upstream.URL, ChannelType: constant.ChannelTypeMoonshot,
-						UpstreamModelName: model, ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true},
-						ChannelOtherSettings: dto.ChannelOtherSettings{NormalizeRequiredToolChoiceWithoutTools: true}}}
-				adaptor := &Adaptor{}
-				converted, err := adaptor.ConvertOpenAIRequest(ctx, info, &request)
-				require.NoError(t, err)
-				wire, err := common.Marshal(converted)
-				require.NoError(t, err)
-				response, err := adaptor.DoRequest(ctx, info, bytes.NewReader(wire))
-				require.NoError(t, err)
-				require.NoError(t, response.(*http.Response).Body.Close())
-				assert.Equal(t, "required", gjson.GetBytes(received, "tool_choice").String())
-				assert.Equal(t, "system", gjson.GetBytes(received, "messages.1.role").String())
-				assert.JSONEq(t, gjson.Get(body, "messages.1.tools").Raw, gjson.GetBytes(received, "messages.1.tools").Raw)
-				assert.False(t, gjson.GetBytes(received, "tools").Exists())
-				assert.Equal(t, stream, gjson.GetBytes(received, "stream").Bool())
-			})
+	const weather = `{"type":"function","function":{"name":"get_weather","description":"Get the weather of a city.","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}`
+	const question = `{"role":"user","content":"what is the weather in beijing?"}`
+	// Official KVV request shapes: test_dynamic_tool_as_last_message, and the
+	// test_tool_choice cases whose 400 must come from the upstream.
+	for _, tc := range []struct {
+		name, tools, messages string
+	}{
+		{"dynamic tool as last message", "", `[` + question + `,{"role":"system","content":"","tools":[` + weather + `]}]`},
+		{"required without tools", "", `[` + question + `]`},
+		{"required with empty tools", `"tools":[],`, `[` + question + `]`},
+	} {
+		for _, model := range []string{"kimi-k3", "kimi-k3.1-pro"} {
+			for _, stream := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/%s/%t", tc.name, model, stream), func(t *testing.T) {
+					body := fmt.Sprintf(`{"model":%q,"stream":%t,%s"messages":%s,"tool_choice":"required"}`, model, stream, tc.tools, tc.messages)
+					var received []byte
+					upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						received, _ = io.ReadAll(r.Body)
+						_, _ = io.WriteString(w, `{}`)
+					}))
+					defer upstream.Close()
+					var request dto.GeneralOpenAIRequest
+					require.NoError(t, common.UnmarshalJsonStr(body, &request))
+					ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+					ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+					// The compatibility switch is on, but KVV keeps the official contract.
+					info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+						ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: upstream.URL, ChannelType: constant.ChannelTypeMoonshot,
+							UpstreamModelName: model, ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true},
+							ChannelOtherSettings: dto.ChannelOtherSettings{NormalizeRequiredToolChoiceWithoutTools: true}}}
+					adaptor := &Adaptor{}
+					converted, err := adaptor.ConvertOpenAIRequest(ctx, info, &request)
+					require.NoError(t, err)
+					wire, err := common.Marshal(converted)
+					require.NoError(t, err)
+					response, err := adaptor.DoRequest(ctx, info, bytes.NewReader(wire))
+					require.NoError(t, err)
+					require.NoError(t, response.(*http.Response).Body.Close())
+					assert.Equal(t, "required", gjson.GetBytes(received, "tool_choice").String())
+					assert.False(t, gjson.GetBytes(received, "tools").Exists())
+					assert.Equal(t, stream, gjson.GetBytes(received, "stream").Bool())
+					if dynamic := gjson.Get(body, "messages.1.tools"); dynamic.Exists() {
+						assert.Equal(t, "system", gjson.GetBytes(received, "messages.1.role").String())
+						assert.JSONEq(t, dynamic.Raw, gjson.GetBytes(received, "messages.1.tools").Raw)
+					}
+				})
+			}
 		}
 	}
 }
@@ -225,6 +239,7 @@ func TestKVVRequestContract(t *testing.T) {
 		{"invalid name", `{"messages":[{"role":"system","tools":[{"type":"function","function":{"name":"1bad"}}]}]}`, "valid names"},
 		{"duplicate across declarations", `{"messages":[{"role":"system","tools":[{"type":"function","function":{"name":"dup"}}]},{"role":"system","tools":[{"type":"function","function":{"name":"dup"}}]}]}`, "duplicate"},
 		{"duplicate global and dynamic", `{"tools":[{"type":"function","function":{"name":"dup"}}],"messages":[{"role":"system","tools":[{"type":"function","function":{"name":"dup"}}]}]}`, "duplicate"},
+		{"tool result without id", `{"messages":[{"role":"tool","content":"some tool result"},{"role":"user","content":"hello"}]}`, "tool_call_id"},
 		{"thinking null", `{"thinking":null}`, "thinking must"},
 		{"thinking array", `{"thinking":[]}`, "thinking must"},
 		{"invalid type", `{"thinking":{"type":"invalid"}}`, "thinking.type"},
