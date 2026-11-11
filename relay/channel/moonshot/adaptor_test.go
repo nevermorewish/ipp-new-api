@@ -705,7 +705,9 @@ func TestDynamicToolsRequiredFallback(t *testing.T) {
 		{"json retry success", true, false, 400, rejection, 2},
 		{"stream rejection", true, true, 400, rejection, 2},
 		{"quoted rejection", true, false, 400, `{"error":{"message":"tool_choice \"required\" requires at least one tool"}}`, 2},
-		{"disabled", false, false, 400, rejection, 1},
+		// The fallback follows the upstream rejection, not the KVV channel
+		// switch, so a channel without KVV still gets the promoted retry.
+		{"channel without kvv", false, false, 400, rejection, 2},
 		{"unrelated error", true, false, 400, `{"error":{"message":"invalid schema"}}`, 1},
 		{"server error", true, false, 500, rejection, 1},
 		{"oversized error", true, false, 400, rejection + strings.Repeat(" ", 65536), 1},
@@ -785,8 +787,9 @@ func TestPromoteRequiredDynamicToolsContract(t *testing.T) {
 		{"global and dynamic", `{"tool_choice":"required","tools":[` + global + `],"messages":[{"role":"user","content":"hello"},{"role":"system","tools":[` + dynamic + `]}]}`, true},
 		{"auto", `{"tool_choice":"auto","messages":[{"role":"user","content":"hello"},{"role":"system","tools":[` + dynamic + `]}]}`, false},
 		{"duplicate", `{"tool_choice":"required","tools":[` + dynamic + `],"messages":[{"role":"user","content":"hello"},{"role":"system","tools":[` + dynamic + `]}]}`, false},
-		{"invalid role", `{"tool_choice":"required","messages":[{"role":"user","tools":[` + dynamic + `]}]}`, false},
-		{"nonempty content", `{"tool_choice":"required","messages":[{"role":"system","content":"instructions","tools":[` + dynamic + `]}]}`, false},
+		{"declaration without text elsewhere", `{"tool_choice":"required","messages":[{"role":"user","tools":[` + dynamic + `]}]}`, false},
+		{"declaration with instructions", `{"tool_choice":"required","messages":[{"role":"user","content":"hello"},{"role":"system","content":"instructions","tools":[` + dynamic + `]}]}`, true},
+		{"declaration on user message", `{"tool_choice":"required","messages":[{"role":"user","content":"hello","tools":[` + dynamic + `]}]}`, true},
 		{"null", `{"tool_choice":"required","messages":[{"role":"system","tools":null}]}`, false},
 		{"object", `{"tool_choice":"required","messages":[{"role":"system","tools":{}}]}`, false},
 		{"null item", `{"tool_choice":"required","messages":[{"role":"system","tools":[null]}]}`, false},

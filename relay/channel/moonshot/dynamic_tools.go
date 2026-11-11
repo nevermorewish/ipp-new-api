@@ -8,17 +8,24 @@ import (
 	"net/http"
 
 	"github.com/QuantumNous/new-api/common"
+	channelconstant "github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/relay/channel"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 )
 
 // doRequestWithDynamicToolFallback preserves native dynamic declarations unless
-// a KVV upstream explicitly rejects required because it only counts global tools.
+// an upstream explicitly rejects required because it only counts global tools.
+// Every Moonshot chat channel is covered, not only KVV ones: the upstream error
+// is the trigger, so a channel whose upstream accepts dynamic tools never pays
+// for the retry path.
 func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relaycommon.RelayInfo, body io.Reader) (*http.Response, error) {
-	if !KVVEnabled(info) || info.RelayFormat != types.RelayFormatOpenAI || body == nil {
+	if info == nil || info.ChannelMeta == nil || info.ChannelType != channelconstant.ChannelTypeMoonshot ||
+		info.RelayMode != relayconstant.RelayModeChatCompletions ||
+		info.RelayFormat != types.RelayFormatOpenAI || body == nil {
 		return channel.DoApiRequest(a, c, info, body)
 	}
 	payload, err := io.ReadAll(body)
@@ -53,7 +60,11 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 }
 
 // promoteRequiredDynamicTools keeps raw tool definitions and required semantics.
-// Invalid or ambiguous declarations must retain the original upstream error.
+// Declarations that the gateway can prove are invalid, or that would change the
+// meaning of the conversation, must retain the original upstream error. A
+// declaration on a non-system message, or one that shares its message with
+// instructions, is still a valid tool declaration for an upstream that only
+// counts global tools, so it is promoted and its text is preserved.
 func promoteRequiredDynamicTools(payload []byte) ([]byte, bool) {
 	if gjson.GetBytes(payload, "tool_choice").Type != gjson.String || gjson.GetBytes(payload, "tool_choice").String() != "required" {
 		return nil, false
@@ -86,13 +97,6 @@ func promoteRequiredDynamicTools(payload []byte) ([]byte, bool) {
 			kept = append(kept, message)
 			continue
 		}
-		if string(message["role"]) != `"system"` {
-			return nil, false
-		}
-		content := bytes.TrimSpace(message["content"])
-		if len(content) > 0 && string(content) != `""` && string(content) != "null" {
-			return nil, false
-		}
 		var dynamic []json.RawMessage
 		if common.Unmarshal(raw, &dynamic) != nil || dynamic == nil {
 			return nil, false
@@ -111,7 +115,12 @@ func promoteRequiredDynamicTools(payload []byte) ([]byte, bool) {
 		tools = append(tools, dynamic...)
 		moved = true
 		delete(message, "tools")
-		delete(message, "content")
+		// A declaration message usually carries no text, so drop the empty
+		// content it leaves behind. Instructions in the same message survive.
+		content := bytes.TrimSpace(message["content"])
+		if len(content) == 0 || string(content) == `""` || string(content) == "null" {
+			delete(message, "content")
+		}
 		// Drop only an empty declaration; retain any metadata on that message.
 		if len(message) > 1 {
 			kept = append(kept, message)
