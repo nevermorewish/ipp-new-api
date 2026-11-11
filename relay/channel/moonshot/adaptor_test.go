@@ -22,53 +22,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func TestRequiredToolChoiceFinalBody(t *testing.T) {
-	service.InitHttpClient()
-	for _, tc := range []struct {
-		name, body string
-		keep       bool
-	}{
-		{"absent tools", `{"tool_choice":"required"}`, false},
-		{"null tools", `{"tools":null,"tool_choice":"required"}`, false},
-		{"empty tools", `{"tools":[],"messages":[{"role":"system","tools":[]}],"tool_choice":"required"}`, false},
-		{"global tools", `{"tools":[{"type":"function","function":{"name":"calculate"}}],"tool_choice":"required"}`, true},
-		{"dynamic tools", `{"messages":[{"role":"user","content":"Calculate"},{"role":"system","tools":[{"type":"function","function":{"name":"calculate"}}]}],"tool_choice":"required"}`, true},
-		{"malformed global tools", `{"tools":{},"tool_choice":"required"}`, true},
-		{"malformed dynamic tools", `{"messages":[{"role":"system","tools":{}}],"tool_choice":"required"}`, true},
-		{"object choice", `{"tool_choice":{"type":"any"}}`, true},
-		{"auto choice", `{"tool_choice":"auto"}`, true},
-	} {
-		for _, enabled := range []bool{false, true} {
-			for _, format := range []types.RelayFormat{types.RelayFormatOpenAI, types.RelayFormatClaude, types.RelayFormatOpenAIResponses} {
-				t.Run(fmt.Sprintf("%s/%t/%s", tc.name, enabled, format), func(t *testing.T) {
-					var received []byte
-					upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						received, _ = io.ReadAll(r.Body)
-						_, _ = io.WriteString(w, `{}`)
-					}))
-					defer upstream.Close()
-					ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
-					ctx.Request = httptest.NewRequest(http.MethodPost, "/", nil)
-					info := &relaycommon.RelayInfo{RelayFormat: format, ChannelMeta: &relaycommon.ChannelMeta{
-						ChannelBaseUrl:       upstream.URL,
-						ChannelOtherSettings: dto.ChannelOtherSettings{NormalizeRequiredToolChoiceWithoutTools: enabled},
-					}}
-					// The final body is also used by passthrough and parameter overrides.
-					response, err := (&Adaptor{}).DoRequest(ctx, info, strings.NewReader(tc.body))
-					require.NoError(t, err)
-					require.NoError(t, response.(*http.Response).Body.Close())
-					if !enabled || tc.keep {
-						assert.JSONEq(t, tc.body, string(received))
-					} else {
-						assert.False(t, gjson.GetBytes(received, "tool_choice").Exists())
-						assert.Equal(t, gjson.Get(tc.body, "messages").Raw, gjson.GetBytes(received, "messages").Raw)
-					}
-				})
-			}
-		}
-	}
-}
-
 func TestKVVKeepsRequiredToolChoice(t *testing.T) {
 	service.InitHttpClient()
 	const weather = `{"type":"function","function":{"name":"get_weather","description":"Get the weather of a city.","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}`
@@ -96,11 +49,10 @@ func TestKVVKeepsRequiredToolChoice(t *testing.T) {
 					require.NoError(t, common.UnmarshalJsonStr(body, &request))
 					ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
 					ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-					// The compatibility switch is on, but KVV keeps the official contract.
+					// KVV keeps the official contract: required stays on the wire.
 					info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
 						ChannelMeta: &relaycommon.ChannelMeta{ChannelBaseUrl: upstream.URL, ChannelType: constant.ChannelTypeMoonshot,
-							UpstreamModelName: model, ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true},
-							ChannelOtherSettings: dto.ChannelOtherSettings{NormalizeRequiredToolChoiceWithoutTools: true}}}
+							UpstreamModelName: model, ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true}}}
 					adaptor := &Adaptor{}
 					converted, err := adaptor.ConvertOpenAIRequest(ctx, info, &request)
 					require.NoError(t, err)

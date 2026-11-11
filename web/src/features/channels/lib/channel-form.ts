@@ -287,7 +287,6 @@ export const channelFormSchema = z
     azure_responses_version: z.string().optional(), // Azure specific
     // Field passthrough controls (stored in settings JSON)
     allow_service_tier: z.boolean().optional(), // OpenAI/Anthropic
-    normalize_required_tool_choice_without_tools: z.boolean().optional(),
     remove_gpt_temperature: z.boolean().optional(),
     remove_azure_gpt_encryption: z.boolean().optional(),
     disable_store: z.boolean().optional(), // OpenAI only
@@ -487,7 +486,6 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   azure_responses_version: '',
   // Field passthrough controls
   allow_service_tier: false,
-  normalize_required_tool_choice_without_tools: false,
   remove_gpt_temperature: false,
   remove_azure_gpt_encryption: false,
   disable_store: false,
@@ -571,7 +569,6 @@ export function transformChannelToFormDefaults(
   let awsKeyType: 'ak_sk' | 'api_key' = 'ak_sk'
   let awsApiType: 'invoke_model' | 'mantle' = 'invoke_model'
   let allowServiceTier = false
-  let normalizeRequiredToolChoiceWithoutTools = false
   let removeGPTTemperature = false
   let removeAzureGPTEncryption = false
   let disableStore = false
@@ -599,8 +596,6 @@ export function transformChannelToFormDefaults(
       awsKeyType = parsed.aws_key_type || 'ak_sk'
       awsApiType = parsed.aws_api_type || 'invoke_model'
       allowServiceTier = parsed.allow_service_tier === true
-      normalizeRequiredToolChoiceWithoutTools =
-        parsed.normalize_required_tool_choice_without_tools === true
       removeGPTTemperature = parsed.remove_gpt_temperature === true
       removeAzureGPTEncryption = parsed.remove_azure_gpt_encryption === true
       disableStore = parsed.disable_store === true
@@ -666,8 +661,6 @@ export function transformChannelToFormDefaults(
     aws_key_type: awsKeyType,
     aws_api_type: awsApiType,
     allow_service_tier: allowServiceTier,
-    normalize_required_tool_choice_without_tools:
-      normalizeRequiredToolChoiceWithoutTools,
     remove_gpt_temperature: removeGPTTemperature,
     remove_azure_gpt_encryption: removeAzureGPTEncryption,
     disable_store: disableStore,
@@ -800,15 +793,6 @@ function buildSettingsJSON(formData: ChannelFormValues): string {
   } else {
     delete settingsObj.remove_gpt_temperature
     delete settingsObj.remove_azure_gpt_encryption
-  }
-
-  if (
-    formData.type === 25 &&
-    formData.normalize_required_tool_choice_without_tools === true
-  ) {
-    settingsObj.normalize_required_tool_choice_without_tools = true
-  } else {
-    delete settingsObj.normalize_required_tool_choice_without_tools
   }
 
   // Field passthrough controls:

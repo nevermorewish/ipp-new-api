@@ -16,7 +16,7 @@ type ChannelSettings struct {
 	ForceFormat               bool   `json:"force_format,omitempty"`
 	ThinkingToContent         bool   `json:"thinking_to_content,omitempty"`
 	MoonshotKVVEnabled        bool   `json:"moonshot_kvv_enabled,omitempty"`
-	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"`
+	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"` // Media compatibility: also turns Chat image_url strings into objects
 	Proxy                     string `json:"proxy"`
 	PassThroughBodyEnabled    bool   `json:"pass_through_body_enabled,omitempty"`
 	ResponsesWebSocketEnabled bool   `json:"responses_websocket_enabled,omitempty"`
@@ -112,9 +112,6 @@ const (
 )
 
 type ChannelOtherSettings struct {
-	// NormalizeRequiredToolChoiceWithoutTools removes the OpenAI required string
-	// only when neither top-level nor message-level tools are declared.
-	NormalizeRequiredToolChoiceWithoutTools bool `json:"normalize_required_tool_choice_without_tools,omitempty"`
 	// RemoveGPTTemperature removes temperature for GPT models that reject it.
 	// It is primarily used by the OpenAI-GPT compatibility channel.
 	RemoveGPTTemperature bool `json:"remove_gpt_temperature,omitempty"`

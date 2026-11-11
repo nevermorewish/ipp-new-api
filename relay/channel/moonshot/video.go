@@ -35,7 +35,9 @@ type videoExtractor func(context.Context, string) ([]videoFrame, error)
 
 // Transform the final wire body, including passthrough and parameter overrides.
 // Only message content is traversed: URLs inside tool arguments are not media.
-func convertVideoBody(ctx context.Context, body []byte, format types.RelayFormat, extract videoExtractor) ([]byte, error) {
+// Videos become sampled frames, and Chat image_url strings become the object
+// form, because some upstreams reject both shapes.
+func convertMediaBody(ctx context.Context, body []byte, format types.RelayFormat, extract videoExtractor) ([]byte, error) {
 	var request map[string]any
 	if err := common.UnmarshalUseNumber(body, &request); err != nil {
 		return nil, fmt.Errorf("invalid JSON for video conversion")
@@ -59,6 +61,12 @@ func convertVideoBody(ctx context.Context, body []byte, format types.RelayFormat
 			var output []any
 			for _, part := range parts {
 				block, _ := part.(map[string]any)
+				if format == types.RelayFormatOpenAI && block["type"] == "image_url" {
+					if imageURL, ok := block["image_url"].(string); ok && imageURL != "" {
+						block["image_url"] = map[string]any{"url": imageURL}
+						changed = true
+					}
+				}
 				ref, isVideo, err := videoReference(block)
 				if err != nil {
 					return nil, err

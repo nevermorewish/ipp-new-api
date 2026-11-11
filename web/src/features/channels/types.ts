@@ -97,7 +97,6 @@ export interface ChannelSettings {
 }
 
 export interface ChannelOtherSettings {
-  normalize_required_tool_choice_without_tools?: boolean
   remove_gpt_temperature?: boolean
   remove_azure_gpt_encryption?: boolean
   azure_responses_version?: string

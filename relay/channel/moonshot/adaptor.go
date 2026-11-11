@@ -138,7 +138,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 			return nil, fmt.Errorf("read Moonshot tool schemas: %w", err)
 		}
 		if info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotVideoToImages {
-			payload, err = convertVideoBody(c.Request.Context(), payload, info.RelayFormat, extractVideoFrames)
+			payload, err = convertMediaBody(c.Request.Context(), payload, info.RelayFormat, extractVideoFrames)
 			if err != nil {
 				return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 			}
@@ -146,11 +146,6 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		normalized, _, err := normalizeKimiToolSchemaRefsBody(payload)
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
-		}
-		// KVV must return the official 400 for required without tools, so the
-		// compatibility switch never applies to a KVV request.
-		if info != nil && info.ChannelMeta != nil && info.ChannelOtherSettings.NormalizeRequiredToolChoiceWithoutTools && !KVVEnabled(info) {
-			normalized, _ = normalizeRequiredToolChoiceWithoutTools(normalized)
 		}
 		requestBody = bytes.NewReader(normalized)
 	}
