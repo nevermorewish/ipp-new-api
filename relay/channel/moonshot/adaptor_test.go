@@ -874,3 +874,58 @@ func TestPromoteRequiredDynamicToolsContract(t *testing.T) {
 		})
 	}
 }
+
+func TestKimiToolResultPairing(t *testing.T) {
+	info := func(relayFormat types.RelayFormat, model string) *relaycommon.RelayInfo {
+		return &relaycommon.RelayInfo{
+			RelayFormat: relayFormat, RelayMode: relayconstant.RelayModeChatCompletions,
+			ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: model},
+		}
+	}
+	assistantCall := `{"role":"assistant","content":null,"tool_calls":[{"id":"call_abc123","type":"function","function":{"name":"get_weather","arguments":"{}"}}]}`
+	for _, tc := range []struct {
+		name, body string
+		info       *relaycommon.RelayInfo
+		wantErr    string
+	}{
+		{
+			name: "orphan result is rejected",
+			body: `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":"weather?"},{"role":"tool","tool_call_id":"call_abc123","content":"sunny"}]}`,
+			info: info(types.RelayFormatOpenAI, "kimi-k3.1-pro"), wantErr: "does not match any preceding assistant tool_calls",
+		},
+		{
+			name: "paired result is accepted",
+			body: `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":"weather?"},` + assistantCall + `,{"role":"tool","tool_call_id":"call_abc123","content":"sunny"}]}`,
+			info: info(types.RelayFormatOpenAI, "kimi-k3.1-pro"),
+		},
+		{
+			name: "second result for one call is rejected",
+			body: `{"model":"kimi-k3","messages":[` + assistantCall + `,{"role":"tool","tool_call_id":"call_abc123","content":"sunny"},{"role":"tool","tool_call_id":"call_abc123","content":"rainy"}]}`,
+			info: info(types.RelayFormatOpenAI, "kimi-k3"), wantErr: "submits a second result",
+		},
+		{
+			name: "empty tool_call_id is rejected",
+			body: `{"model":"kimi-k3","messages":[{"role":"user","content":"weather?"},{"role":"tool","content":"sunny"}]}`,
+			info: info(types.RelayFormatOpenAI, "kimi-k3"), wantErr: "tool_call_id is required",
+		},
+		{
+			name: "claude format is not checked",
+			body: `{"model":"kimi-k3","messages":[{"role":"tool","tool_call_id":"call_abc123","content":"sunny"}]}`,
+			info: info(types.RelayFormatClaude, "kimi-k3"),
+		},
+		{
+			name: "older kimi models keep pass-through",
+			body: `{"model":"kimi-k2.5","messages":[{"role":"user","content":"weather?"},{"role":"tool","tool_call_id":"call_abc123","content":"sunny"}]}`,
+			info: info(types.RelayFormatOpenAI, "kimi-k2.5"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateKimiToolResultPairing([]byte(tc.body), tc.info)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}

@@ -147,6 +147,9 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
+		if err := validateKimiToolResultPairing(normalized, info); err != nil {
+			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		}
 		requestBody = bytes.NewReader(normalized)
 	}
 	return a.doRequestWithDynamicToolFallback(c, info, requestBody)
