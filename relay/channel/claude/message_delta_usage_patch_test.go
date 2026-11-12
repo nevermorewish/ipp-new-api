@@ -45,6 +45,33 @@ func TestPatchClaudeMessageDeltaUsageDataZeroValueChecks(t *testing.T) {
 	assert.False(t, ojson.Get(patchedData, "usage.cache_creation_input_tokens").Exists())
 }
 
+func TestPatchClaudeMessageDeltaUsageDataKeepsTTLSplitPair(t *testing.T) {
+	// A stream that reports the 5m lifetime must also report the 1h lifetime,
+	// including an explicit zero: non-stream responses carry both keys, and a
+	// client diffing the two shapes must not see the key disappear.
+	originalData := `{"type":"message_delta","usage":{"output_tokens":80,"cache_creation":{"ephemeral_5m_input_tokens":5632}}}`
+	usage := &dto.ClaudeUsage{
+		OutputTokens:             80,
+		CacheCreationInputTokens: 5632,
+		CacheCreation:            &dto.ClaudeCacheCreationUsage{Ephemeral5mInputTokens: 5632},
+	}
+
+	patchedData := patchClaudeMessageDeltaUsageData(originalData, usage)
+
+	require.EqualValues(t, 5632, ojson.Get(patchedData, "usage.cache_creation.ephemeral_5m_input_tokens").Int())
+	require.True(t, ojson.Get(patchedData, "usage.cache_creation.ephemeral_1h_input_tokens").Exists())
+	require.EqualValues(t, 0, ojson.Get(patchedData, "usage.cache_creation.ephemeral_1h_input_tokens").Int())
+}
+
+func TestPatchClaudeMessageDeltaUsageDataLeavesAbsentCacheCreationAlone(t *testing.T) {
+	originalData := `{"type":"message_delta","usage":{"output_tokens":53}}`
+	usage := &dto.ClaudeUsage{OutputTokens: 53}
+
+	patchedData := patchClaudeMessageDeltaUsageData(originalData, usage)
+
+	assert.False(t, ojson.Get(patchedData, "usage.cache_creation").Exists())
+}
+
 func TestShouldSkipClaudeMessageDeltaUsagePatch(t *testing.T) {
 	originGlobalPassThrough := model_setting.GetGlobalSettings().PassThroughRequestEnabled
 	t.Cleanup(func() {

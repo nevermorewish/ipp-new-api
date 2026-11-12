@@ -469,8 +469,12 @@ func PatchClaudeMessageDeltaUsageData(data string, usage *dto.ClaudeUsage) strin
 	data = setMessageDeltaUsageInt(data, "usage.cache_creation_input_tokens", usage.CacheCreationInputTokens)
 
 	if usage.CacheCreation != nil {
-		data = setMessageDeltaUsageInt(data, "usage.cache_creation.ephemeral_5m_input_tokens", usage.CacheCreation.Ephemeral5mInputTokens)
-		data = setMessageDeltaUsageInt(data, "usage.cache_creation.ephemeral_1h_input_tokens", usage.CacheCreation.Ephemeral1hInputTokens)
+		// The TTL split is a contract field pair: a stream that reports one
+		// lifetime must also report the other, including an explicit zero.
+		// Non-stream responses already carry both keys, and a client comparing
+		// the two shapes cannot tell an absent 1h field from an unreported one.
+		data = setMessageDeltaUsageIntOrZero(data, "usage.cache_creation.ephemeral_5m_input_tokens", usage.CacheCreation.Ephemeral5mInputTokens)
+		data = setMessageDeltaUsageIntOrZero(data, "usage.cache_creation.ephemeral_1h_input_tokens", usage.CacheCreation.Ephemeral1hInputTokens)
 	}
 
 	return data
@@ -478,6 +482,27 @@ func PatchClaudeMessageDeltaUsageData(data string, usage *dto.ClaudeUsage) strin
 
 func setMessageDeltaUsageInt(data string, path string, localValue int) string {
 	if localValue <= 0 {
+		return data
+	}
+
+	upstreamValue := ojson.Get(data, path)
+	if upstreamValue.Exists() && upstreamValue.Int() > 0 {
+		return data
+	}
+
+	patchedData, err := ojson.Set(data, path, localValue)
+	if err != nil {
+		return data
+	}
+	return patchedData
+}
+
+// setMessageDeltaUsageIntOrZero keeps an explicitly reported zero. It applies
+// only to the cache_creation TTL split, whose presence is part of the usage
+// contract: an event that already carries the cache_creation object must carry
+// both lifetime counters, and a non-zero upstream value still wins.
+func setMessageDeltaUsageIntOrZero(data string, path string, localValue int) string {
+	if !ojson.Get(data, "usage.cache_creation").IsObject() {
 		return data
 	}
 
