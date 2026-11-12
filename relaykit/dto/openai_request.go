@@ -496,6 +496,7 @@ type Message struct {
 	Content          any             `json:"content"`
 	Name             *string         `json:"name,omitempty"`
 	Prefix           *bool           `json:"prefix,omitempty"`
+	Partial          *bool           `json:"partial,omitempty"` // Kimi Partial Mode; Prefix is DeepSeek's equivalent
 	ReasoningContent *string         `json:"reasoning_content,omitempty"`
 	Reasoning        *string         `json:"reasoning,omitempty"`
 	ToolCalls        json.RawMessage `json:"tool_calls,omitempty"`

@@ -308,6 +308,24 @@ func TestGeneralOpenAIRequestPreserveMessageLevelTools(t *testing.T) {
 	assert.Contains(t, meta.CombineText, "lookup_order")
 }
 
+func TestGeneralOpenAIRequestPreserveKimiPartial(t *testing.T) {
+	for _, tc := range []struct {
+		name, message, expected string
+	}{
+		{name: "enabled", message: `{"role":"assistant","content":"MODEL ","partial":true}`, expected: "true"},
+		{name: "explicit false", message: `{"role":"assistant","content":"MODEL ","partial":false}`, expected: "false"},
+		{name: "omitted", message: `{"role":"assistant","content":"MODEL "}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var req GeneralOpenAIRequest
+			require.NoError(t, kitutil.Unmarshal([]byte(`{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":"hi"},`+tc.message+`]}`), &req))
+			encoded, err := kitutil.Marshal(req)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, ojson.GetBytes(encoded, "messages.1.partial").Raw)
+		})
+	}
+}
+
 func TestSGLangRequestExtensionsRoundTrip(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
