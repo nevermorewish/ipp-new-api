@@ -82,6 +82,22 @@ func patchClaudeMessageDeltaUsageData(data string, usage *dto.ClaudeUsage) strin
 	return relayconvert.PatchClaudeMessageDeltaUsageData(data, usage)
 }
 
+// claudeKVVCacheCompat reports whether the Kimi vendor cache contract applies
+// to this native Messages request. The official Messages shape reports the
+// cache write split under usage.cache_creation, while a KVV upstream reports it
+// as cache_write_token_details; the translation is opt-in per channel and
+// model, exactly like the Chat contract.
+func claudeKVVCacheCompat(info *relaycommon.RelayInfo) bool {
+	if info == nil || info.ChannelMeta == nil ||
+		info.ChannelType != constant.ChannelTypeMoonshot ||
+		!info.ChannelSetting.MoonshotKVVEnabled ||
+		!dto.IsKimiK3FamilyModel(info.UpstreamModelName) {
+		return false
+	}
+	return info.ChannelSetting.MoonshotKVVParamCompat ||
+		(dto.IsKimiK31Model(info.UpstreamModelName) && info.ChannelSetting.MoonshotK31ParamCompat)
+}
+
 func FormatClaudeResponseInfo(claudeResponse *dto.ClaudeResponse, oaiResponse *dto.ChatCompletionsStreamResponse, claudeInfo *ClaudeResponseInfo) bool {
 	return relayconvert.FormatClaudeResponseInfo(claudeResponse, oaiResponse, claudeInfo)
 }
@@ -116,14 +132,33 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 			if claudeResponse.Message != nil {
 				info.UpstreamModelName = claudeResponse.Message.Model
 			}
+			// A KVV upstream reports the cache write split in its own
+			// vocabulary, and message_start carries no split at all. Translate
+			// it here so both stream events report the official cache_creation
+			// object; a split the upstream did send is never rewritten.
+			if claudeKVVCacheCompat(info) && !shouldSkipClaudeMessageDeltaUsagePatch(info) {
+				data = relayconvert.PatchClaudeUsageCacheCreationFromDetails(data, "message.usage")
+			}
 		} else if claudeResponse.Type == "message_delta" {
 			// 确保 message_delta 的 usage 包含完整的 input_tokens 和 cache 相关字段
 			// 解决 AWS Bedrock 等上游返回的 message_delta 缺少这些字段的问题
 			if !shouldSkipClaudeMessageDeltaUsagePatch(info) {
+				if claudeKVVCacheCompat(info) {
+					data = relayconvert.PatchClaudeUsageCacheCreationFromDetails(data, "usage")
+				}
 				data = patchClaudeMessageDeltaUsageData(data, buildMessageDeltaPatchUsage(&claudeResponse, claudeInfo))
 			}
 		}
 		countClaudeStreamBillableTools(info, &claudeResponse)
+		// The bytes here come from upstream, not from a struct, so the
+		// internal usage fields can only be present when this gateway served
+		// the request itself or a conversion added them. Pass-through forwards
+		// the upstream event verbatim.
+		if !shouldSkipClaudeMessageDeltaUsagePatch(info) {
+			if scrubbed, didScrub := dto.ScrubClaudeInternalUsageInBody(common.StringToByteSlice(data)); didScrub {
+				data = string(scrubbed)
+			}
+		}
 		helper.ClaudeChunkData(c, claudeResponse, data)
 	} else if info.RelayFormat == types.RelayFormatOpenAI {
 		state, err := claudeToChatStreamState(info)

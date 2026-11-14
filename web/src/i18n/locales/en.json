@@ -7535,6 +7535,10 @@
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom",
     "By clicking sign in, you agree to our": "By clicking sign in, you agree to our",
-    "By creating an account, you agree to our": "By creating an account, you agree to our"
+    "By creating an account, you agree to our": "By creating an account, you agree to our",
+    "KVV parameter compatibility": "KVV parameter compatibility",
+    "K3.1 parameter compatibility": "K3.1 parameter compatibility",
+    "Requires KVV adaptation. Rewrite instead of rejecting: accept any temperature from 0 to 1 and send 1, and map reasoning effort minimal, medium and xhigh to low, high and max, ignoring case. Other invalid values still return 400. The legacy effort rewrite is ignored while K3.1 parameter compatibility is on.": "Requires KVV adaptation. Rewrite instead of rejecting: accept any temperature from 0 to 1 and send 1, and map reasoning effort minimal, medium and xhigh to low, high and max, ignoring case. Other invalid values still return 400. The legacy effort rewrite is ignored while K3.1 parameter compatibility is on.",
+    "Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.": "Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility."
   }
 }

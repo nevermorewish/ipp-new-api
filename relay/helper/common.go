@@ -202,6 +202,12 @@ func ClaudeData(c *gin.Context, resp dto.ClaudeResponse) error {
 	if err != nil {
 		common.SysError(common.LogText("error marshalling stream response: %s", err.Error()))
 	} else {
+		// Every frame here is built from a struct, so a converted upstream can
+		// have attached the gateway's own accounting fields to usage. Strip
+		// them once, before the bytes reach the client.
+		if scrubbed, didScrub := dto.ScrubClaudeInternalUsageInBody(jsonData); didScrub {
+			jsonData = scrubbed
+		}
 		c.Render(-1, common.CustomEvent{Data: fmt.Sprintf("event: %s\n", resp.Type)})
 		c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonData)})
 	}

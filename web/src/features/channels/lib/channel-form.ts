@@ -265,6 +265,8 @@ export const channelFormSchema = z
     force_format: z.boolean().optional(),
     thinking_to_content: z.boolean().optional(),
     moonshot_kvv_enabled: z.boolean().optional(),
+    moonshot_kvv_param_compat: z.boolean().optional(),
+    moonshot_k31_param_compat: z.boolean().optional(),
     moonshot_video_to_images: z.boolean().optional(),
     proxy: z
       .string()
@@ -467,6 +469,8 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   force_format: false,
   thinking_to_content: false,
   moonshot_kvv_enabled: false,
+  moonshot_kvv_param_compat: false,
+  moonshot_k31_param_compat: false,
   moonshot_video_to_images: false,
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
@@ -519,6 +523,8 @@ export function transformChannelToFormDefaults(
     force_format: false,
     thinking_to_content: false,
     moonshot_kvv_enabled: false,
+    moonshot_kvv_param_compat: false,
+    moonshot_k31_param_compat: false,
     moonshot_video_to_images: false,
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
@@ -543,6 +549,8 @@ export function transformChannelToFormDefaults(
         force_format: parsed.force_format || false,
         thinking_to_content: parsed.thinking_to_content || false,
         moonshot_kvv_enabled: parsed.moonshot_kvv_enabled === true,
+        moonshot_kvv_param_compat: parsed.moonshot_kvv_param_compat === true,
+        moonshot_k31_param_compat: parsed.moonshot_k31_param_compat === true,
         moonshot_video_to_images: parsed.moonshot_video_to_images === true,
         proxy: parsed.proxy || '',
         http_protocol: protocol,
@@ -700,6 +708,14 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
         : undefined,
     moonshot_kvv_enabled:
       formData.type === 25 && formData.moonshot_kvv_enabled === true
+        ? true
+        : undefined,
+    moonshot_kvv_param_compat:
+      formData.type === 25 && formData.moonshot_kvv_param_compat === true
+        ? true
+        : undefined,
+    moonshot_k31_param_compat:
+      formData.type === 25 && formData.moonshot_k31_param_compat === true
         ? true
         : undefined,
     proxy: formData.proxy?.trim() || '',

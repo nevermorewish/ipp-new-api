@@ -30,8 +30,56 @@ func (a *Adaptor) ConvertGeminiRequest(*gin.Context, *relaycommon.RelayInfo, *dt
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ClaudeRequest) (any, error) {
+	if err := adaptKVVMessagesCacheControl(info, req); err != nil {
+		return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
 	adaptor := claude.Adaptor{}
 	return adaptor.ConvertClaudeRequest(c, info, req)
+}
+
+// adaptKVVMessagesCacheControl aligns a Claude Messages request with the
+// official KVV cache contract while the compatibility switch is on: an
+// unsupported cache_control member becomes the 400 the official endpoint would
+// return, and a body-level lifetime is lifted to the request level because the
+// official endpoint reads only the top-level field and would otherwise fall
+// back to the default 5m lifetime.
+func adaptKVVMessagesCacheControl(info *relaycommon.RelayInfo, request *dto.ClaudeRequest) error {
+	if !kvvMessagesCacheCompat(info, request) {
+		return nil
+	}
+	if err := validateKVVMessagesCacheControl(request.CacheControl, "cache_control"); err != nil {
+		return err
+	}
+	for messageIndex := range request.Messages {
+		for blockIndex, control := range claudeContentCacheControls(request.Messages[messageIndex].Content) {
+			path := fmt.Sprintf("messages[%d].content[%d].cache_control", messageIndex, blockIndex)
+			if err := validateKVVMessagesCacheControl(control, path); err != nil {
+				return err
+			}
+		}
+	}
+	ttl, ok := kimiMessagesCacheTTL(request)
+	if !ok {
+		return nil
+	}
+	request.CacheControl, _ = common.Marshal(map[string]string{"type": "ephemeral", "ttl": ttl})
+	return nil
+}
+
+// kvvMessagesCacheCompat reports whether the KVV cache contract applies to this
+// Messages request. The switch is shared with the Chat contract, and the model
+// check keeps non-K3 Moonshot models on their existing behavior.
+func kvvMessagesCacheCompat(info *relaycommon.RelayInfo, request *dto.ClaudeRequest) bool {
+	if info == nil || info.ChannelMeta == nil || request == nil ||
+		info.ChannelType != channelconstant.ChannelTypeMoonshot ||
+		!info.ChannelSetting.MoonshotKVVEnabled {
+		return false
+	}
+	if !isKimiK3FamilyModel(info.UpstreamModelName) {
+		return false
+	}
+	return info.ChannelSetting.MoonshotKVVParamCompat ||
+		(isKimiK31Model(info.UpstreamModelName) && info.ChannelSetting.MoonshotK31ParamCompat)
 }
 
 func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
@@ -98,7 +146,7 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 
 func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
 	if KVVEnabled(info) {
-		if err := adaptKVVRequest(request); err != nil {
+		if err := adaptKVVRequest(request, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 		if strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro") && request.ReasoningEffort == "none" {
@@ -108,7 +156,77 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request.Temperature != nil && isTemperatureOneOnlyModel(getUpstreamModelName(info, request.Model)) && *request.Temperature != 1.0 {
 		request.Temperature = common.GetPointer[float64](1.0)
 	}
+	// Moonshot only reports prompt cache usage for streaming requests when the
+	// upstream request opts into the terminal usage chunk. Enable it on the wire
+	// even when the client omitted stream_options (or set include_usage to
+	// false); info.ShouldIncludeUsage still controls whether that chunk is
+	// exposed back to the client.
+	ensureKimiStreamUsage(request)
 	return request, nil
+}
+
+func ensureKimiStreamUsage(request *dto.GeneralOpenAIRequest) {
+	if request == nil || request.Stream == nil || !*request.Stream {
+		return
+	}
+	if request.StreamOptions == nil {
+		request.StreamOptions = &dto.StreamOptions{IncludeUsage: true}
+		return
+	}
+	request.StreamOptions.IncludeUsage = true
+}
+
+func hasMeaningfulKimiMessageContent(content any) bool {
+	switch value := content.(type) {
+	case nil:
+		return false
+	case string:
+		return strings.TrimSpace(value) != ""
+	case []any:
+		for _, item := range value {
+			if hasMeaningfulKimiMessageContentItem(item) {
+				return true
+			}
+		}
+		return false
+	case []dto.MediaContent:
+		for _, item := range value {
+			if item.Type != dto.ContentTypeText || strings.TrimSpace(item.Text) != "" {
+				return true
+			}
+		}
+		return false
+	default:
+		// Preserve malformed or provider-specific content so this compatibility
+		// filter does not silently turn an unrelated request error into data loss.
+		return true
+	}
+}
+
+func hasMeaningfulKimiMessageContentItem(item any) bool {
+	content, ok := item.(map[string]any)
+	if !ok {
+		return item != nil
+	}
+	contentType, _ := content["type"].(string)
+	if contentType != dto.ContentTypeText {
+		return len(content) > 0
+	}
+	text, _ := content["text"].(string)
+	return strings.TrimSpace(text) != ""
+}
+
+func hasKimiAssistantToolCalls(raw []byte) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var toolCalls []dto.ToolCallRequest
+	if err := common.Unmarshal(raw, &toolCalls); err != nil {
+		// Keep malformed tool calls and let normal validation report them rather
+		// than misclassifying the entire assistant message as empty.
+		return true
+	}
+	return len(toolCalls) > 0
 }
 
 func getUpstreamModelName(info *relaycommon.RelayInfo, fallback string) string {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/MoeForge/moego/ojson"
 	kitutil "github.com/QuantumNous/new-api/relaykit/relayconvert/kitutil"
 	"github.com/QuantumNous/new-api/relaykit/types"
 )
@@ -585,6 +586,47 @@ func (c *Thinking) GetBudgetTokens() int {
 	return *c.BudgetTokens
 }
 
+// claudeInternalUsageKeys are gateway-internal accounting fields. BillingUsage
+// is the provider-native snapshot settlement reads, and the two flat counters
+// are the same TTL split that the cache_creation object already reports. The
+// official Messages contract has none of them, so they never go on the wire;
+// upstream responses still parse them because the struct fields stay readable.
+var claudeInternalUsageKeys = []string{
+	"billing_usage",
+	"claude_cache_creation_5_m_tokens",
+	"claude_cache_creation_1_h_tokens",
+}
+
+// ScrubClaudeInternalUsageInBody removes the internal accounting fields from a
+// Claude Messages response or stream event body. "message.usage" covers
+// message_start, "usage" covers every other event and the non-stream response.
+// Returns the (possibly new) body and whether it was modified; the input slice
+// is never mutated.
+func ScrubClaudeInternalUsageInBody(body []byte) ([]byte, bool) {
+	var paths []string
+	for _, prefix := range []string{"usage", "message.usage"} {
+		for _, key := range claudeInternalUsageKeys {
+			if ojson.GetBytes(body, prefix+"."+key).Exists() {
+				paths = append(paths, prefix+"."+key)
+			}
+		}
+	}
+	if len(paths) == 0 {
+		return body, false
+	}
+
+	scrubbed := append([]byte(nil), body...)
+	for _, path := range paths {
+		next, err := ojson.DeleteBytes(scrubbed, path)
+		if err != nil {
+			// Malformed body — forward it untouched.
+			return body, false
+		}
+		scrubbed = next
+	}
+	return scrubbed, true
+}
+
 func (c *ClaudeRequest) IsStringSystem() bool {
 	_, ok := c.System.(string)
 	return ok
@@ -690,9 +732,14 @@ type ClaudeUsage struct {
 	BillingUsage                *BillingUsage        `json:"billing_usage,omitempty"`
 }
 
+// ClaudeCacheCreationUsage is the TTL split of cache writes. Both counters are
+// part of the usage contract, so neither is omitted: a client comparing this
+// object with the one in message_delta must not read an absent lifetime as
+// unreported. The object itself is optional, so an upstream that reports no
+// cache_creation at all still round-trips unchanged.
 type ClaudeCacheCreationUsage struct {
-	Ephemeral5mInputTokens int `json:"ephemeral_5m_input_tokens,omitempty"`
-	Ephemeral1hInputTokens int `json:"ephemeral_1h_input_tokens,omitempty"`
+	Ephemeral5mInputTokens int `json:"ephemeral_5m_input_tokens"`
+	Ephemeral1hInputTokens int `json:"ephemeral_1h_input_tokens"`
 }
 
 func (u *ClaudeUsage) GetCacheCreation5mTokens() int {

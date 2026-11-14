@@ -11,12 +11,38 @@ import (
 	"github.com/QuantumNous/new-api/relaykit/types"
 )
 
+// IsKimiK3FamilyModel reports the models that share the K3 parameter contract:
+// fixed sampling values, preserved thinking and the 1M token context window.
+// It lives here so both the Moonshot adaptor and the Claude Messages relay can
+// apply the same KVV compatibility gate without importing each other.
+func IsKimiK3FamilyModel(model string) bool {
+	switch strings.ToLower(strings.TrimSpace(model)) {
+	case "kimi-k3", "kimi-k3.1-pro", "kimi-k3.1-pro-highspeed":
+		return true
+	default:
+		return false
+	}
+}
+
+// IsKimiK31Model reports the K3.1 releases, which have their own parameter
+// compatibility switch.
+func IsKimiK31Model(model string) bool {
+	switch strings.ToLower(strings.TrimSpace(model)) {
+	case "kimi-k3.1-pro", "kimi-k3.1-pro-highspeed":
+		return true
+	default:
+		return false
+	}
+}
+
 type ChannelSettings struct {
 	TaskPluginKey             string `json:"task_plugin_key,omitempty"`
 	ForceFormat               bool   `json:"force_format,omitempty"`
 	ThinkingToContent         bool   `json:"thinking_to_content,omitempty"`
 	MoonshotKVVEnabled        bool   `json:"moonshot_kvv_enabled,omitempty"`
-	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"` // Media compatibility: also turns Chat image_url strings into objects
+	MoonshotKVVParamCompat    bool   `json:"moonshot_kvv_param_compat,omitempty"` // KVV only: adapt temperature and reasoning effort instead of rejecting them
+	MoonshotK31ParamCompat    bool   `json:"moonshot_k31_param_compat,omitempty"` // KVV only, kimi-k3.1 models: answer exactly like the official API, stricter where it rejects and looser where it accepts
+	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"`  // Media compatibility: also turns Chat image_url strings into objects
 	Proxy                     string `json:"proxy"`
 	PassThroughBodyEnabled    bool   `json:"pass_through_body_enabled,omitempty"`
 	ResponsesWebSocketEnabled bool   `json:"responses_websocket_enabled,omitempty"`

@@ -480,6 +480,58 @@ func PatchClaudeMessageDeltaUsageData(data string, usage *dto.ClaudeUsage) strin
 	return data
 }
 
+// PatchClaudeUsageCacheCreationFromDetails fills the Claude cache_creation
+// object from the cache-write TTL split the upstream reported in its own
+// vocabulary. Moonshot answers a Messages request with
+// usage.cache_write_tokens_details.{ttl_5m_tokens,ttl_1h_tokens} instead of
+// cache_creation.{ephemeral_5m_input_tokens,ephemeral_1h_input_tokens}, so a
+// client comparing against the official shape sees the split missing.
+//
+// usagePath is "usage" for message_delta and "message.usage" for message_start.
+// An object the upstream already sent is never rewritten: its own split wins.
+func PatchClaudeUsageCacheCreationFromDetails(data string, usagePath string) string {
+	if data == "" || usagePath == "" {
+		return data
+	}
+	if !ojson.Get(data, usagePath).IsObject() {
+		return data
+	}
+	if ojson.Get(data, usagePath+".cache_creation").IsObject() {
+		return data
+	}
+	detailsPath := usagePath + ".cache_write_tokens_details"
+	if !ojson.Get(data, detailsPath).IsObject() {
+		return data
+	}
+
+	// Both lifetimes are written, so a 1h-only write still reports 5m as an
+	// explicit zero. A non-number member carries no count and reads as zero.
+	tokens5m := int(ojson.Get(data, detailsPath+".ttl_5m_tokens").Int())
+	tokens1h := int(ojson.Get(data, detailsPath+".ttl_1h_tokens").Int())
+	tokens5m = max(tokens5m, 0)
+	tokens1h = max(tokens1h, 0)
+	if tokens5m == 0 && tokens1h == 0 {
+		return data
+	}
+
+	patched := data
+	creationPath := usagePath + ".cache_creation"
+	for _, field := range []struct {
+		path  string
+		value int
+	}{
+		{creationPath + ".ephemeral_5m_input_tokens", tokens5m},
+		{creationPath + ".ephemeral_1h_input_tokens", tokens1h},
+	} {
+		next, err := ojson.Set(patched, field.path, field.value)
+		if err != nil {
+			return data
+		}
+		patched = next
+	}
+	return patched
+}
+
 func setMessageDeltaUsageInt(data string, path string, localValue int) string {
 	if localValue <= 0 {
 		return data

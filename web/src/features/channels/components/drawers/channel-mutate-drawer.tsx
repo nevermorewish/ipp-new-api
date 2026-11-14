@@ -301,6 +301,8 @@ const SENSITIVE_FORM_FIELDS = [
   'force_format',
   'thinking_to_content',
   'moonshot_kvv_enabled',
+  'moonshot_kvv_param_compat',
+  'moonshot_k31_param_compat',
   'moonshot_video_to_images',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
@@ -1908,32 +1910,80 @@ export function ChannelMutateDrawer({
   )
 
   const kvvFields = currentType === 25 && (
-    <FormField
-      control={form.control}
-      name='moonshot_kvv_enabled'
-      render={({ field }) => (
-        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
-          <div className='space-y-0.5'>
-            <FormLabel>{t('KVV adaptation')}</FormLabel>
-            <FormDescription>
-              {t(
-                'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.'
-              )}
-            </FormDescription>
-          </div>
-          <FormControl>
-            <Switch
-              disabled={sensitiveLocked}
-              checked={field.value === true}
-              onCheckedChange={field.onChange}
-              onBlur={field.onBlur}
-              name={field.name}
-              ref={field.ref}
-            />
-          </FormControl>
-        </FormItem>
-      )}
-    />
+    <>
+      <FormField
+        control={form.control}
+        name='moonshot_kvv_enabled'
+        render={({ field }) => (
+          <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+            <div className='space-y-0.5'>
+              <FormLabel>{t('KVV adaptation')}</FormLabel>
+              <FormDescription>
+                {t(
+                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.'
+                )}
+              </FormDescription>
+            </div>
+            <FormControl>
+              <Switch
+                disabled={sensitiveLocked}
+                checked={field.value === true}
+                onCheckedChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                ref={field.ref}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name='moonshot_kvv_param_compat'
+        render={({ field }) => (
+          <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+            <div className='space-y-0.5'>
+              <FormLabel>{t('KVV parameter compatibility')}</FormLabel>
+              <FormDescription>
+                {t(
+                  'Requires KVV adaptation. Rewrite instead of rejecting: accept any temperature from 0 to 1 and send 1, and map reasoning effort minimal, medium and xhigh to low, high and max, ignoring case. Other invalid values still return 400. The legacy effort rewrite is ignored while K3.1 parameter compatibility is on.'
+                )}
+              </FormDescription>
+            </div>
+            <FormControl>
+              <Switch
+                disabled={sensitiveLocked || form.watch('moonshot_kvv_enabled') !== true}
+                checked={field.value === true}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name='moonshot_k31_param_compat'
+        render={({ field }) => (
+          <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+            <div className='space-y-0.5'>
+              <FormLabel>{t('K3.1 parameter compatibility')}</FormLabel>
+              <FormDescription>
+                {t(
+                  'Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.'
+                )}
+              </FormDescription>
+            </div>
+            <FormControl>
+              <Switch
+                disabled={sensitiveLocked || form.watch('moonshot_kvv_enabled') !== true}
+                checked={field.value === true}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+    </>
   )
 
   const mediaCompatibilityFields = currentType === 25 && (

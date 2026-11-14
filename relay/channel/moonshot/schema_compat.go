@@ -5,9 +5,48 @@ import (
 	"math"
 	"reflect"
 	"strings"
+
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/relaykit/dto"
 )
 
 const maxKimiFunctionSchemaDepth = 64
+
+// normalizeKimiFunctionParameterSchemas fills an absent parameters schema and
+// repairs the redundant anyOf/items shape. The official K3.1 API accepts a
+// tool without parameters, so an empty schema is filled rather than rejected.
+//
+// Parameters stay the client's raw bytes (upstreams fill arguments in schema
+// property order); a schema is decoded and re-encoded only when it changes.
+func normalizeKimiFunctionParameterSchemas(requestTools []dto.ToolCallRequest) bool {
+	changed := false
+	for index := range requestTools {
+		if requestTools[index].Type != "function" {
+			continue
+		}
+		parameters := requestTools[index].Function.Parameters
+		if len(parameters) == 0 || common.GetJsonType(parameters) == "null" {
+			requestTools[index].Function.Parameters = json.RawMessage(`{"type":"object","properties":{}}`)
+			changed = true
+			continue
+		}
+		var schema any
+		if err := common.UnmarshalUseNumber(parameters, &schema); err != nil {
+			// Leave malformed schemas for upstream validation to report.
+			continue
+		}
+		if !normalizeKimiFunctionSchemaNode(schema, 0) {
+			continue
+		}
+		normalized, err := common.Marshal(schema)
+		if err != nil {
+			continue
+		}
+		requestTools[index].Function.Parameters = normalized
+		changed = true
+	}
+	return changed
+}
 
 func normalizeKimiFunctionSchemaNode(value any, depth int) bool {
 	if depth > maxKimiFunctionSchemaDepth {

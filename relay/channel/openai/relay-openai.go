@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -122,6 +123,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	var secondLastStreamData string // 保留倒数第二个stream data；部分兼容网关把完整usage放在倒数第二个事件
 	seenStreamToolCalls := make(map[string]struct{})
 	var streamFunctionCallNames []string
+	isMoonshot := info.ChannelType == constant.ChannelTypeMoonshot
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
 		if lastStreamData != "" {
@@ -176,9 +178,23 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 		}
 	}
 
+	// Moonshot reports the terminal usage on the chunk that also carries the
+	// last choice and finish_reason. OpenAI-compatible clients, including the
+	// Kimi cache-usage contract, expect that usage in its own choices=[] chunk
+	// after the finish chunk.
+	forwardLastData := lastStreamData
+	splitInlineUsage := ""
+	if isMoonshot && containStreamUsage && usageFrame == lastStreamData {
+		if stripped, usageJSON, ok := stripInlineStreamUsage(lastStreamData); ok {
+			forwardLastData = stripped
+			splitInlineUsage = usageJSON
+			shouldSendLastResp = true
+		}
+	}
+
 	if info.RelayFormat == types.RelayFormatOpenAI {
 		if shouldSendLastResp {
-			_ = sendStreamData(c, info, lastStreamData, info.ChannelSetting.ForceFormat, info.ChannelSetting.ThinkingToContent)
+			_ = sendStreamData(c, info, forwardLastData, info.ChannelSetting.ForceFormat, info.ChannelSetting.ThinkingToContent)
 		}
 	}
 
@@ -189,6 +205,26 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 
 	applyUsagePostProcessing(info, usage, common.StringToByteSlice(usageFrame))
 
+	if splitInlineUsage != "" && info.ShouldIncludeUsage && info.RelayFormat == types.RelayFormatOpenAI {
+		// Forward the upstream usage object verbatim: re-marshalling the typed
+		// DTO would drop explicit zero counts (cache_write_tokens: 0) and
+		// rename Moonshot's TTL split, which the cache contract compares
+		// field by field.
+		chunk := struct {
+			Id                string          `json:"id"`
+			Object            string          `json:"object"`
+			Created           int64           `json:"created"`
+			Model             string          `json:"model"`
+			SystemFingerprint string          `json:"system_fingerprint"`
+			Choices           []any           `json:"choices"`
+			Usage             json.RawMessage `json:"usage"`
+		}{
+			Id: responseId, Object: "chat.completion.chunk", Created: createAt, Model: model,
+			SystemFingerprint: systemFingerprint, Choices: []any{}, Usage: json.RawMessage(splitInlineUsage),
+		}
+		_ = helper.ObjectData(c, chunk)
+	}
+
 	for _, name := range streamFunctionCallNames {
 		info.CountBillableToolCall(dto.BuildInCallFunctionCall, name)
 	}
@@ -196,6 +232,53 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	HandleFinalResponse(c, info, lastStreamData, responseId, createAt, model, systemFingerprint, usage, containStreamUsage)
 
 	return usage, nil
+}
+
+// stripInlineStreamUsage removes usage members from a chunk that also carries
+// choices and returns the removed top-level usage as raw JSON, so the
+// standalone usage chunk can forward exactly what the upstream reported. A
+// choices=[] usage chunk is already the standard shape and is left untouched,
+// which yields ok=false.
+func stripInlineStreamUsage(data string) (string, string, bool) {
+	var chunk struct {
+		Usage   json.RawMessage `json:"usage"`
+		Choices []struct {
+			Usage json.RawMessage `json:"usage"`
+		} `json:"choices"`
+	}
+	if err := common.UnmarshalJsonStr(data, &chunk); err != nil {
+		return data, "", false
+	}
+	if len(chunk.Choices) == 0 {
+		return data, "", false
+	}
+	hasUsage := len(chunk.Usage) > 0 && string(chunk.Usage) != "null"
+	for i := range chunk.Choices {
+		if len(chunk.Choices[i].Usage) > 0 && string(chunk.Choices[i].Usage) != "null" {
+			hasUsage = true
+		}
+	}
+	if !hasUsage {
+		return data, "", false
+	}
+	usageJSON := ""
+	if len(chunk.Usage) > 0 && string(chunk.Usage) != "null" {
+		usageJSON = string(chunk.Usage)
+	}
+	stripped, err := ojson.Delete(data, "usage")
+	if err != nil {
+		return data, "", false
+	}
+	for i := range chunk.Choices {
+		if len(chunk.Choices[i].Usage) > 0 && string(chunk.Choices[i].Usage) != "null" {
+			path := fmt.Sprintf("choices.%d.usage", i)
+			stripped, err = ojson.Delete(stripped, path)
+			if err != nil {
+				return data, "", false
+			}
+		}
+	}
+	return stripped, usageJSON, usageJSON != ""
 }
 
 // observeStreamChoices collects billable function call names and records the
@@ -353,6 +436,11 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		claudeRespStr, err := common.Marshal(convertResult.Value)
 		if err != nil {
 			return nil, types.NewError(err, types.ErrorCodeBadResponseBody)
+		}
+		// The converted body carries the gateway's own accounting fields on
+		// usage; strip them so the client sees the official Messages shape.
+		if scrubbed, didScrub := dto.ScrubClaudeInternalUsageInBody(claudeRespStr); didScrub {
+			claudeRespStr = scrubbed
 		}
 		responseBody = claudeRespStr
 	case types.RelayFormatGemini:

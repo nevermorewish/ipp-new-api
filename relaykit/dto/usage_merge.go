@@ -337,6 +337,12 @@ func mergeInputTokenDetails(current *InputTokenDetails, incoming InputTokenDetai
 		if incoming.CacheWriteTokensDetails.TTL12hTokens > 0 {
 			merged.TTL12hTokens = incoming.CacheWriteTokensDetails.TTL12hTokens
 		}
+		if incoming.CacheWriteTokensDetails.TTL5mTokens > 0 {
+			merged.TTL5mTokens = incoming.CacheWriteTokensDetails.TTL5mTokens
+		}
+		if incoming.CacheWriteTokensDetails.TTL1hTokens > 0 {
+			merged.TTL1hTokens = incoming.CacheWriteTokensDetails.TTL1hTokens
+		}
 		current.CacheWriteTokensDetails = &merged
 	}
 	if incoming.TextTokens > 0 {

@@ -200,9 +200,20 @@ func (s *ResponsesToClaudeStreamState) ensureMessageStart(estimatedInputTokens i
 	}
 	s.sentMessageStart = true
 	inputTokens := estimatedInputTokens
+	// message_start carries the same usage shape as message_delta: the
+	// cache_creation object is always present, with both lifetimes, so a
+	// client comparing the two events never has to guess whether an absent
+	// lifetime means zero or "not reported yet".
+	startUsage := &dto.ClaudeUsage{
+		InputTokens:   inputTokens,
+		CacheCreation: &dto.ClaudeCacheCreationUsage{},
+	}
 	if s.Usage != nil {
 		if usage := sharedclaude.UsageFromOpenAI(s.Usage); usage != nil {
-			inputTokens = usage.InputTokens
+			startUsage.InputTokens = usage.InputTokens
+			if usage.CacheCreation != nil {
+				startUsage.CacheCreation = usage.CacheCreation
+			}
 		}
 	}
 	message := &dto.ClaudeMediaMessage{
@@ -210,7 +221,7 @@ func (s *ResponsesToClaudeStreamState) ensureMessageStart(estimatedInputTokens i
 		Type:  "message",
 		Role:  "assistant",
 		Model: s.Model,
-		Usage: &dto.ClaudeUsage{InputTokens: inputTokens},
+		Usage: startUsage,
 	}
 	message.SetContent(make([]any, 0))
 	return []*dto.ClaudeResponse{{Type: "message_start", Message: message}}

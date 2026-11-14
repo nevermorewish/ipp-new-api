@@ -190,8 +190,9 @@ func StreamResponseOpenAI2Claude(openAIResponse *dto.ChatCompletionsStreamRespon
 		// clients treat message_delta as authoritative for the fields it
 		// carries, including a corrected input_tokens.
 		startUsage := &dto.ClaudeUsage{
-			InputTokens:  info.GetEstimatePromptTokens(),
-			OutputTokens: 0,
+			InputTokens:   info.GetEstimatePromptTokens(),
+			OutputTokens:  0,
+			CacheCreation: &dto.ClaudeCacheCreationUsage{},
 		}
 		if openAIResponse.Usage != nil && dto.HasOpenAIUsageTokens(openAIResponse.Usage) {
 			if real := buildClaudeUsageFromOpenAIUsage(openAIResponse.Usage); real != nil {

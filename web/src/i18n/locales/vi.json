@@ -7535,6 +7535,10 @@
     "Zhipu V4": "Zhipu V4",
     "Zoom": "Zoom",
     "By clicking sign in, you agree to our": "Bằng cách nhấp đăng nhập, bạn đồng ý với",
-    "By creating an account, you agree to our": "Bằng cách tạo tài khoản, bạn đồng ý với"
+    "By creating an account, you agree to our": "Bằng cách tạo tài khoản, bạn đồng ý với",
+    "KVV parameter compatibility": "Tương thích tham số KVV",
+    "K3.1 parameter compatibility": "Tương thích tham số K3.1",
+    "Requires KVV adaptation. Rewrite instead of rejecting: accept any temperature from 0 to 1 and send 1, and map reasoning effort minimal, medium and xhigh to low, high and max, ignoring case. Other invalid values still return 400. The legacy effort rewrite is ignored while K3.1 parameter compatibility is on.": "Yêu cầu áp dụng KVV. Ghi lại thay vì từ chối: chấp nhận temperature từ 0 đến 1 và gửi 1, đồng thời ánh xạ reasoning effort minimal, medium và xhigh thành low, high và max, không phân biệt hoa thường. Các giá trị không hợp lệ khác vẫn trả về 400. Việc ghi lại effort này không áp dụng khi bật tương thích K3.1.",
+    "Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.": "Yêu cầu áp dụng KVV. Chỉ áp dụng cho các mô hình kimi-k3.1 và phán định hoàn toàn giống API chính thức: chấp nhận dạng viết tắt chuỗi cho media, tools không có parameters và việc hạ ngân sách đầu ra trong giới hạn tối đa của mô hình, đồng thời trả về 400 cho giá trị lấy mẫu cố định bị từ chối, nội dung rỗng, prediction hay tùy chọn cache không hợp lệ, reasoning_effort ngoài low, high và max, hoặc ngân sách đầu ra vượt giới hạn tối đa của mô hình. Ưu tiên cao hơn tương thích tham số KVV."
   }
 }

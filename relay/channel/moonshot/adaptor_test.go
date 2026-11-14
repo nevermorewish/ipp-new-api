@@ -296,6 +296,41 @@ func TestKVVRequestContract(t *testing.T) {
 }
 
 func TestKVVThinkingAndSwitch(t *testing.T) {
+	// The wider OpenAI and Anthropic levels are the official 400 on the
+	// baseline and are rewritten only while KVV parameter compatibility is on.
+	for _, alias := range []struct {
+		name, body, forceParamCompat string
+	}{
+		{"minimal alias", `{"reasoning_effort":"minimal"}`, "low"},
+		{"medium alias", `{"reasoning_effort":"medium"}`, "high"},
+		{"xhigh alias", `{"reasoning_effort":"xhigh"}`, "max"},
+		{"explicit medium alias", `{"thinking":{"effort":"medium"}}`, "high"},
+	} {
+		t.Run(alias.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(alias.body, &request))
+			request.Model = "kimi-k3"
+			info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3",
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true},
+			}}
+			_, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+			var apiErr *types.NewAPIError
+			require.ErrorAs(t, err, &apiErr)
+			assert.Equal(t, 400, apiErr.StatusCode)
+
+			var compatRequest dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(alias.body, &compatRequest))
+			compatRequest.Model = "kimi-k3"
+			info.ChannelSetting.MoonshotKVVParamCompat = true
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &compatRequest)
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			assert.Equal(t, alias.forceParamCompat, gjson.GetBytes(wire, "reasoning_effort").String())
+		})
+	}
+
 	for _, tc := range []struct {
 		name, body, kind, effort string
 	}{
@@ -303,10 +338,6 @@ func TestKVVThinkingAndSwitch(t *testing.T) {
 		{"template false", `{"chat_template_kwargs":{"thinking":false,"custom":7}}`, "disabled", "none"},
 		{"reasoning none", `{"reasoning_effort":"none"}`, "disabled", "none"},
 		{"reasoning low", `{"reasoning_effort":"low"}`, "enabled", "low"},
-		{"minimal alias", `{"reasoning_effort":"minimal"}`, "enabled", "low"},
-		{"medium alias", `{"reasoning_effort":"medium"}`, "enabled", "high"},
-		{"xhigh alias", `{"reasoning_effort":"xhigh"}`, "enabled", "max"},
-		{"explicit medium alias", `{"thinking":{"effort":"medium"}}`, "enabled", "high"},
 		{"explicit effort wins", `{"thinking":{"type":"enabled","effort":"low"},"reasoning_effort":"max"}`, "enabled", "low"},
 		{"disabled ignores effort and keep", `{"thinking":{"type":"disabled","keep":"none","effort":"high"},"reasoning_effort":"max"}`, "disabled", "none"},
 		{"explicit type wins", `{"thinking":{"type":"enabled"},"chat_template_kwargs":{"thinking":false}}`, "enabled", "max"},
@@ -926,6 +957,108 @@ func TestKimiToolResultPairing(t *testing.T) {
 				return
 			}
 			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
+// TestKVVK31ParamCompat covers the kimi-k3.1 switch. With it on the gateway
+// answers exactly like the official API, including the cases where the legacy
+// behavior accepted a value the official API rejects.
+func TestKVVK31ParamCompat(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, wantError string
+		compat                bool
+		legacy                bool
+		wantTemperature       float64
+	}{
+		{name: "off accepts unsupported temperature", body: `{"temperature":0.99}`, wantTemperature: 1},
+		{name: "on rejects unsupported temperature", compat: true, body: `{"temperature":0.99}`, wantError: "temperature"},
+		{name: "on accepts fixed temperature", compat: true, body: `{"temperature":1}`, wantTemperature: 1},
+		{name: "off maps medium to nothing", body: `{"reasoning_effort":"medium"}`, wantError: "reasoning effort"},
+		{name: "on rejects medium", compat: true, body: `{"reasoning_effort":"medium"}`, wantError: "reasoning effort"},
+		{name: "on accepts low", compat: true, body: `{"reasoning_effort":"low"}`},
+		{name: "on rejects minimal", compat: true, body: `{"reasoning_effort":"minimal"}`, wantError: "reasoning effort"},
+		{name: "on rejects xhigh", compat: true, body: `{"reasoning_effort":"xhigh"}`, wantError: "reasoning effort"},
+		{name: "official wins over legacy rewrite", compat: true, legacy: true, body: `{"reasoning_effort":"medium"}`, wantError: "reasoning effort"},
+		{name: "both reject top_p", body: `{"top_p":0.5}`, wantError: "top_p"},
+		{name: "on rejects top_p", compat: true, body: `{"top_p":0.5}`, wantError: "top_p"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
+			request.Model = "kimi-k3.1-pro"
+			info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: tc.compat, MoonshotKVVParamCompat: tc.legacy},
+			}}
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+			if tc.wantError != "" {
+				var apiErr *types.NewAPIError
+				require.ErrorAs(t, err, &apiErr)
+				assert.Equal(t, 400, apiErr.StatusCode)
+				assert.ErrorContains(t, err, tc.wantError)
+				return
+			}
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantTemperature, gjson.GetBytes(wire, "temperature").Float())
+			if gjson.Get(tc.body, "top_p").Exists() {
+				assert.Equal(t, 0.95, gjson.GetBytes(wire, "top_p").Float())
+			}
+		})
+	}
+}
+
+// TestKVVK31RequestValidation covers the request shapes the official API
+// rejects or accepts, which the gateway must answer the same way.
+func TestKVVK31RequestValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, wantError string
+		promptTokens          int
+		wantBudget            int64
+	}{
+		{name: "empty user content", body: `{"messages":[{"role":"user","content":""}]}`, wantError: "empty content"},
+		{name: "empty system content", body: `{"messages":[{"role":"system","content":""},{"role":"user","content":"hi"}]}`, wantError: "empty content"},
+		{name: "assistant tool call without content", body: `{"messages":[{"role":"user","content":"hi"},{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]}]}`},
+		{name: "empty tool result", body: `{"messages":[{"role":"user","content":"hi"},{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"f","arguments":"{}"}}]},{"role":"tool","tool_call_id":"c1","content":""}]}`},
+		{name: "illegal prediction type", body: `{"messages":[{"role":"user","content":"hi"}],"prediction":{"type":"bogus"}}`, wantError: "prediction.type"},
+		{name: "prediction text content", body: `{"messages":[{"role":"user","content":"hi"}],"prediction":{"type":"content","content":[{"type":"text","text":"a"}]}}`},
+		{name: "illegal cache ttl", body: `{"messages":[{"role":"user","content":"hi"}],"prompt_cache_options":{"ttl":"2h"}}`, wantError: "ttl"},
+		{name: "illegal cache mode", body: `{"messages":[{"role":"user","content":"hi"}],"prompt_cache_options":{"mode":"bogus"}}`, wantError: "mode"},
+		{name: "official cache option", body: `{"messages":[{"role":"user","content":"hi"}],"prompt_cache_options":{"mode":"explicit","ttl":"1h"}}`},
+		{name: "tool without parameters", body: `{"messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"f"}}]}`},
+		{name: "budget lowered to context window", body: `{"messages":[{"role":"user","content":"hi"}],"max_completion_tokens":1048576}`, promptTokens: 9, wantBudget: 1048567},
+		{name: "budget lowered to context without estimate", body: `{"messages":[{"role":"user","content":"hi"}],"max_completion_tokens":1048576}`, wantBudget: 1048576},
+		{name: "budget above model maximum", body: `{"messages":[{"role":"user","content":"hi"}],"max_completion_tokens":1048577}`, wantError: "max_completion_tokens"},
+		{name: "deprecated max_tokens above model maximum", body: `{"messages":[{"role":"user","content":"hi"}],"max_tokens":1048577}`, wantError: "max_tokens"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
+			request.Model = "kimi-k3.1-pro"
+			info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: true},
+			}}
+			info.SetEstimatePromptTokens(tc.promptTokens)
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+			if tc.wantError != "" {
+				var apiErr *types.NewAPIError
+				require.ErrorAs(t, err, &apiErr)
+				assert.Equal(t, 400, apiErr.StatusCode)
+				assert.ErrorContains(t, err, tc.wantError)
+				return
+			}
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			if tc.wantBudget > 0 {
+				assert.Equal(t, tc.wantBudget, gjson.GetBytes(wire, "max_completion_tokens").Int())
+			}
+			if gjson.Get(tc.body, "tools").Exists() {
+				assert.JSONEq(t, `{"type":"object","properties":{}}`, gjson.GetBytes(wire, "tools.0.function.parameters").Raw)
+			}
 		})
 	}
 }

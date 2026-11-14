@@ -279,15 +279,20 @@ type InputTokenDetails struct {
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
 }
 
-// CacheWriteTokenDetails is OpenAI's split of cache writes by lifetime. The
-// two counts do not overlap and sum to cache_write_tokens.
+// CacheWriteTokenDetails splits cache writes by lifetime. The counts do not
+// overlap and sum to cache_write_tokens. OpenAI reports 30m/12h; Moonshot
+// reports 5m/1h under the same nested field name, and clients compare the
+// TTL keys by name, so both vocabularies live here. Absent keys stay absent:
+// each family omits its zeros rather than emitting the other's placeholders.
 type CacheWriteTokenDetails struct {
-	TTL30mTokens int `json:"ttl_30m_tokens"`
-	TTL12hTokens int `json:"ttl_12h_tokens"`
+	TTL30mTokens int `json:"ttl_30m_tokens,omitempty"`
+	TTL12hTokens int `json:"ttl_12h_tokens,omitempty"`
+	TTL5mTokens  int `json:"ttl_5m_tokens,omitempty"`
+	TTL1hTokens  int `json:"ttl_1h_tokens,omitempty"`
 }
 
 func (d *CacheWriteTokenDetails) HasTokens() bool {
-	return d != nil && (d.TTL30mTokens != 0 || d.TTL12hTokens != 0)
+	return d != nil && (d.TTL30mTokens != 0 || d.TTL12hTokens != 0 || d.TTL5mTokens != 0 || d.TTL1hTokens != 0)
 }
 
 // CachedTokenDetails describes subsets of cached_tokens. Pointers distinguish
