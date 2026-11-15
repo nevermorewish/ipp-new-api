@@ -21,7 +21,8 @@ import (
 // an upstream explicitly rejects required because it only counts global tools.
 // Every Moonshot chat channel is covered, not only KVV ones: the upstream error
 // is the trigger, so a channel whose upstream accepts dynamic tools never pays
-// for the retry path.
+// for the retry path. A channel can also send the promoted body up front, for an
+// upstream that accepts the declaration but does not reliably honor required.
 func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relaycommon.RelayInfo, body io.Reader) (*http.Response, error) {
 	if info == nil || info.ChannelMeta == nil || info.ChannelType != channelconstant.ChannelTypeMoonshot ||
 		info.RelayMode != relayconstant.RelayModeChatCompletions ||
@@ -33,6 +34,13 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 		return nil, fmt.Errorf("read dynamic tools: %w", err)
 	}
 	fallback, eligible := promoteRequiredDynamicTools(payload)
+	// The Kimi Code upstream accepts required over tools declared only in the
+	// messages, but now and then never finishes the call: it runs to the
+	// output limit and returns no tool call. Declared at the top level, the
+	// same tools are called reliably.
+	if eligible && info.ChannelSetting.MoonshotHoistDynamicTools {
+		return channel.DoApiRequest(a, c, info, bytes.NewReader(fallback))
+	}
 	resp, err := channel.DoApiRequest(a, c, info, bytes.NewReader(payload))
 	if err != nil || !eligible || resp == nil || resp.StatusCode != http.StatusBadRequest || resp.Body == nil {
 		return resp, err

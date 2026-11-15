@@ -270,6 +270,7 @@ export const channelFormSchema = z
     moonshot_k31_param_compat: z.boolean().optional(),
     moonshot_video_to_images: z.boolean().optional(),
     moonshot_disable_thinking: z.boolean().optional(),
+    moonshot_hoist_dynamic_tools: z.boolean().optional(),
     proxy: z
       .string()
       .optional()
@@ -475,6 +476,7 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   moonshot_k31_param_compat: false,
   moonshot_video_to_images: false,
   moonshot_disable_thinking: false,
+  moonshot_hoist_dynamic_tools: false,
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
   http2_connection_shards: 1,
@@ -530,6 +532,7 @@ export function transformChannelToFormDefaults(
     moonshot_k31_param_compat: false,
     moonshot_video_to_images: false,
     moonshot_disable_thinking: false,
+    moonshot_hoist_dynamic_tools: false,
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
     http2_connection_shards: 1,
@@ -557,6 +560,8 @@ export function transformChannelToFormDefaults(
         moonshot_k31_param_compat: parsed.moonshot_k31_param_compat === true,
         moonshot_video_to_images: parsed.moonshot_video_to_images === true,
         moonshot_disable_thinking: parsed.moonshot_disable_thinking === true,
+        moonshot_hoist_dynamic_tools:
+          parsed.moonshot_hoist_dynamic_tools === true,
         proxy: parsed.proxy || '',
         http_protocol: protocol,
         http2_connection_shards: protocol === HTTP_PROTOCOL_HTTP1 ? 1 : shards,
@@ -713,6 +718,10 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
         : undefined,
     moonshot_disable_thinking:
       formData.type === 25 && formData.moonshot_disable_thinking === true
+        ? true
+        : undefined,
+    moonshot_hoist_dynamic_tools:
+      formData.type === 25 && formData.moonshot_hoist_dynamic_tools === true
         ? true
         : undefined,
     moonshot_kvv_enabled:

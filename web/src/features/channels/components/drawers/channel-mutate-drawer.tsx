@@ -307,6 +307,7 @@ const SENSITIVE_FORM_FIELDS = [
   'moonshot_k31_param_compat',
   'moonshot_video_to_images',
   'moonshot_disable_thinking',
+  'moonshot_hoist_dynamic_tools',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'proxy',
@@ -2033,6 +2034,35 @@ export function ChannelMutateDrawer({
             <FormDescription>
               {t(
                 'Thinking stays on by default. A Chat Completions request turns it off only when it asks to, for example with thinking.type set to disabled; KVV adaptation then accepts this for K3.1 Pro instead of returning 400. On kimi-k3 and kimi-k3.1 models, a named tool_choice with thinking off is answered through structured output and returned as a call to that function, so its prompt tokens differ from the official API.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const hoistDynamicToolsField = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_hoist_dynamic_tools'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Promote dynamic tools')}</FormLabel>
+            <FormDescription>
+              {t(
+                'When a Chat Completions request sets tool_choice to required, tools declared in messages are sent as top-level tools. Some Kimi upstreams otherwise now and then never finish the required call and stop at the output limit without a tool call. Because the declarations move, prompt tokens differ from the official API.'
               )}
             </FormDescription>
           </div>
@@ -4945,6 +4975,7 @@ export function ChannelMutateDrawer({
                 {kvvFields}
                 {mediaCompatibilityFields}
                 {disableThinkingField}
+                {hoistDynamicToolsField}
                 <OpenAIGPTSettings
                   control={form.control}
                   channelType={currentType}

@@ -89,6 +89,7 @@ export interface ChannelSettings {
   moonshot_k31_param_compat?: boolean
   moonshot_video_to_images?: boolean
   moonshot_disable_thinking?: boolean
+  moonshot_hoist_dynamic_tools?: boolean
   proxy?: string
   pass_through_body_enabled?: boolean
   responses_websocket_enabled?: boolean

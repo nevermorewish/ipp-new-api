@@ -869,6 +869,49 @@ func TestDynamicToolsRequiredFallback(t *testing.T) {
 	}
 }
 
+func TestDynamicToolsHoistSwitch(t *testing.T) {
+	service.InitHttpClient()
+	const tool = `{"type":"function","function":{"name":"calculate","parameters":{"type":"object","properties":{"expression":{"type":"string"}},"required":["expression"]}}}`
+	const user = `{"role":"user","content":"Calculate 23*47"}`
+	for _, tc := range []struct {
+		name, choice    string
+		stream, hoisted bool
+	}{
+		{"required", "required", false, true},
+		{"required stream", "required", true, true},
+		// auto leaves the call to the model, so the declaration keeps its
+		// official place in the conversation.
+		{"auto", "auto", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var received [][]byte
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				wire, _ := io.ReadAll(r.Body)
+				received = append(received, wire)
+				_, _ = io.WriteString(w, `{}`)
+			}))
+			defer upstream.Close()
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions, IsStream: tc.stream, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, ChannelBaseUrl: upstream.URL, UpstreamModelName: "kimi-k3.1-pro", ChannelSetting: dto.ChannelSettings{MoonshotHoistDynamicTools: true},
+			}}
+			body := fmt.Sprintf(`{"model":"kimi-k3.1-pro","tool_choice":%q,"stream":%t,"messages":[%s,{"role":"system","tools":[%s]}]}`, tc.choice, tc.stream, user, tool)
+			response, err := (&Adaptor{}).DoRequest(ctx, info, strings.NewReader(body))
+			require.NoError(t, err)
+			resp := response.(*http.Response)
+			defer resp.Body.Close()
+			// The promoted body is the first and only request, not a retry.
+			require.Len(t, received, 1)
+			want := body
+			if tc.hoisted {
+				want = fmt.Sprintf(`{"model":"kimi-k3.1-pro","tool_choice":"required","stream":%t,"messages":[%s],"tools":[%s]}`, tc.stream, user, tool)
+			}
+			assert.JSONEq(t, want, string(received[0]))
+		})
+	}
+}
+
 func TestPromoteRequiredDynamicToolsContract(t *testing.T) {
 	const dynamic = `{"type":"function","function":{"name":"dynamic","parameters":{"type":"object"}}}`
 	const global = `{"type":"function","function":{"name":"global","parameters":{"type":"object"}}}`
