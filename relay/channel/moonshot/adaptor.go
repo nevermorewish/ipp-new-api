@@ -354,6 +354,14 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		if err := validateKimiToolResultPairing(normalized, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
+		// Split here rather than in ConvertOpenAIRequest: a KVV request is
+		// converted twice, the split is not idempotent, and the dynamic tool
+		// fallback below must carry the same parts.
+		if info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotSplitCacheText &&
+			info.RelayFormat == types.RelayFormatOpenAI && info.RelayMode == constant.RelayModeChatCompletions &&
+			isKimiK3FamilyModel(info.UpstreamModelName) {
+			normalized = splitKimiCacheTextBody(normalized)
+		}
 		requestBody = bytes.NewReader(normalized)
 	}
 	return a.doRequestWithDynamicToolFallback(c, info, requestBody)

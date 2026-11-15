@@ -90,6 +90,7 @@ export interface ChannelSettings {
   moonshot_video_to_images?: boolean
   moonshot_disable_thinking?: boolean
   moonshot_hoist_dynamic_tools?: boolean
+  moonshot_split_cache_text?: boolean
   proxy?: string
   pass_through_body_enabled?: boolean
   responses_websocket_enabled?: boolean

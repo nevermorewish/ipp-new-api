@@ -308,6 +308,7 @@ const SENSITIVE_FORM_FIELDS = [
   'moonshot_video_to_images',
   'moonshot_disable_thinking',
   'moonshot_hoist_dynamic_tools',
+  'moonshot_split_cache_text',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'proxy',
@@ -2063,6 +2064,35 @@ export function ChannelMutateDrawer({
             <FormDescription>
               {t(
                 'When a Chat Completions request sets tool_choice to required, tools declared in messages are sent as top-level tools. Some Kimi upstreams otherwise now and then never finish the required call and stop at the output limit without a tool call. Because the declarations move, prompt tokens differ from the official API.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const splitCacheTextField = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_split_cache_text'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Split long text for prompt cache')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Sends long system and user text of Chat Completions requests to Kimi K3 models as several text parts, cut at fixed positions and before its last two lines. Unlike the official API, which matches the prompt cache on the token prefix, some upstreams reuse it only at message or part boundaries, so a request whose text changes only at the end would miss. The model receives the same text and prompt tokens do not change; each conversation misses the cache once after the switch is turned on.'
               )}
             </FormDescription>
           </div>
@@ -4976,6 +5006,7 @@ export function ChannelMutateDrawer({
                 {mediaCompatibilityFields}
                 {disableThinkingField}
                 {hoistDynamicToolsField}
+                {splitCacheTextField}
                 <OpenAIGPTSettings
                   control={form.control}
                   channelType={currentType}

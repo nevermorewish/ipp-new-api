@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -1376,6 +1377,176 @@ func TestKVVK31MediaStringShorthand(t *testing.T) {
 			// Sibling members survive the rewrite, and an object form is never touched.
 			assert.Equal(t, "keep", gjson.GetBytes(wire, "messages.0.content.1.detail_hint").String())
 			assert.JSONEq(t, `{"url":"https://example.com/b.png"}`, gjson.GetBytes(wire, "messages.0.content.3.image_url").Raw)
+		})
+	}
+}
+
+// kimiCacheTail is the per-request end of the vendor cache test: a fixed reply
+// instruction and an identifier that changes on every request.
+func kimiCacheTail(id string) string {
+	return "\n请只回复：已收到。\n请求编号：" + id + "；请求标识：" + strings.Repeat("a1", 32) + "。"
+}
+
+func TestKimiCacheTextPieces(t *testing.T) {
+	material := strings.Repeat("缓存资料。", 940) // 4700 runes without a line break
+	for _, tc := range []struct {
+		name string
+		text string
+		cuts []int // rune offsets where a new part starts; nil keeps the text whole
+	}{
+		{"below the minimum", strings.Repeat("a", 1023), nil},
+		{"no checkpoint below the length", strings.Repeat("a", 1024), nil},
+		{"checkpoints", strings.Repeat("a", 5000), []int{1024, 2048, 4096}},
+		{"checkpoints count runes", strings.Repeat("中", 3000), []int{1024, 2048}},
+		{"identifier on the last line", material + kimiCacheTail("1"), []int{1024, 2048, 4096, 4701, 4711}},
+		{"CRLF and a blank line", material + "\r\n\r\n请只回复：已收到。\r\n请求编号：1", []int{1024, 2048, 4096, 4704, 4715}},
+		{"trailing blank lines stay in the last part", material + "\n问题\n\n", []int{1024, 2048, 4096, 4701}},
+		{"line start on a checkpoint", strings.Repeat("a", 2047) + "\n" + strings.Repeat("b", 10), []int{1024, 2048}},
+		{"no whitespace-only part", strings.Repeat("a", 4095) + "\n\n问题", []int{1024, 2048, 4096}},
+		{"invalid UTF-8", strings.Repeat("a", 2000) + "\xff", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pieces := kimiCacheTextPieces(tc.text)
+			if tc.cuts == nil {
+				assert.Nil(t, pieces)
+				return
+			}
+			assert.Equal(t, tc.text, strings.Join(pieces, ""))
+			var cuts []int
+			offset := 0
+			for _, piece := range pieces[:len(pieces)-1] {
+				offset += utf8.RuneCountInString(piece)
+				cuts = append(cuts, offset)
+			}
+			assert.Equal(t, tc.cuts, cuts)
+			for _, piece := range pieces {
+				assert.True(t, utf8.ValidString(piece))
+				assert.NotEmpty(t, strings.TrimSpace(piece))
+			}
+		})
+	}
+
+	// Only the part that holds the identifier differs, so every part before it
+	// is read from the cache the previous request wrote.
+	first := kimiCacheTextPieces(material + kimiCacheTail("1"))
+	second := kimiCacheTextPieces(material + kimiCacheTail("20261115-000042"))
+	require.Len(t, second, len(first))
+	assert.Equal(t, first[:len(first)-1], second[:len(second)-1])
+	assert.NotEqual(t, first[len(first)-1], second[len(second)-1])
+}
+
+func TestSplitKimiCacheTextBody(t *testing.T) {
+	long := strings.Repeat("缓存资料。", 940) + kimiCacheTail("1")
+	quoted, err := common.Marshal(long)
+	require.NoError(t, err)
+	text := string(quoted)
+	joinParts := func(parts []gjson.Result) string {
+		var joined strings.Builder
+		for _, part := range parts {
+			assert.Equal(t, dto.ContentTypeText, part.Get("type").String())
+			joined.WriteString(part.Get("text").String())
+		}
+		return joined.String()
+	}
+
+	t.Run("only the message content changes", func(t *testing.T) {
+		body := `{"model":"kimi-k3.1-pro","extension":9007199254740993,"tools":[{"type":"function","function":{"name":"lookup","parameters":{"type":"object","x-large":9007199254740993}}}],"messages":[{"role":"system","content":"short"},{"role":"user","content":` + text + `}]}`
+		out := splitKimiCacheTextBody([]byte(body))
+		content := gjson.GetBytes(out, "messages.1.content")
+		require.True(t, content.IsArray())
+		assert.Equal(t, strings.Replace(body, text, content.Raw, 1), string(out))
+		assert.Len(t, content.Array(), 6)
+		assert.Equal(t, long, joinParts(content.Array()))
+	})
+
+	t.Run("system text", func(t *testing.T) {
+		out := splitKimiCacheTextBody([]byte(`{"messages":[{"role":"system","content":` + text + `}]}`))
+		assert.Equal(t, long, joinParts(gjson.GetBytes(out, "messages.0.content").Array()))
+	})
+
+	t.Run("other parts keep their place", func(t *testing.T) {
+		image := `{"type":"image_url","image_url":{"url":"data:image/png;base64,AAAA"}}`
+		out := splitKimiCacheTextBody([]byte(`{"messages":[{"role":"user","content":[` + image + `,{"type":"text","text":` + text + `}]}]}`))
+		parts := gjson.GetBytes(out, "messages.0.content").Array()
+		require.Len(t, parts, 7)
+		assert.JSONEq(t, image, parts[0].Raw)
+		assert.Equal(t, long, joinParts(parts[1:]))
+	})
+
+	shortParts := strings.Repeat(`{"type":"text","text":"x"},`, 15)
+	for _, tc := range []struct{ name, body string }{
+		{"assistant partial", `{"messages":[{"role":"assistant","content":` + text + `,"partial":true}]}`},
+		{"tool result", `{"messages":[{"role":"tool","tool_call_id":"call_1","content":` + text + `}]}`},
+		{"developer", `{"messages":[{"role":"developer","content":` + text + `}]}`},
+		{"context cache", `{"messages":[{"role":"cache","content":` + text + `}]}`},
+		{"dynamic tool declaration", `{"messages":[{"role":"system","content":` + text + `,"tools":[]}]}`},
+		{"part with cache_control", `{"messages":[{"role":"user","content":[{"type":"text","text":` + text + `,"cache_control":{"type":"ephemeral"}}]}]}`},
+		{"more parts than the cap", `{"messages":[{"role":"user","content":[` + shortParts + `{"type":"text","text":` + text + `}]}]}`},
+		{"short text", `{"messages":[{"role":"user","content":"hello"}]}`},
+		{"null content", `{"messages":[{"role":"user","content":null}]}`},
+		{"messages object", `{"messages":{"role":"user","content":` + text + `}}`},
+		{"not JSON", `{"messages":[`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.body, string(splitKimiCacheTextBody([]byte(tc.body))))
+		})
+	}
+}
+
+func TestKimiSplitCacheTextSwitch(t *testing.T) {
+	service.InitHttpClient()
+	long := strings.Repeat("缓存资料。", 940) + kimiCacheTail("1")
+	quoted, err := common.Marshal(long)
+	require.NoError(t, err)
+	const tool = `{"type":"function","function":{"name":"calculate","parameters":{"type":"object"}}}`
+	for _, tc := range []struct {
+		name               string
+		model              string
+		format             types.RelayFormat
+		on, hoist, splitIt bool
+	}{
+		{"on", "kimi-k3.1-pro", types.RelayFormatOpenAI, true, false, true},
+		{"off", "kimi-k3.1-pro", types.RelayFormatOpenAI, false, false, false},
+		{"other model", "kimi-k2.6", types.RelayFormatOpenAI, true, false, false},
+		{"Messages format", "kimi-k3.1-pro", types.RelayFormatClaude, true, false, false},
+		// The promoted dynamic tool body is built from the split body.
+		{"promoted dynamic tools", "kimi-k3.1-pro", types.RelayFormatOpenAI, true, true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var received [][]byte
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				wire, _ := io.ReadAll(r.Body)
+				received = append(received, wire)
+				_, _ = io.WriteString(w, `{}`)
+			}))
+			defer upstream.Close()
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			info := &relaycommon.RelayInfo{RelayFormat: tc.format, RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, ChannelBaseUrl: upstream.URL, UpstreamModelName: tc.model,
+				ChannelSetting: dto.ChannelSettings{MoonshotSplitCacheText: tc.on, MoonshotHoistDynamicTools: tc.hoist},
+			}}
+			body := `{"model":"` + tc.model + `","messages":[{"role":"user","content":` + string(quoted) + `}]}`
+			if tc.hoist {
+				body = `{"model":"` + tc.model + `","tool_choice":"required","messages":[{"role":"user","content":` + string(quoted) + `},{"role":"system","tools":[` + tool + `]}]}`
+			}
+			response, err := (&Adaptor{}).DoRequest(ctx, info, strings.NewReader(body))
+			require.NoError(t, err)
+			require.NoError(t, response.(*http.Response).Body.Close())
+			require.Len(t, received, 1)
+			content := gjson.GetBytes(received[0], "messages.0.content")
+			if !tc.splitIt {
+				assert.Equal(t, gjson.String, content.Type)
+				assert.Equal(t, long, content.String())
+				return
+			}
+			parts := content.Array()
+			require.Len(t, parts, 6)
+			assert.True(t, strings.HasPrefix(parts[5].Get("text").String(), "请求编号：1"))
+			if tc.hoist {
+				assert.JSONEq(t, `[`+tool+`]`, gjson.GetBytes(received[0], "tools").Raw)
+				assert.Len(t, gjson.GetBytes(received[0], "messages").Array(), 1)
+			}
 		})
 	}
 }

@@ -45,6 +45,7 @@ type ChannelSettings struct {
 	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"`  // Media compatibility: also turns Chat image_url strings into objects
 	MoonshotDisableThinking   bool   `json:"moonshot_disable_thinking,omitempty"` // Let a Chat Completions client turn thinking off; it stays on by default
 	MoonshotHoistDynamicTools bool   `json:"moonshot_hoist_dynamic_tools,omitempty"`
+	MoonshotSplitCacheText    bool   `json:"moonshot_split_cache_text,omitempty"` // Chat, K3 family: send long user and system text as several text parts so prompt cache is reused
 	Proxy                     string `json:"proxy"`
 	PassThroughBodyEnabled    bool   `json:"pass_through_body_enabled,omitempty"`
 	ResponsesWebSocketEnabled bool   `json:"responses_websocket_enabled,omitempty"`

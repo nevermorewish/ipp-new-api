@@ -67,6 +67,7 @@ const CONFIGURATION_BLOCKS = {
       'moonshot_video_to_images',
       'moonshot_disable_thinking',
       'moonshot_hoist_dynamic_tools',
+      'moonshot_split_cache_text',
       'remove_gpt_temperature',
       'remove_azure_gpt_encryption',
       'pass_through_body_enabled',
@@ -169,6 +170,7 @@ export function getChannelConfigurationState(
       (values.type === 25 && values.moonshot_video_to_images) ||
       (values.type === 25 && values.moonshot_disable_thinking) ||
       (values.type === 25 && values.moonshot_hoist_dynamic_tools) ||
+      (values.type === 25 && values.moonshot_split_cache_text) ||
       (values.type === CHANNEL_TYPE_OPENAI_GPT &&
         (values.remove_gpt_temperature ||
           values.remove_azure_gpt_encryption)) ||

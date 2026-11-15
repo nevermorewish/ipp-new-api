@@ -1656,6 +1656,10 @@ const MOONSHOT_SWITCHES = [
   { label: 'Media format compatibility', key: 'moonshot_video_to_images' },
   { label: 'Allow disabling thinking', key: 'moonshot_disable_thinking' },
   { label: 'Promote dynamic tools', key: 'moonshot_hoist_dynamic_tools' },
+  {
+    label: 'Split long text for prompt cache',
+    key: 'moonshot_split_cache_text',
+  },
 ] as const
 
 test.each(
