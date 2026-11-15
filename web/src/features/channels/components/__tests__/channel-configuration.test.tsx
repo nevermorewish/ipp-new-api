@@ -1652,13 +1652,22 @@ test('other providers hide and omit the Moonshot KVV setting', async () => {
   expect(JSON.parse(payload.setting).moonshot_kvv_enabled).toBeUndefined()
 })
 
-test.each([false, true])(
-  'Moonshot media format switch restores %s and saves its opposite',
-  async (enabled) => {
+const MOONSHOT_SWITCHES = [
+  { label: 'Media format compatibility', key: 'moonshot_video_to_images' },
+  { label: 'Disable thinking', key: 'moonshot_disable_thinking' },
+] as const
+
+test.each(
+  MOONSHOT_SWITCHES.flatMap((option) =>
+    [false, true].map((enabled) => ({ ...option, enabled }))
+  )
+)(
+  'Moonshot $label switch restores $enabled and saves its opposite',
+  async ({ label, key, enabled }) => {
     editingChannel = {
       ...editingChannel,
       type: 25,
-      setting: JSON.stringify({ moonshot_video_to_images: enabled }),
+      setting: JSON.stringify({ [key]: enabled }),
     }
     const put = vi
       .spyOn(api, 'put')
@@ -1667,9 +1676,7 @@ test.each([false, true])(
     render(<ConfigurationHarness currentRow={editingChannel} />)
     await screen.findByDisplayValue('Existing channel')
     await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
-    const toggle = screen.getByRole('switch', {
-      name: 'Media format compatibility',
-    })
+    const toggle = screen.getByRole('switch', { name: label })
     expect(toggle).toHaveAttribute('aria-checked', String(enabled))
     toggle.focus()
     await user.keyboard(' ')
@@ -1677,33 +1684,34 @@ test.each([false, true])(
     await user.click(screen.getByRole('button', { name: 'Update Channel' }))
     await waitFor(() => expect(put).toHaveBeenCalled())
     const payload = put.mock.calls[0]?.[1] as { setting: string }
-    expect(JSON.parse(payload.setting).moonshot_video_to_images === true).toBe(
-      !enabled
-    )
+    expect(JSON.parse(payload.setting)[key] === true).toBe(!enabled)
   }
 )
 
-test('other providers hide and omit the Moonshot media format setting', async () => {
-  editingChannel = {
-    ...editingChannel,
-    type: 1,
-    setting: '{"moonshot_video_to_images":true}',
+test.each(MOONSHOT_SWITCHES)(
+  'other providers hide and omit the Moonshot $label setting',
+  async ({ label, key }) => {
+    editingChannel = {
+      ...editingChannel,
+      type: 1,
+      setting: JSON.stringify({ [key]: true }),
+    }
+    const put = vi
+      .spyOn(api, 'put')
+      .mockResolvedValue({ data: { success: true } })
+    const user = userEvent.setup()
+    render(<ConfigurationHarness currentRow={editingChannel} />)
+    await screen.findByDisplayValue('Existing channel')
+    await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+    expect(
+      screen.queryByRole('switch', { name: label })
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Update Channel' }))
+    await waitFor(() => expect(put).toHaveBeenCalled())
+    const payload = put.mock.calls[0]?.[1] as { setting: string }
+    expect(JSON.parse(payload.setting)[key]).toBeUndefined()
   }
-  const put = vi
-    .spyOn(api, 'put')
-    .mockResolvedValue({ data: { success: true } })
-  const user = userEvent.setup()
-  render(<ConfigurationHarness currentRow={editingChannel} />)
-  await screen.findByDisplayValue('Existing channel')
-  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
-  expect(
-    screen.queryByRole('switch', { name: 'Media format compatibility' })
-  ).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: 'Update Channel' }))
-  await waitFor(() => expect(put).toHaveBeenCalled())
-  const payload = put.mock.calls[0]?.[1] as { setting: string }
-  expect(JSON.parse(payload.setting).moonshot_video_to_images).toBeUndefined()
-})
+)
 
 test('request processing configuration does not mark the network category as configured', async () => {
   editingChannel = {

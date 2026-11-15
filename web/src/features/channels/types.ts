@@ -88,6 +88,7 @@ export interface ChannelSettings {
   moonshot_kvv_param_compat?: boolean
   moonshot_k31_param_compat?: boolean
   moonshot_video_to_images?: boolean
+  moonshot_disable_thinking?: boolean
   proxy?: string
   pass_through_body_enabled?: boolean
   responses_websocket_enabled?: boolean

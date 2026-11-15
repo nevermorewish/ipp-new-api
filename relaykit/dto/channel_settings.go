@@ -43,6 +43,7 @@ type ChannelSettings struct {
 	MoonshotKVVParamCompat    bool   `json:"moonshot_kvv_param_compat,omitempty"` // KVV only: adapt temperature and reasoning effort instead of rejecting them
 	MoonshotK31ParamCompat    bool   `json:"moonshot_k31_param_compat,omitempty"` // KVV only, kimi-k3.1 models: answer exactly like the official API, stricter where it rejects and looser where it accepts
 	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"`  // Media compatibility: also turns Chat image_url strings into objects
+	MoonshotDisableThinking   bool   `json:"moonshot_disable_thinking,omitempty"` // Send every Chat Completions and Messages request with thinking disabled, whatever the client asks for
 	Proxy                     string `json:"proxy"`
 	PassThroughBodyEnabled    bool   `json:"pass_through_body_enabled,omitempty"`
 	ResponsesWebSocketEnabled bool   `json:"responses_websocket_enabled,omitempty"`

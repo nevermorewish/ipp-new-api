@@ -1063,22 +1063,20 @@ func TestKVVK31RequestValidation(t *testing.T) {
 	}
 }
 
-// TestKVVK31DisabledThinking covers disabled thinking on K3.1, which a named
-// tool_choice requires. The official API accepts it, so the K3.1 switch
-// forwards it in the official shape; without the switch the gateway still
-// rejects it.
+// TestKVVK31DisabledThinking covers disabled thinking on K3.1. The official API
+// accepts it, so the K3.1 switch forwards it in the official shape; without the
+// switch the gateway still rejects it.
 func TestKVVK31DisabledThinking(t *testing.T) {
-	const namedTool = `"tools":[{"type":"function","function":{"name":"get_weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}}],` +
-		`"tool_choice":{"type":"function","function":{"name":"get_weather"}},"messages":[{"role":"user","content":"北京天气怎么样？"}]`
+	const message = `"messages":[{"role":"user","content":"北京天气怎么样？"}]`
 	for _, tc := range []struct {
 		name, model, body, wantError string
 		compat                       bool
 	}{
-		{name: "switch off rejects", model: "kimi-k3.1-pro", body: `{"thinking":{"type":"disabled"},` + namedTool + `}`, wantError: "thinking must be enabled"},
-		{name: "thinking type", model: "kimi-k3.1-pro", compat: true, body: `{"thinking":{"type":"disabled"},` + namedTool + `}`},
-		{name: "reasoning effort none", model: "kimi-k3.1-pro", compat: true, body: `{"reasoning_effort":"none",` + namedTool + `}`},
-		{name: "non-thinking temperature", model: "kimi-k3.1-pro", compat: true, body: `{"thinking":{"type":"disabled"},"temperature":0.6,` + namedTool + `}`},
-		{name: "highspeed", model: "kimi-k3.1-pro-highspeed", compat: true, body: `{"thinking":{"type":"disabled","keep":"all"},` + namedTool + `}`},
+		{name: "switch off rejects", model: "kimi-k3.1-pro", body: `{"thinking":{"type":"disabled"},` + message + `}`, wantError: "thinking must be enabled"},
+		{name: "thinking type", model: "kimi-k3.1-pro", compat: true, body: `{"thinking":{"type":"disabled"},` + message + `}`},
+		{name: "reasoning effort none", model: "kimi-k3.1-pro", compat: true, body: `{"reasoning_effort":"none",` + message + `}`},
+		{name: "non-thinking temperature", model: "kimi-k3.1-pro", compat: true, body: `{"thinking":{"type":"disabled"},"temperature":0.6,` + message + `}`},
+		{name: "highspeed", model: "kimi-k3.1-pro-highspeed", compat: true, body: `{"thinking":{"type":"disabled","keep":"all"},` + message + `}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var request dto.GeneralOpenAIRequest
@@ -1101,10 +1099,195 @@ func TestKVVK31DisabledThinking(t *testing.T) {
 			require.NoError(t, err)
 			assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
 			assert.False(t, gjson.GetBytes(wire, "reasoning_effort").Exists())
-			assert.JSONEq(t, gjson.Get(tc.body, "tool_choice").Raw, gjson.GetBytes(wire, "tool_choice").Raw)
 			assert.Equal(t, gjson.Get(tc.body, "temperature").Raw, gjson.GetBytes(wire, "temperature").Raw)
 		})
 	}
+}
+
+// TestKVVK31NamedToolChoice covers a named tool_choice with thinking disabled.
+// Kimi upstreams reject it as if thinking were on, so the K3.1 switch asks for
+// the function's parameters as a json_schema response format and turns the
+// answer back into a call to that function.
+func TestKVVK31NamedToolChoice(t *testing.T) {
+	const weather = `{"type":"function","function":{"name":"get_weather","description":"Get the weather of a city.","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}`
+	const weatherFormat = `{"type":"json_schema","json_schema":{"name":"get_weather","description":"Get the weather of a city.","schema":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}`
+	const named = `"tool_choice":{"type":"function","function":{"name":"get_weather"}}`
+	const user = `{"role":"user","content":"北京天气怎么样？"}`
+	newInfo := func(stream bool) *relaycommon.RelayInfo {
+		return &relaycommon.RelayInfo{
+			RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+			IsStream: stream, DisablePing: true,
+			ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: true},
+			},
+		}
+	}
+
+	for _, tc := range []struct {
+		name, body string
+		wantFormat string // empty: the tool_choice is forwarded unchanged
+	}{
+		{name: "top-level tool replaces the client response format", wantFormat: weatherFormat,
+			body: `{"thinking":{"type":"disabled"},"tools":[` + weather + `],` + named + `,"response_format":{"type":"json_object"},"messages":[` + user + `]}`},
+		{name: "dynamic tool", wantFormat: weatherFormat,
+			body: `{"thinking":{"type":"disabled"},` + named + `,"messages":[{"role":"system","content":"","tools":[` + weather + `]},` + user + `]}`},
+		{name: "tool without parameters", wantFormat: `{"type":"json_schema","json_schema":{"name":"get_weather","schema":{"type":"object","properties":{}}}}`,
+			body: `{"thinking":{"type":"disabled"},"tools":[{"type":"function","function":{"name":"get_weather"}}],` + named + `,"messages":[` + user + `]}`},
+		{name: "undeclared function",
+			body: `{"thinking":{"type":"disabled"},"tools":[` + weather + `],"tool_choice":{"type":"function","function":{"name":"get_time"}},"messages":[` + user + `]}`},
+		{name: "thinking enabled",
+			body: `{"tools":[` + weather + `],` + named + `,"messages":[` + user + `]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
+			request.Model = "kimi-k3.1-pro"
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, newInfo(false), &request)
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			if tc.wantFormat == "" {
+				assert.JSONEq(t, gjson.Get(tc.body, "tool_choice").Raw, gjson.GetBytes(wire, "tool_choice").Raw)
+				assert.False(t, gjson.GetBytes(wire, "response_format").Exists())
+				return
+			}
+			assert.Equal(t, "none", gjson.GetBytes(wire, "tool_choice").String())
+			assert.JSONEq(t, tc.wantFormat, gjson.GetBytes(wire, "response_format").Raw)
+			assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
+		})
+	}
+
+	// The upstream bodies below are captured answers to the rewritten request.
+	originalTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() { constant.StreamingTimeout = originalTimeout })
+	const usage = `"usage":{"prompt_tokens":158,"completion_tokens":34,"total_tokens":192,"cached_tokens":0,"completion_tokens_details":{},"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0}}`
+	chunk := func(choice string) string {
+		return `data: {"choices":[` + choice + `],"created":1794743397,"id":"chatcmpl-7a7b","model":"kimi-k3.1-pro","object":"chat.completion.chunk"}` + "\n\n"
+	}
+	upstreamStream := chunk(`{"index":0,"delta":{"role":"assistant"}}`) + chunk(`{"index":0,"delta":{}}`)
+	for _, fragment := range []string{`{\"`, `city`, `\":`, ` \"`, `北京`, `\"}`} {
+		upstreamStream += chunk(`{"index":0,"delta":{"content":"` + fragment + `"}}`)
+	}
+	upstreamStream += `data: {"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}],"created":1794743397,"id":"chatcmpl-7a7b","model":"kimi-k3.1-pro","object":"chat.completion.chunk",` + usage + "}\n\ndata: [DONE]\n\n"
+	upstreamJSON := `{"choices":[{"index":0,"message":{"role":"assistant","content":"{\"city\": \"北京\"}"},"finish_reason":"stop"}],"created":1794743400,"id":"chatcmpl-fcbf","model":"kimi-k3.1-pro","object":"chat.completion",` + usage + `}`
+
+	for _, stream := range []bool{false, true} {
+		t.Run(fmt.Sprintf("response stream=%t", stream), func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(`{"thinking":{"type":"disabled"},"tools":[`+weather+`],`+named+`,"messages":[`+user+`]}`, &request))
+			request.Model = "kimi-k3.1-pro"
+			request.Stream = common.GetPointer(stream)
+			info := newInfo(stream)
+			adaptor := &Adaptor{}
+			_, err := adaptor.ConvertOpenAIRequest(nil, info, &request)
+			require.NoError(t, err)
+
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			upstream, contentType := upstreamJSON, "application/json"
+			if stream {
+				upstream, contentType = upstreamStream, "text/event-stream"
+			}
+			resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {contentType}}, Body: io.NopCloser(strings.NewReader(upstream))}
+			usageResult, apiErr := adaptor.DoResponse(c, resp, info)
+			require.Nil(t, apiErr)
+			// Usage is the upstream's own; only the answer's shape changes.
+			assert.Equal(t, 158, usageResult.(*dto.Usage).PromptTokens)
+
+			var id, name, arguments, content, finish string
+			if !stream {
+				body := recorder.Body.Bytes()
+				id = gjson.GetBytes(body, "choices.0.message.tool_calls.0.id").String()
+				name = gjson.GetBytes(body, "choices.0.message.tool_calls.0.function.name").String()
+				arguments = gjson.GetBytes(body, "choices.0.message.tool_calls.0.function.arguments").String()
+				content = gjson.GetBytes(body, "choices.0.message.content").String()
+				finish = gjson.GetBytes(body, "choices.0.finish_reason").String()
+				assert.Equal(t, "function", gjson.GetBytes(body, "choices.0.message.tool_calls.0.type").String())
+			}
+			for line := range strings.SplitSeq(recorder.Body.String(), "\n") {
+				event, ok := strings.CutPrefix(line, "data: ")
+				if !stream || !ok || !strings.HasPrefix(event, "{") {
+					continue
+				}
+				delta := gjson.Get(event, "choices.0.delta")
+				id += delta.Get("tool_calls.0.id").String()
+				name += delta.Get("tool_calls.0.function.name").String()
+				arguments += delta.Get("tool_calls.0.function.arguments").String()
+				content += delta.Get("content").String()
+				if reason := gjson.Get(event, "choices.0.finish_reason").String(); reason != "" {
+					finish = reason
+				}
+			}
+			assert.Regexp(t, `^get_weather_0_[0-9a-f]{8}$`, id)
+			assert.Equal(t, "get_weather", name)
+			assert.Equal(t, `{"city": "北京"}`, arguments)
+			assert.Empty(t, content)
+			assert.Equal(t, "tool_calls", finish)
+		})
+	}
+}
+
+// TestMoonshotDisableThinking covers the channel switch that sends every
+// request with thinking disabled, whatever the client asked for.
+func TestMoonshotDisableThinking(t *testing.T) {
+	const weather = `"tools":[{"type":"function","function":{"name":"get_weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}}]`
+	const named = `"tool_choice":{"type":"function","function":{"name":"get_weather"}}`
+	for _, tc := range []struct {
+		name, model, body string
+		kvv               bool
+		wantEmulated      bool
+	}{
+		{name: "client default without KVV", model: "kimi-k3.1-pro", body: `{}`},
+		{name: "client default with KVV", model: "kimi-k3.1-pro", kvv: true, body: `{"temperature":1}`},
+		{name: "client disabled thinking with KVV", model: "kimi-k3.1-pro", kvv: true, body: `{"thinking":{"type":"disabled"}}`},
+		{name: "client effort and template switch", model: "kimi-k3", kvv: true, body: `{"reasoning_effort":"high","chat_template_kwargs":{"thinking":true,"custom":7}}`},
+		{name: "K3 named tool", model: "kimi-k3.1-pro", kvv: true, body: `{` + weather + `,` + named + `}`, wantEmulated: true},
+		{name: "K3 named tool without KVV", model: "kimi-k3.1-pro", body: `{` + weather + `,` + named + `}`, wantEmulated: true},
+		{name: "other model keeps a named tool", model: "kimi-k2.6", body: `{` + weather + `,` + named + `}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
+			request.Model = tc.model
+			request.Messages = []dto.Message{{Role: "user", Content: "北京天气怎么样？"}}
+			info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: tc.model,
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: tc.kvv, MoonshotDisableThinking: true},
+			}}
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
+			assert.False(t, gjson.GetBytes(wire, "reasoning_effort").Exists())
+			if gjson.Get(tc.body, "chat_template_kwargs").Exists() {
+				assert.JSONEq(t, `{"thinking":false,"custom":7}`, gjson.GetBytes(wire, "chat_template_kwargs").Raw)
+			}
+			if tc.wantEmulated {
+				assert.Equal(t, "none", gjson.GetBytes(wire, "tool_choice").String())
+				assert.Equal(t, "get_weather", gjson.GetBytes(wire, "response_format.json_schema.name").String())
+			} else if gjson.Get(tc.body, "tool_choice").Exists() {
+				assert.JSONEq(t, gjson.Get(tc.body, "tool_choice").Raw, gjson.GetBytes(wire, "tool_choice").Raw)
+			}
+		})
+	}
+
+	t.Run("messages", func(t *testing.T) {
+		var request dto.ClaudeRequest
+		require.NoError(t, common.UnmarshalJsonStr(`{"model":"kimi-k3.1-pro","max_tokens":512,"thinking":{"type":"enabled","budget_tokens":1024},"messages":[{"role":"user","content":"hi"}]}`, &request))
+		info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatClaude, ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+			ChannelSetting: dto.ChannelSettings{MoonshotDisableThinking: true},
+		}}
+		converted, err := (&Adaptor{}).ConvertClaudeRequest(nil, info, &request)
+		require.NoError(t, err)
+		wire, err := common.Marshal(converted)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
+	})
 }
 
 // TestKVVK31MediaStringShorthand covers the official string shorthand for

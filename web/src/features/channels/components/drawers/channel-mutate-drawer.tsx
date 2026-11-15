@@ -304,6 +304,7 @@ const SENSITIVE_FORM_FIELDS = [
   'moonshot_kvv_param_compat',
   'moonshot_k31_param_compat',
   'moonshot_video_to_images',
+  'moonshot_disable_thinking',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'proxy',
@@ -1920,7 +1921,7 @@ export function ChannelMutateDrawer({
               <FormLabel>{t('KVV adaptation')}</FormLabel>
               <FormDescription>
                 {t(
-                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking unless K3.1 parameter compatibility is on. Disable global and channel body passthrough before use.'
+                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking unless K3.1 parameter compatibility or Disable thinking is on. Disable global and channel body passthrough before use.'
                 )}
               </FormDescription>
             </div>
@@ -1952,7 +1953,9 @@ export function ChannelMutateDrawer({
             </div>
             <FormControl>
               <Switch
-                disabled={sensitiveLocked || form.watch('moonshot_kvv_enabled') !== true}
+                disabled={
+                  sensitiveLocked || form.watch('moonshot_kvv_enabled') !== true
+                }
                 checked={field.value === true}
                 onCheckedChange={field.onChange}
               />
@@ -1969,13 +1972,15 @@ export function ChannelMutateDrawer({
               <FormLabel>{t('K3.1 parameter compatibility')}</FormLabel>
               <FormDescription>
                 {t(
-                  'Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters, disabled thinking and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.'
+                  'Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters, disabled thinking and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. A named tool_choice with thinking disabled is answered through structured output and returned as a call to that function, so its prompt tokens differ from the official API. Takes precedence over KVV parameter compatibility.'
                 )}
               </FormDescription>
             </div>
             <FormControl>
               <Switch
-                disabled={sensitiveLocked || form.watch('moonshot_kvv_enabled') !== true}
+                disabled={
+                  sensitiveLocked || form.watch('moonshot_kvv_enabled') !== true
+                }
                 checked={field.value === true}
                 onCheckedChange={field.onChange}
               />
@@ -1997,6 +2002,35 @@ export function ChannelMutateDrawer({
             <FormDescription>
               {t(
                 'Convert videos to sampled images and string image_url values to object form for upstreams that reject them. Requires image input support. Audio is not included.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const disableThinkingField = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_disable_thinking'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Disable thinking')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Send every Chat Completions and Messages request on this channel with thinking disabled, whatever the client asks for. On kimi-k3 and kimi-k3.1 models, a named tool_choice in Chat Completions is answered through structured output and returned as a call to that function, so its prompt tokens differ from the official API. Use only for models that support disabled thinking.'
               )}
             </FormDescription>
           </div>
@@ -4901,6 +4935,7 @@ export function ChannelMutateDrawer({
                 {thinkingFields}
                 {kvvFields}
                 {mediaCompatibilityFields}
+                {disableThinkingField}
                 <OpenAIGPTSettings
                   control={form.control}
                   channelType={currentType}

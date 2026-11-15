@@ -2,12 +2,14 @@ package moonshot
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/MoeForge/moego/ojson"
 	"github.com/QuantumNous/new-api/common"
 	channelconstant "github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/relay/channel"
@@ -22,6 +24,9 @@ import (
 )
 
 type Adaptor struct {
+	// namedToolCall is set when a named tool_choice went upstream as structured
+	// output, so the response must be turned back into that function call.
+	namedToolCall *kvvNamedToolCall
 }
 
 func (a *Adaptor) ConvertGeminiRequest(*gin.Context, *relaycommon.RelayInfo, *dto.GeminiChatRequest) (any, error) {
@@ -34,7 +39,21 @@ func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayIn
 		return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}
 	adaptor := claude.Adaptor{}
-	return adaptor.ConvertClaudeRequest(c, info, req)
+	converted, err := adaptor.ConvertClaudeRequest(c, info, req)
+	if err != nil {
+		return nil, err
+	}
+	// Set after the conversion so a model suffix cannot turn thinking back on.
+	if channelDisablesThinking(info) {
+		req.Thinking = &dto.Thinking{Type: "disabled"}
+	}
+	return converted, nil
+}
+
+// channelDisablesThinking reports whether the channel sends every request with
+// thinking disabled, whatever the client asked for.
+func channelDisablesThinking(info *relaycommon.RelayInfo) bool {
+	return info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotDisableThinking
 }
 
 // adaptKVVMessagesCacheControl aligns a Claude Messages request with the
@@ -151,20 +170,40 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if kvvMediaStringShorthand(info) {
 		rewriteKimiMediaStringShorthand(request)
 	}
+	disableThinking := channelDisablesThinking(info) && info.RelayMode == constant.RelayModeChatCompletions
 	if KVVEnabled(info) {
 		if err := adaptKVVRequest(request, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
-		if request.ReasoningEffort == "none" {
+		if request.ReasoningEffort == "none" && !disableThinking {
 			switch {
 			case kvvOfficialCompat(info):
 				// The official API accepts disabled thinking on K3.1, which a
 				// named tool_choice requires. thinking.type alone turns it off;
 				// none is not one of the official reasoning_effort levels.
 				request.ReasoningEffort = ""
+				a.namedToolCall = emulateKVVNamedToolChoice(request)
 			case strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro"):
 				return nil, types.NewOpenAIError(fmt.Errorf("thinking must be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 			}
+		}
+	}
+	if disableThinking {
+		// The client's own parameters were validated above in the mode it
+		// chose. thinking.type alone turns thinking off, reasoning_effort has
+		// no level for it, and an open-source template switch must agree.
+		request.THINKING = json.RawMessage(`{"type":"disabled"}`)
+		request.ReasoningEffort = ""
+		for _, key := range []string{"thinking", "enable_thinking"} {
+			if !ojson.GetBytes(request.ChatTemplateKwargs, key).Exists() {
+				continue
+			}
+			if updated, err := ojson.SetBytes(request.ChatTemplateKwargs, key, false); err == nil {
+				request.ChatTemplateKwargs = updated
+			}
+		}
+		if isKimiK3FamilyModel(getUpstreamModelName(info, request.Model)) {
+			a.namedToolCall = emulateKVVNamedToolChoice(request)
 		}
 	}
 	if request.Temperature != nil && isTemperatureOneOnlyModel(getUpstreamModelName(info, request.Model)) && *request.Temperature != 1.0 {
@@ -352,6 +391,18 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 		adaptor := claude.Adaptor{}
 		return adaptor.DoResponse(c, resp, info)
 	default:
+		if a.namedToolCall != nil {
+			if info.IsStream {
+				resp.Body = newKVVNamedToolCallStream(resp.Body, *a.namedToolCall)
+			} else {
+				body, err := io.ReadAll(resp.Body)
+				_ = resp.Body.Close()
+				if err != nil {
+					return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)
+				}
+				resp.Body = io.NopCloser(bytes.NewReader(a.namedToolCall.rewriteResponse(body)))
+			}
+		}
 		adaptor := openai.Adaptor{}
 		return adaptor.DoResponse(c, resp, info)
 	}
