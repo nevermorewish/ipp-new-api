@@ -156,7 +156,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 		if strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro") && request.ReasoningEffort == "none" {
-			return nil, types.NewOpenAIError(fmt.Errorf("kimi-k3.1-pro requires thinking to be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+			return nil, types.NewOpenAIError(fmt.Errorf("thinking must be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
 	}
 	if request.Temperature != nil && isTemperatureOneOnlyModel(getUpstreamModelName(info, request.Model)) && *request.Temperature != 1.0 {
@@ -310,7 +310,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 	if requestBody != nil {
 		payload, err := io.ReadAll(requestBody)
 		if err != nil {
-			return nil, fmt.Errorf("read Moonshot tool schemas: %w", err)
+			return nil, fmt.Errorf("read tool schemas: %w", err)
 		}
 		if info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotVideoToImages {
 			payload, err = convertMediaBody(c.Request.Context(), payload, info.RelayFormat, extractVideoFrames)

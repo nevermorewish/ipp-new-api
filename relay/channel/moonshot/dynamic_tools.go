@@ -30,7 +30,7 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 	}
 	payload, err := io.ReadAll(body)
 	if err != nil {
-		return nil, fmt.Errorf("read Moonshot dynamic tools: %w", err)
+		return nil, fmt.Errorf("read dynamic tools: %w", err)
 	}
 	fallback, eligible := promoteRequiredDynamicTools(payload)
 	resp, err := channel.DoApiRequest(a, c, info, bytes.NewReader(payload))

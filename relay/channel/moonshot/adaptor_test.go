@@ -572,7 +572,7 @@ func TestKVVK31ProDynamicToolsAndThinking(t *testing.T) {
 				require.ErrorAs(t, err, &apiErr)
 				assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
 				assert.True(t, types.IsSkipRetryError(apiErr))
-				assert.ErrorContains(t, err, "requires thinking")
+				assert.EqualError(t, err, "thinking must be enabled")
 				return
 			}
 			require.NoError(t, err)

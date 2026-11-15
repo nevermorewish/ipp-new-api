@@ -187,14 +187,14 @@ func adaptKVVRequest(request *dto.GeneralOpenAIRequest, info *relaycommon.RelayI
 		// silently lowering it. This is stricter than the baseline, so it
 		// stays behind the K3.1 switch.
 		if v := request.Temperature; v != nil && (math.IsNaN(*v) || *v != kvvFixedTemperature) {
-			return fmt.Errorf("temperature must be %v for kimi-k3", kvvFixedTemperature)
+			return fmt.Errorf("temperature must be %v", kvvFixedTemperature)
 		}
 	} else if legacyCompat {
 		// The legacy switch rewrites: any temperature in [0,1] is accepted and
 		// then replaced with the value the backend actually uses.
 		if request.Temperature != nil && (math.IsNaN(*request.Temperature) ||
 			*request.Temperature < 0 || *request.Temperature > 1) {
-			return fmt.Errorf("temperature must be between 0 and 1 for kimi-k3")
+			return fmt.Errorf("temperature must be between 0 and 1")
 		}
 		if request.Temperature != nil {
 			request.Temperature = common.GetPointer(kvvFixedTemperature)
@@ -203,23 +203,23 @@ func adaptKVVRequest(request *dto.GeneralOpenAIRequest, info *relaycommon.RelayI
 		*request.Temperature < 0 || *request.Temperature > 1) {
 		// Unchanged behavior: any temperature in [0,1] is accepted, and
 		// thinking requests are pinned to 1 because the backend fixes it.
-		return fmt.Errorf("temperature must be between 0 and 1 for kimi-k3")
+		return fmt.Errorf("temperature must be between 0 and 1")
 	}
 	if !paramCompat && request.Temperature != nil && request.ReasoningEffort != "none" {
 		request.Temperature = common.GetPointer(1.0)
 	}
 
 	if v := request.TopP; v != nil && *v != 0.95 {
-		return fmt.Errorf("top_p must be 0.95 for kimi-k3")
+		return fmt.Errorf("top_p must be 0.95")
 	}
 	if v := request.PresencePenalty; v != nil && *v != 0 {
-		return fmt.Errorf("presence_penalty must be 0 for kimi-k3")
+		return fmt.Errorf("presence_penalty must be 0")
 	}
 	if v := request.FrequencyPenalty; v != nil && *v != 0 {
-		return fmt.Errorf("frequency_penalty must be 0 for kimi-k3")
+		return fmt.Errorf("frequency_penalty must be 0")
 	}
 	if v := request.N; v != nil && *v != 1 {
-		return fmt.Errorf("n must be 1 for kimi-k3")
+		return fmt.Errorf("n must be 1")
 	}
 	return nil
 }
@@ -454,7 +454,7 @@ func clampKVVOutputBudget(request *dto.GeneralOpenAIRequest, info *relaycommon.R
 		{"max_tokens", request.MaxTokens},
 	} {
 		if field.value != nil && *field.value > kimiK3ContextWindowTokens {
-			return fmt.Errorf("%s must not exceed %d for kimi-k3", field.name, kimiK3ContextWindowTokens)
+			return fmt.Errorf("%s must not exceed %d", field.name, kimiK3ContextWindowTokens)
 		}
 	}
 	if info == nil {
