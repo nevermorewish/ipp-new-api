@@ -145,6 +145,12 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Header, info *rel
 }
 
 func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
+	if request == nil {
+		return nil, nil
+	}
+	if kvvMediaStringShorthand(info) {
+		rewriteKimiMediaStringShorthand(request)
+	}
 	if KVVEnabled(info) {
 		if err := adaptKVVRequest(request, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -227,6 +233,57 @@ func hasKimiAssistantToolCalls(raw []byte) bool {
 		return true
 	}
 	return len(toolCalls) > 0
+}
+
+// rewriteKimiMediaStringShorthand turns the official string shorthand for
+// image_url and video_url into the object form. The official API accepts both
+// shapes, but Kimi upstreams answer the string form with a generic 400, so the
+// rewrite is a compatibility behavior and only runs while it is enabled.
+func rewriteKimiMediaStringShorthand(request *dto.GeneralOpenAIRequest) {
+	for messageIndex := range request.Messages {
+		content, ok := request.Messages[messageIndex].Content.([]any)
+		if !ok {
+			continue
+		}
+		changed := false
+		rewritten := make([]any, 0, len(content))
+		for _, rawPart := range content {
+			part, ok := rawPart.(map[string]any)
+			if !ok {
+				rewritten = append(rewritten, rawPart)
+				continue
+			}
+			partType := strings.ToLower(strings.TrimSpace(kimiMediaStringValue(part["type"])))
+			if partType != dto.ContentTypeImageURL && partType != "video_url" {
+				rewritten = append(rewritten, rawPart)
+				continue
+			}
+			url, ok := part[partType].(string)
+			if !ok || url == "" {
+				rewritten = append(rewritten, rawPart)
+				continue
+			}
+			objectPart := map[string]any{
+				"type":   partType,
+				partType: map[string]any{"url": url},
+			}
+			for key, value := range part {
+				if key != partType && key != "type" {
+					objectPart[key] = value
+				}
+			}
+			rewritten = append(rewritten, objectPart)
+			changed = true
+		}
+		if changed {
+			request.Messages[messageIndex].Content = rewritten
+		}
+	}
+}
+
+func kimiMediaStringValue(value any) string {
+	text, _ := value.(string)
+	return text
 }
 
 func getUpstreamModelName(info *relaycommon.RelayInfo, fallback string) string {
