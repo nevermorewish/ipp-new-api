@@ -672,6 +672,11 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	if newAPIError != nil {
 		return newAPIError
 	}
+	// Anthropic serves a cached prefix only to the workspace that wrote it, so
+	// a multi-key AnthropicOfficial channel keeps every prompt head on one key.
+	if pinnedKey, pinnedIndex, ok := service.PromptCacheAffinityKey(c, channel, modelName); ok {
+		key, index = pinnedKey, pinnedIndex
+	}
 	if channel.ChannelInfo.IsMultiKey {
 		common.SetContextKey(c, constant.ContextKeyChannelIsMultiKey, true)
 		common.SetContextKey(c, constant.ContextKeyChannelMultiKeyIndex, index)

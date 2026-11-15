@@ -64,7 +64,10 @@ const (
 	ChannelTypeSeedance       = 64
 	ChannelTypeOpenAIGPT      = 65
 	ChannelTypeSeedanceAPI    = 66
-	ChannelTypeDummy          // this one is only for count, do not add any channel after this
+	// ChannelTypeAnthropicOfficial relays like the Anthropic channel and keeps
+	// each prompt cache on one key of a multi-key pool.
+	ChannelTypeAnthropicOfficial = 67
+	ChannelTypeDummy             // this one is only for count, do not add any channel after this
 
 )
 
@@ -138,6 +141,7 @@ var ChannelBaseURLs = []string{
 	"https://api.huanxing.ai",                   //64
 	"https://api.openai.com",                    //65
 	"",                                          //66 SeedanceAPI: deployment-specific signing secret and URL
+	"https://api.anthropic.com",                 //67
 }
 
 func GetChannelBaseURL(channelType int) string {
@@ -211,6 +215,8 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeSeedance:       "Seedance",
 	ChannelTypeOpenAIGPT:      "OpenAI-GPT",
 	ChannelTypeSeedanceAPI:    "SeedanceAPI",
+
+	ChannelTypeAnthropicOfficial: "AnthropicOfficial",
 }
 
 func GetChannelTypeName(channelType int) string {

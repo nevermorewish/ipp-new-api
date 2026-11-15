@@ -1,7 +1,9 @@
 package model
 
 import (
+	"crypto/sha256"
 	"database/sql/driver"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -293,6 +295,58 @@ func (channel *Channel) GetNextEnabledKey() (string, int, *types.NewAPIError) {
 		// Unknown mode, default to first enabled key (or original key string)
 		return keys[enabledIdx[0]], enabledIdx[0], nil
 	}
+}
+
+// ChannelKeyFingerprint identifies an API key by content rather than by its
+// position in the channel's key list, which shifts when keys are added,
+// removed or reordered.
+func ChannelKeyFingerprint(key string) string {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return ""
+	}
+	return common.Sha1([]byte(key))
+}
+
+// GetEnabledKeyByRendezvous returns the enabled key that ranks first for anchor
+// under rendezvous hashing, skipping keys whose fingerprint is in skip.
+//
+// Each key is ranked by its own content rather than its position, so adding,
+// removing, reordering or disabling keys only moves the anchors whose first
+// choice changed; every other anchor keeps its key. It reports ok=false when no
+// enabled key is left outside skip.
+func (channel *Channel) GetEnabledKeyByRendezvous(anchor []byte, skip map[string]struct{}) (string, int, bool) {
+	keys := channel.GetKeys()
+	lock := GetChannelPollingLock(channel.Id)
+	lock.Lock()
+	defer lock.Unlock()
+
+	bestIndex := -1
+	var bestScore uint64
+	for index, key := range keys {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		if status, exists := channel.ChannelInfo.MultiKeyStatusList[index]; exists && status != common.ChannelStatusEnabled {
+			continue
+		}
+		if _, skipped := skip[ChannelKeyFingerprint(key)]; skipped {
+			continue
+		}
+		hasher := sha256.New()
+		hasher.Write(anchor)
+		hasher.Write([]byte{0})
+		hasher.Write([]byte(key))
+		score := binary.BigEndian.Uint64(hasher.Sum(nil))
+		if bestIndex < 0 || score > bestScore {
+			bestIndex, bestScore = index, score
+		}
+	}
+	if bestIndex < 0 {
+		return "", 0, false
+	}
+	return keys[bestIndex], bestIndex, true
 }
 
 func (channel *Channel) SaveChannelInfo() error {

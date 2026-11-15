@@ -138,8 +138,10 @@ import {
 } from '../../api'
 import {
   ADD_MODE_OPTIONS,
+  ANTHROPIC_FAMILY_TYPES,
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
   CHANNEL_STATUS_LABELS,
+  CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
   CHANNEL_TYPE_NEW_API,
   CHANNEL_TYPE_OLLAMA,
   CHANNEL_TYPE_OPTIONS,
@@ -3175,7 +3177,7 @@ export function ChannelMutateDrawer({
 
           {CLAUDE_FIELD_PASSTHROUGH_TYPES.has(currentType) && (
             <>
-              {currentType === 14 && (
+              {ANTHROPIC_FAMILY_TYPES.has(currentType) && (
                 <FormField
                   control={form.control}
                   name='allow_inference_geo'
@@ -3229,7 +3231,7 @@ export function ChannelMutateDrawer({
                 )}
               />
 
-              {currentType === 14 && (
+              {ANTHROPIC_FAMILY_TYPES.has(currentType) && (
                 <FormField
                   control={form.control}
                   name='claude_beta_query'
@@ -4829,6 +4831,13 @@ export function ChannelMutateDrawer({
                         </SelectContent>
                       </Select>
                       <FormDescription>
+                        {currentType === CHANNEL_TYPE_ANTHROPIC_OFFICIAL && (
+                          <span className='block'>
+                            {t(
+                              'Requests that share a prompt prefix always use the same key so the prompt cache keeps hitting. This strategy only picks keys for requests without a prompt'
+                            )}
+                          </span>
+                        )}
                         {multiKeyType === 'polling' ? (
                           <span className='text-warning'>
                             {t(

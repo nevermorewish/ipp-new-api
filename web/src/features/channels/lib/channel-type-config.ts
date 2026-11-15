@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import {
   CHANNEL_TYPES,
+  CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
   CHANNEL_TYPE_VLLM,
   CHANNEL_TYPE_SGLANG,
 } from '../constants'
@@ -101,6 +102,16 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
     hints: {
       key: 'Format: sk-ant-...',
       models: 'claude-3-opus,claude-3-sonnet,claude-3-haiku',
+    },
+  },
+  [CHANNEL_TYPE_ANTHROPIC_OFFICIAL]: {
+    id: CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
+    name: CHANNEL_TYPES[CHANNEL_TYPE_ANTHROPIC_OFFICIAL],
+    icon: 'anthropic',
+    hints: {
+      baseUrl: 'Default: https://api.anthropic.com',
+      key: 'Format: sk-ant-...',
+      models: 'claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5',
     },
   },
   24: {

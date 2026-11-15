@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import type { FieldErrors, FieldPath } from 'react-hook-form'
 
 import {
+  ANTHROPIC_FAMILY_TYPES,
   CHANNEL_TYPE_OLLAMA,
   CHANNEL_TYPE_OPENAI_GPT,
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
@@ -186,7 +187,8 @@ export function getChannelConfigurationState(
           values.allow_include_obfuscation)) ||
       (claudePassthrough &&
         (values.allow_speed ||
-          (values.type === 14 && values.claude_beta_query)))
+          (ANTHROPIC_FAMILY_TYPES.has(values.type) &&
+            values.claude_beta_query)))
     ),
     extraSettings: Boolean(
       values.proxy?.trim() ||

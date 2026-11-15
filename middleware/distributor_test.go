@@ -400,3 +400,44 @@ func TestSharedEndpointRebindsToBoundNewAPIExtension(t *testing.T) {
 	assert.Equal(t, "alpha", c.GetString("task_plugin_key"), "the first bound candidate executes regardless of the earlier pin")
 	assert.Equal(t, "alpha", c.MustGet(jsplugin.ContextKeyPinnedEndpoint).(jsplugin.PinnedEndpoint).Plugin.Meta.Key)
 }
+
+// The selected key is what the relay sends upstream, so the prompt-cache pick
+// must survive into the request context on every request of a cache probe.
+func TestSetupContextKeepsAnthropicOfficialPromptOnOneKey(t *testing.T) {
+	channel := &model.Channel{
+		Id:   1064,
+		Type: constant.ChannelTypeAnthropicOfficial,
+		Key:  "sk-ant-a\nsk-ant-b\nsk-ant-c\nsk-ant-d",
+		ChannelInfo: model.ChannelInfo{
+			IsMultiKey:   true,
+			MultiKeySize: 4,
+			MultiKeyMode: constant.MultiKeyModeRandom,
+		},
+	}
+	system := strings.Repeat("Static reference data. ", 500)
+	firstKey, firstIndex := "", -1
+	for trial := range 20 {
+		body, err := common.Marshal(map[string]any{
+			"model": "claude-haiku-5-5",
+			"system": []any{map[string]any{
+				"type": "text", "text": system, "cache_control": map[string]any{"type": "ephemeral"},
+			}},
+			"messages": []any{map[string]any{"role": "user", "content": fmt.Sprintf("New trial %03d. Reply only OK.", trial)}},
+		})
+		require.NoError(t, err)
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+		c.Set(common.KeyRequestBody, body)
+
+		require.Nil(t, SetupContextForSelectedChannel(c, channel, "claude-haiku-5-5"))
+		key := common.GetContextKeyString(c, constant.ContextKeyChannelKey)
+		index := common.GetContextKeyInt(c, constant.ContextKeyChannelMultiKeyIndex)
+		require.Equal(t, channel.GetKeys()[index], key)
+		if trial == 0 {
+			firstKey, firstIndex = key, index
+			continue
+		}
+		assert.Equal(t, firstKey, key, "trial %d", trial)
+		assert.Equal(t, firstIndex, index, "trial %d", trial)
+	}
+}

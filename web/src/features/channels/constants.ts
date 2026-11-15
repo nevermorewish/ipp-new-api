@@ -44,6 +44,8 @@ export const CHANNEL_TYPE_OPENAI_GPT = 65
 
 export const CHANNEL_TYPE_SEEDANCE_API = 66
 
+export const CHANNEL_TYPE_ANTHROPIC_OFFICIAL = 67
+
 export const CHANNEL_TYPES = {
   0: 'Unknown',
   1: 'OpenAI',
@@ -108,6 +110,7 @@ export const CHANNEL_TYPES = {
   64: 'Seedance',
   65: 'OpenAI-GPT',
   66: 'SeedanceAPI',
+  67: 'AnthropicOfficial',
 } as const
 
 export type ChannelProviderPresentation = {
@@ -198,15 +201,19 @@ export const CHANNEL_PROVIDER_PRESENTATION: Partial<
   66: {
     descriptionKey: 'Connect to SeedanceAPI using a shared signing secret',
   },
+  67: {
+    descriptionKey:
+      'Connect to the official Anthropic API and keep each prompt cache on one key',
+  },
 } satisfies Record<
   Exclude<keyof typeof CHANNEL_TYPES, 0 | typeof CHANNEL_TYPE_TASK_PLUGIN>,
   ChannelProviderPresentation
 >
 
 const CHANNEL_TYPE_DISPLAY_ORDER: number[] = [
-  1, 65, 14, 24, 33, 43, 3, 41, 17, 45, 25, 26, 23, 48, 60, 58, 59, 61, 42, 34,
-  20, 4, 62, 40, 27, 15, 46, 18, 31, 35, 49, 19, 47, 37, 38, 39, 11, 8, 57, 22,
-  21, 44, 2, 5, 36, 50, 51, 52, 53, 54, 64, 66, 55, 56,
+  1, 65, 14, 67, 24, 33, 43, 3, 41, 17, 45, 25, 26, 23, 48, 60, 58, 59, 61, 42,
+  34, 20, 4, 62, 40, 27, 15, 46, 18, 31, 35, 49, 19, 47, 37, 38, 39, 11, 8, 57,
+  22, 21, 44, 2, 5, 36, 50, 51, 52, 53, 54, 64, 66, 55, 56,
 ]
 
 export const CHANNEL_TYPE_OPTIONS: { value: number; label: string }[] = (() => {
@@ -543,11 +550,13 @@ export const MODEL_FETCHABLE_TYPES = new Set([
   60,
   CHANNEL_TYPE_VLLM,
   CHANNEL_TYPE_SGLANG,
+  CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
 ])
 
 export const FIELD_PASSTHROUGH_TYPES = new Set([
   1,
   14,
+  CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
   57,
   58,
   59,
@@ -568,11 +577,24 @@ export const OPENAI_FIELD_PASSTHROUGH_TYPES = new Set([
 
 export const CLAUDE_FIELD_PASSTHROUGH_TYPES = new Set([
   14,
+  CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
   58,
   59,
   CHANNEL_TYPE_NEW_API,
   CHANNEL_TYPE_VLLM,
   CHANNEL_TYPE_SGLANG,
+])
+
+/**
+ * Channel types that call the Anthropic Messages API with Anthropic's own
+ * request controls (inference_geo and the beta query).
+ *
+ * 14 = Anthropic
+ * 67 = AnthropicOfficial (keeps each prompt cache on one key)
+ */
+export const ANTHROPIC_FAMILY_TYPES = new Set([
+  14,
+  CHANNEL_TYPE_ANTHROPIC_OFFICIAL,
 ])
 
 export const TYPE_TO_KEY_PROMPT: Record<number, string> = {

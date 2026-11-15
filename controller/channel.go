@@ -290,7 +290,7 @@ func GetAllChannels(c *gin.Context) {
 func buildFetchModelsHeaders(channel *model.Channel, key string) (http.Header, error) {
 	var headers http.Header
 	switch channel.Type {
-	case constant.ChannelTypeAnthropic:
+	case constant.ChannelTypeAnthropic, constant.ChannelTypeAnthropicOfficial:
 		headers = GetClaudeAuthHeader(key)
 	default:
 		headers = GetAuthHeader(key)

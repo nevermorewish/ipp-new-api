@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { z } from 'zod'
 
 import {
+  ANTHROPIC_FAMILY_TYPES,
   CLAUDE_FIELD_PASSTHROUGH_TYPES,
   CHANNEL_TYPE_NEW_API,
   CHANNEL_TYPE_OLLAMA,
@@ -863,7 +864,7 @@ function buildSettingsJSON(formData: ChannelFormValues): string {
   }
 
   // Only the Anthropic adaptor supports forcing the Claude beta query.
-  if (formData.type === 14) {
+  if (ANTHROPIC_FAMILY_TYPES.has(formData.type)) {
     settingsObj.claude_beta_query = formData.claude_beta_query === true
   } else if ('claude_beta_query' in settingsObj) {
     delete settingsObj.claude_beta_query
