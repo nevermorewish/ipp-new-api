@@ -2,7 +2,6 @@ package moonshot
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -39,21 +38,7 @@ func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayIn
 		return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}
 	adaptor := claude.Adaptor{}
-	converted, err := adaptor.ConvertClaudeRequest(c, info, req)
-	if err != nil {
-		return nil, err
-	}
-	// Set after the conversion so a model suffix cannot turn thinking back on.
-	if channelDisablesThinking(info) {
-		req.Thinking = &dto.Thinking{Type: "disabled"}
-	}
-	return converted, nil
-}
-
-// channelDisablesThinking reports whether the channel sends every request with
-// thinking disabled, whatever the client asked for.
-func channelDisablesThinking(info *relaycommon.RelayInfo) bool {
-	return info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotDisableThinking
+	return adaptor.ConvertClaudeRequest(c, info, req)
 }
 
 // adaptKVVMessagesCacheControl aligns a Claude Messages request with the
@@ -170,42 +155,30 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if kvvMediaStringShorthand(info) {
 		rewriteKimiMediaStringShorthand(request)
 	}
-	disableThinking := channelDisablesThinking(info) && info.RelayMode == constant.RelayModeChatCompletions
+	// Thinking stays on unless the client turns it off; the switch only lets
+	// the client do so.
+	allowDisableThinking := info != nil && info.ChannelMeta != nil &&
+		info.ChannelSetting.MoonshotDisableThinking && info.RelayMode == constant.RelayModeChatCompletions
 	emulateNamedToolChoice := false
 	if KVVEnabled(info) {
 		if err := adaptKVVRequest(request, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
-		if request.ReasoningEffort == "none" && !disableThinking {
+		if request.ReasoningEffort == "none" {
 			switch {
-			case kvvOfficialCompat(info):
-				// The official API accepts disabled thinking on K3.1, which a
-				// named tool_choice requires. thinking.type alone turns it off;
-				// none is not one of the official reasoning_effort levels.
+			case kvvOfficialCompat(info) || allowDisableThinking:
+				// The official API accepts disabled thinking, which a named
+				// tool_choice requires. thinking.type alone turns it off; none is
+				// not one of the official reasoning_effort levels.
 				request.ReasoningEffort = ""
 				emulateNamedToolChoice = true
 			case strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro"):
 				return nil, types.NewOpenAIError(fmt.Errorf("thinking must be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 			}
 		}
-	}
-	if disableThinking {
-		// The client's own parameters were validated above in the mode it
-		// chose. thinking.type alone turns thinking off, reasoning_effort has
-		// no level for it, and an open-source template switch must agree.
-		request.THINKING = json.RawMessage(`{"type":"disabled"}`)
-		request.ReasoningEffort = ""
-		for _, key := range []string{"thinking", "enable_thinking"} {
-			if !ojson.GetBytes(request.ChatTemplateKwargs, key).Exists() {
-				continue
-			}
-			if updated, err := ojson.SetBytes(request.ChatTemplateKwargs, key, false); err == nil {
-				request.ChatTemplateKwargs = updated
-			}
-		}
-		if isKimiK3FamilyModel(getUpstreamModelName(info, request.Model)) {
-			emulateNamedToolChoice = true
-		}
+	} else if allowDisableThinking && isKimiK3FamilyModel(getUpstreamModelName(info, request.Model)) &&
+		ojson.GetBytes(request.THINKING, "type").String() == "disabled" {
+		emulateNamedToolChoice = true
 	}
 	// TextHelper converts a KVV request a second time, on the body this pass
 	// already rewrote. That pass finds no named tool_choice, so it must keep

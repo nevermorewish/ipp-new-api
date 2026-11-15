@@ -1923,7 +1923,7 @@ export function ChannelMutateDrawer({
               <FormLabel>{t('KVV adaptation')}</FormLabel>
               <FormDescription>
                 {t(
-                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking unless K3.1 parameter compatibility or Disable thinking is on. Disable global and channel body passthrough before use.'
+                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking unless K3.1 parameter compatibility or Allow disabling thinking is on. Disable global and channel body passthrough before use.'
                 )}
               </FormDescription>
             </div>
@@ -2029,10 +2029,10 @@ export function ChannelMutateDrawer({
       render={({ field }) => (
         <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
           <div className='space-y-0.5'>
-            <FormLabel>{t('Disable thinking')}</FormLabel>
+            <FormLabel>{t('Allow disabling thinking')}</FormLabel>
             <FormDescription>
               {t(
-                'Send every Chat Completions and Messages request on this channel with thinking disabled, whatever the client asks for. On kimi-k3 and kimi-k3.1 models, a named tool_choice in Chat Completions is answered through structured output and returned as a call to that function, so its prompt tokens differ from the official API. Use only for models that support disabled thinking.'
+                'Thinking stays on by default. A Chat Completions request turns it off only when it asks to, for example with thinking.type set to disabled; KVV adaptation then accepts this for K3.1 Pro instead of returning 400. On kimi-k3 and kimi-k3.1 models, a named tool_choice with thinking off is answered through structured output and returned as a call to that function, so its prompt tokens differ from the official API.'
               )}
             </FormDescription>
           </div>

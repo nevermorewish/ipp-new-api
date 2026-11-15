@@ -1654,7 +1654,7 @@ test('other providers hide and omit the Moonshot KVV setting', async () => {
 
 const MOONSHOT_SWITCHES = [
   { label: 'Media format compatibility', key: 'moonshot_video_to_images' },
-  { label: 'Disable thinking', key: 'moonshot_disable_thinking' },
+  { label: 'Allow disabling thinking', key: 'moonshot_disable_thinking' },
 ] as const
 
 test.each(

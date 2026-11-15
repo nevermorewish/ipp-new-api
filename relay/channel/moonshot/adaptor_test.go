@@ -1179,7 +1179,7 @@ func TestKVVK31NamedToolChoice(t *testing.T) {
 		settings       dto.ChannelSettings
 	}{
 		{name: "client disables thinking", thinking: `"thinking":{"type":"disabled"},`, settings: k31Compat},
-		{name: "channel disables thinking", settings: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotDisableThinking: true}},
+		{name: "allow switch", thinking: `"thinking":{"type":"disabled"},`, settings: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotDisableThinking: true}},
 	} {
 		for _, stream := range []bool{false, true} {
 			t.Run(fmt.Sprintf("response %s stream=%t", path.name, stream), func(t *testing.T) {
@@ -1247,23 +1247,25 @@ func TestKVVK31NamedToolChoice(t *testing.T) {
 	}
 }
 
-// TestMoonshotDisableThinking covers the channel switch that sends every
-// request with thinking disabled, whatever the client asked for.
-func TestMoonshotDisableThinking(t *testing.T) {
+// TestMoonshotAllowDisableThinking covers the channel switch that lets a
+// client turn thinking off. Thinking stays on by default; only a request that
+// asks for it goes upstream with thinking disabled.
+func TestMoonshotAllowDisableThinking(t *testing.T) {
 	const weather = `"tools":[{"type":"function","function":{"name":"get_weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}}]`
 	const named = `"tool_choice":{"type":"function","function":{"name":"get_weather"}}`
+	const disabled = `"thinking":{"type":"disabled"}`
+	const kvvDefault = `{"type":"enabled","keep":"all","effort":"max"}`
 	for _, tc := range []struct {
-		name, model, body string
-		kvv               bool
-		wantEmulated      bool
+		name, model, body, wantThinking string // empty wantThinking: no thinking field
+		kvv, wantEmulated               bool
 	}{
-		{name: "client default without KVV", model: "kimi-k3.1-pro", body: `{}`},
-		{name: "client default with KVV", model: "kimi-k3.1-pro", kvv: true, body: `{"temperature":1}`},
-		{name: "client disabled thinking with KVV", model: "kimi-k3.1-pro", kvv: true, body: `{"thinking":{"type":"disabled"}}`},
-		{name: "client effort and template switch", model: "kimi-k3", kvv: true, body: `{"reasoning_effort":"high","chat_template_kwargs":{"thinking":true,"custom":7}}`},
-		{name: "K3 named tool", model: "kimi-k3.1-pro", kvv: true, body: `{` + weather + `,` + named + `}`, wantEmulated: true},
-		{name: "K3 named tool without KVV", model: "kimi-k3.1-pro", body: `{` + weather + `,` + named + `}`, wantEmulated: true},
-		{name: "other model keeps a named tool", model: "kimi-k2.6", body: `{` + weather + `,` + named + `}`},
+		{name: "default keeps thinking", model: "kimi-k3.1-pro", kvv: true, body: `{}`, wantThinking: kvvDefault},
+		{name: "default keeps thinking without KVV", model: "kimi-k3.1-pro", body: `{}`},
+		{name: "client disables thinking", model: "kimi-k3.1-pro", kvv: true, body: `{` + disabled + `}`, wantThinking: `{"type":"disabled"}`},
+		{name: "client disables thinking with a named tool", model: "kimi-k3.1-pro", kvv: true, body: `{` + disabled + `,` + weather + `,` + named + `}`, wantThinking: `{"type":"disabled"}`, wantEmulated: true},
+		{name: "named tool without KVV", model: "kimi-k3", body: `{` + disabled + `,` + weather + `,` + named + `}`, wantThinking: `{"type":"disabled"}`, wantEmulated: true},
+		{name: "thinking on keeps a named tool", model: "kimi-k3.1-pro", kvv: true, body: `{` + weather + `,` + named + `}`, wantThinking: kvvDefault},
+		{name: "other model keeps a named tool", model: "kimi-k2.6", body: `{` + disabled + `,` + weather + `,` + named + `}`, wantThinking: `{"type":"disabled"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var request dto.GeneralOpenAIRequest
@@ -1278,10 +1280,13 @@ func TestMoonshotDisableThinking(t *testing.T) {
 			require.NoError(t, err)
 			wire, err := common.Marshal(converted)
 			require.NoError(t, err)
-			assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
-			assert.False(t, gjson.GetBytes(wire, "reasoning_effort").Exists())
-			if gjson.Get(tc.body, "chat_template_kwargs").Exists() {
-				assert.JSONEq(t, `{"thinking":false,"custom":7}`, gjson.GetBytes(wire, "chat_template_kwargs").Raw)
+			if tc.wantThinking == "" {
+				assert.False(t, gjson.GetBytes(wire, "thinking").Exists())
+			} else {
+				assert.JSONEq(t, tc.wantThinking, gjson.GetBytes(wire, "thinking").Raw)
+			}
+			if tc.wantThinking == `{"type":"disabled"}` {
+				assert.False(t, gjson.GetBytes(wire, "reasoning_effort").Exists())
 			}
 			if tc.wantEmulated {
 				assert.Equal(t, "none", gjson.GetBytes(wire, "tool_choice").String())
@@ -1291,20 +1296,6 @@ func TestMoonshotDisableThinking(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("messages", func(t *testing.T) {
-		var request dto.ClaudeRequest
-		require.NoError(t, common.UnmarshalJsonStr(`{"model":"kimi-k3.1-pro","max_tokens":512,"thinking":{"type":"enabled","budget_tokens":1024},"messages":[{"role":"user","content":"hi"}]}`, &request))
-		info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatClaude, ChannelMeta: &relaycommon.ChannelMeta{
-			ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
-			ChannelSetting: dto.ChannelSettings{MoonshotDisableThinking: true},
-		}}
-		converted, err := (&Adaptor{}).ConvertClaudeRequest(nil, info, &request)
-		require.NoError(t, err)
-		wire, err := common.Marshal(converted)
-		require.NoError(t, err)
-		assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
-	})
 }
 
 // TestKVVK31MediaStringShorthand covers the official string shorthand for
