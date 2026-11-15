@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"/>
+<title>Kimi-K3 模型接入功能测试报告</title>
+<style>
+body{font-family:ui-sans-serif,system-ui,sans-serif;margin:24px;background:#f7f5f2;color:#1b1b1b}
+h1{margin:0 0 8px}.meta{color:#555;line-height:1.6}
+.card{background:#fff;border:1px solid #e6e1da;border-radius:12px;padding:16px;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid #eee;padding:8px;text-align:left;vertical-align:top}
+th{background:#faf8f5}.ok{color:#067d3c}.bad{color:#b42318}.err{color:#b42318}
+code{font-size:12px}
+.fail-box{background:#fff8f7;border:1px solid #f0d0cb;border-radius:10px;padding:12px;margin:12px 0}
+.fail-case{border-top:1px solid #f0d0cb;padding-top:10px;margin-top:10px}
+.fail-col ul{margin:6px 0 0;padding-left:18px;max-height:220px;overflow:auto}
+.fail-col li{margin:2px 0;font-size:12px;line-height:1.4}
+.fail-col a{color:#b42318;text-decoration:none}
+.fail-col a:hover{text-decoration:underline}
+.warn{background:#fff8e8;border:1px solid #f0d9a8;border-radius:8px;padding:10px 12px;color:#8a5a00;line-height:1.5}
+pre.io{background:#1b1b1b;color:#f5f5f5;padding:12px;border-radius:8px;overflow:auto;font-size:12px;line-height:1.45;max-height:420px}
+.cache-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 14px}
+.cache-title{font-size:16px;font-weight:650}
+.cache-pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:650}
+.cache-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0 0 16px}
+.cache-stat{background:#faf8f5;border:1px solid #eee;border-radius:12px;padding:12px 14px}
+.cache-stat .l{font-size:11px;color:#6b7280;letter-spacing:.02em}
+.cache-stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px;letter-spacing:-.02em}
+.cache-stat .s{font-size:11px;color:#6b7280;margin-top:6px}
+.cache-rounds td.mono,.cache-rounds th,.mono{font-variant-numeric:tabular-nums}
+.cache-chart-wrap{margin-top:18px;padding-top:8px;border-top:1px solid #eee}
+.cache-chart-title{font-size:14px;font-weight:650;margin-bottom:8px}
+.cache-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#555;margin-bottom:10px}
+.cache-legend i.lg{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.cache-legend i.read{background:#5a7d4e}.cache-legend i.write{background:#d97706}.cache-legend i.uncached{background:#9ca3af}
+.cache-chart{display:flex;align-items:flex-end;gap:10px;height:220px;padding:8px 4px 0;border-bottom:1px solid #e5e7eb}
+.cache-bar-col{flex:1;min-width:36px;max-width:80px;height:100%;display:flex;flex-direction:column;align-items:center}
+.cache-bar{width:70%;flex:1;display:flex;flex-direction:column-reverse;justify-content:flex-start;background:#f3f4f6;border-radius:6px 6px 0 0;overflow:hidden}
+.cache-bar .seg{width:100%}.cache-bar .seg.read{background:#5a7d4e}.cache-bar .seg.write{background:#d97706}.cache-bar .seg.uncached{background:#9ca3af}
+.cache-bar-label{font-size:11px;color:#6b7280;margin-top:6px}
+</style></head><body>
+<h1>Kimi-K3 模型接入功能测试报告</h1>
+<div class="meta">
+  Provider: kimi · Protocol: openai<br/>
+  生成时间: 2026-11-10T16:44:30
+</div>
+<section class="card">
+  <h2 class="bad">总体结论：功能检测未通过 / 存疑</h2>
+  <table>
+    <thead><tr><th>模型</th><th>判定</th><th>得分</th><th>子项</th><th>TTFT p50</th><th>E2E p50</th><th>摘要</th><th>错误用例</th><th>导出</th></tr></thead>
+    <tbody><tr><td><code>kimi-k3.1-pro</code></td><td style='color:#b42318;font-weight:700'>fail</td><td>90/100</td><td>12/13</td><td>3233</td><td>5046</td><td>12/13 项通过 · score 90/100 · 建议项 8/9 · 门禁失败 1 项 · must 失败 3 项</td><td><div class='fail-col'><div class='err'>14 项失败</div><ul><li><a href='#failures-kimi-k3.1-pro'><code>video_base64</code></a><span class='meta'> · 评分子项</span></li><li><a href='#failures-kimi-k3.1-pro'><code>must.video_base64</code></a><span class='meta'> · 功能</span></li><li><a href='#failures-kimi-k3.1-pro'><code>must.dynamic_tool_with_content_rejected</code></a><span class='meta'> · 功能</span></li><li><a href='#failures-kimi-k3.1-pro'><code>must.invalid_mfjs_schema</code></a><span class='meta'> · 功能</span></li><li><a href='#failures-kimi-k3.1-pro'><code>recommend.video_url</code></a><span class='meta'> · 功能</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_0_7</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_1_1</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_2_0</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_neg</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_0_6</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_top_p_0_8</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_n_2</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_presence_penalty_0_5</code></a><span class='meta'> · 思考/参数</span></li><li><a href='#failures-kimi-k3.1-pro'><code>param_reject_frequency_penalty_0_5</code></a><span class='meta'> · 思考/参数</span></li></ul></div></td><td><code>kimik3-run-e1bcd2b0-kimi-k3.1-pro-2026-11-10T08-44-30.txt</code></td></tr></tbody>
+  </table>
+</section>
+
+<section class="card" id="fail-summary">
+  <h2 class="bad">错误用例汇总（14）</h2>
+  <p class="meta">仅列出未通过项；点击 Case 可跳到对应模型的失败详情。</p>
+  <table>
+    <thead><tr><th>模型</th><th>套件</th><th>级别</th><th>Case</th><th>名称</th><th>原因</th></tr></thead>
+    <tbody><tr><td><code>kimi-k3.1-pro</code></td><td>评分子项</td><td>gate</td><td><a href='#failures-kimi-k3.1-pro'><code>video_base64</code></a></td><td>Video_base64</td><td class='err'>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>功能</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>must.video_base64</code></a></td><td>多模态视频 · Video_base64</td><td class='err'>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>功能</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>must.dynamic_tool_with_content_rejected</code></a></td><td>动态加载工具 · tools 与 content 互斥</td><td class='err'>未按预期拒绝: SSE 分片不足: 1（需 ≥2）</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>功能</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>must.invalid_mfjs_schema</code></a></td><td>结构化输出 · 非法 MFJS Schema 反例</td><td class='err'>失败: HTTP 200 且响应无 warning</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>功能</td><td>recommend</td><td><a href='#failures-kimi-k3.1-pro'><code>recommend.video_url</code></a></td><td>多模态视频 · video_url</td><td class='err'>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;eligible channels are temporarily unavailable (request id: 202611100840557031642628268d9d6gXT0N3Jk)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;channel_temporarily_unavailable&#x27;}</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_0_7</code></a></td><td>参数约束 · temperature=0.7（应拒绝）</td><td class='err'>应拒绝但请求成功 · temperature=0.7</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_1_1</code></a></td><td>参数约束 · temperature=1.1（应拒绝）</td><td class='err'>应拒绝但请求成功 · temperature=1.1</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_2_0</code></a></td><td>参数约束 · temperature=2.0（应拒绝）</td><td class='err'>应拒绝但请求成功 · temperature=2.0</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_neg</code></a></td><td>参数约束 · temperature=-0.1（应拒绝）</td><td class='err'>应拒绝但请求成功 · temperature=-0.1</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_temperature_0_6</code></a></td><td>参数约束 · temperature=0.6（应拒绝）</td><td class='err'>应拒绝但请求成功 · temperature=0.6</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_top_p_0_8</code></a></td><td>参数约束 · top_p=0.8（应拒绝）</td><td class='err'>应拒绝但请求成功 · top_p=0.8</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_n_2</code></a></td><td>参数约束 · n=2（应拒绝）</td><td class='err'>应拒绝但请求成功 · n=2</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_presence_penalty_0_5</code></a></td><td>参数约束 · presence_penalty=0.5（应拒绝）</td><td class='err'>应拒绝但请求成功 · presence_penalty=0.5</td></tr><tr><td><code>kimi-k3.1-pro</code></td><td>思考/参数</td><td>must</td><td><a href='#failures-kimi-k3.1-pro'><code>param_reject_frequency_penalty_0_5</code></a></td><td>参数约束 · frequency_penalty=0.5（应拒绝）</td><td class='err'>应拒绝但请求成功 · frequency_penalty=0.5</td></tr></tbody>
+  </table>
+</section>
+
+
+<section class="card">
+  <h3>kimi-k3.1-pro · 功能 fail · 90/100
+      · 思考/参数 fail</h3>
+  <p class="meta">Base https://api.silinest.com/v1 ·
+     export <code>kimik3-run-e1bcd2b0-kimi-k3.1-pro-2026-11-10T08-44-30.txt</code>
+     <br/>思考生效 + 参数约束: fail · 必过 15/24</p>
+  <h4>评分子项</h4>
+  <table><thead><tr><th>ID</th><th>名称</th><th>结果</th><th>权重</th><th>说明</th></tr></thead>
+  <tbody><tr><td><code>http_ok</code></td><td>请求成功</td><td style='color:#067d3c'>PASS</td><td>4</td><td>1/1 HTTP 成功</td></tr><tr><td><code>ping_ok</code></td><td>探活</td><td style='color:#067d3c'>PASS</td><td>4</td><td>探活成功</td></tr><tr><td><code>model_match</code></td><td>模型回显</td><td style='color:#067d3c'>PASS</td><td>2</td><td>响应含模型标识</td></tr><tr><td><code>usage_present</code></td><td>usage 回传</td><td style='color:#067d3c'>PASS</td><td>4</td><td>usage 存在（含非流式专测）</td></tr><tr><td><code>cache_hit</code></td><td>Prefix Cache 命中率</td><td style='color:#067d3c'>PASS</td><td>8</td><td>全部命中 · 覆盖率 90.9% · hit_rate=100.0% · coverage=90.9%</td></tr><tr><td><code>stream_integrity</code></td><td>Stream 完整性</td><td style='color:#067d3c'>PASS</td><td>10</td><td>SSE chunks=64 done=True</td></tr><tr><td><code>usage_stream</code></td><td>Usage 流式</td><td style='color:#067d3c'>PASS</td><td>8</td><td>流式末包含 usage</td></tr><tr><td><code>image_base64</code></td><td>Image_base64</td><td style='color:#067d3c'>PASS</td><td>10</td><td>Image_base64 可用</td></tr><tr><td><code>video_base64</code></td><td>Video_base64</td><td style='color:#b42318'>FAIL</td><td>10</td><td>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</td></tr><tr><td><code>tool_choice</code></td><td>tool_choice 分支</td><td style='color:#067d3c'>PASS</td><td>12</td><td>default/auto/required/none/allowed_tools 均通过</td></tr><tr><td><code>structured_output</code></td><td>结构化输出</td><td style='color:#067d3c'>PASS</td><td>10</td><td>json_object + json_schema 均通过</td></tr><tr><td><code>reasoning_effort</code></td><td>reasoning_effort</td><td style='color:#067d3c'>PASS</td><td>10</td><td>三档均有思考（reasoning_content 或 reasoning_tokens）且 low/high 可区分</td></tr><tr><td><code>thinking_switch</code></td><td>K3 思考始终开启</td><td style='color:#067d3c'>PASS</td><td>8</td><td>K3 默认思考开启且关思考未生效</td></tr></tbody></table>
+  <h4>功能</h4>
+  <table><thead><tr><th>Case</th><th>级别</th><th>名称</th><th>结果</th><th>HTTP</th><th>E2E ms</th><th>TTFB ms</th><th>TTFT ms</th><th>说明</th><th>检查项</th></tr></thead><tbody><tr><td><code>must.stream_integrity</code></td><td>must</td><td>协议 · Stream 完整性</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>5644</td><td>331</td><td>2471</td><td>SSE chunks=64 done=True</td><td>Stream 完整性（≥2 分片 + [DONE]）</td></tr><tr><td><code>must.usage_non_stream</code></td><td>must</td><td>协议 · Usage 非流式</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>4495</td><td>—</td><td>—</td><td>usage prompt/completion=91/32</td><td>Usage 字段 · 非流式</td></tr><tr><td><code>must.usage_stream</code></td><td>must</td><td>协议 · Usage 流式</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>4050</td><td>320</td><td>3402</td><td>流式末包含 usage</td><td>Usage 字段 · 流式（include_usage）</td></tr><tr><td><code>must.image_base64</code></td><td>must</td><td>多模态图像 · Image_base64</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>8567</td><td>—</td><td>—</td><td>Image_base64 可用</td><td>Image_base64</td></tr><tr><td><code>must.video_base64</code></td><td>must</td><td>多模态视频 · Video_base64</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>502</td><td>732</td><td>—</td><td>—</td><td>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</td><td>Video_base64</td></tr><tr><td><code>must.tool_call</code></td><td>must</td><td>工具调用 · Tool Call 能力</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>3883</td><td>—</td><td>—</td><td>tools 可用</td><td>Tool Call 能力</td></tr><tr><td><code>must.dynamic_tool_with_content_rejected</code></td><td>must</td><td>动态加载工具 · tools 与 content 互斥</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>571</td><td>289</td><td>—</td><td>未按预期拒绝: SSE 分片不足: 1（需 ≥2）</td><td>动态 tools system 消息携带 content 应返回 HTTP 400</td></tr><tr><td><code>must.tool_choice_default</code></td><td>must</td><td>工具调用 · tool_choice=default</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>4334</td><td>—</td><td>—</td><td>HTTP 成功</td><td>tool_choice=default</td></tr><tr><td><code>must.tool_choice_auto</code></td><td>must</td><td>工具调用 · tool_choice=auto</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>4000</td><td>—</td><td>—</td><td>HTTP 成功</td><td>tool_choice=auto</td></tr><tr><td><code>must.tool_choice_required</code></td><td>must</td><td>工具调用 · tool_choice=required</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>9949</td><td>—</td><td>—</td><td>已发起 tool_calls</td><td>tool_choice=required</td></tr><tr><td><code>must.tool_choice_none</code></td><td>must</td><td>工具调用 · tool_choice=none</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>10429</td><td>—</td><td>—</td><td>未调用工具（符合 none）</td><td>tool_choice=none</td></tr><tr><td><code>optional.tool_choice_function</code></td><td>optional</td><td>工具调用 · tool_choice=function</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>4021</td><td>—</td><td>—</td><td>强制 function 可用</td><td>tool_choice=function（可选）</td></tr><tr><td><code>must.tool_choice_allowed_tools</code></td><td>must</td><td>工具调用 · tool_choice=allowed_tools</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>4137</td><td>—</td><td>—</td><td>子集内调用 [&#x27;get_weather&#x27;]</td><td>tool_choice=allowed_tools</td></tr><tr><td><code>must.tool_choice</code></td><td>must</td><td>工具调用 · tool_choice 核心分支汇总</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>None</td><td>—</td><td>—</td><td>—</td><td>default/auto/required/none/allowed_tools 均通过</td><td>tool_choice 核心分支汇总</td></tr><tr><td><code>must.thinking_enable_thinking_on</code></td><td>must</td><td>思考 · enable_thinking_on</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>13108</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=172</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_enable_thinking_off</code></td><td>must</td><td>思考 · enable_thinking_off</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>10191</td><td>—</td><td>—</td><td>官方 K3 不能关思考 · 仍开启 reasoning_tokens=140</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_thinking_type_enabled</code></td><td>must</td><td>思考 · thinking_type_enabled</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>19411</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=329</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_thinking_type_disabled</code></td><td>must</td><td>思考 · thinking_type_disabled</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>10180</td><td>—</td><td>—</td><td>仍开启思考（忽略 thinking.type） · reasoning_tokens=145</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_chat_template_kwargs_enable_thinking</code></td><td>must</td><td>思考 · chat_template_kwargs_enable_thinking</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>17505</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=384</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_chat_template_kwargs_thinking</code></td><td>must</td><td>思考 · chat_template_kwargs_thinking</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>50060</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=115</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_chat_template_kwargs_thinking_off</code></td><td>must</td><td>思考 · chat_template_kwargs_thinking_off</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>9018</td><td>—</td><td>—</td><td>官方 K3 不能关思考 · 仍开启 reasoning_tokens=142</td><td>思考行为（K3 不能关）</td></tr><tr><td><code>must.thinking_default</code></td><td>must</td><td>思考 · 默认行为（K3 始终开启）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>6930</td><td>—</td><td>—</td><td>默认开启思考 · reasoning_tokens=72</td><td>默认思考</td></tr><tr><td><code>must.thinking_switch</code></td><td>must</td><td>思考 · K3 始终开启且不能关闭</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>6930</td><td>—</td><td>—</td><td>K3 默认思考开启且关思考未生效</td><td>K3 思考始终开启（官方不能关）</td></tr><tr><td><code>must.json_object</code></td><td>must</td><td>结构化输出 · JSON Object</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>6517</td><td>—</td><td>—</td><td>合法 JSON</td><td>JSON Object</td></tr><tr><td><code>must.json_schema</code></td><td>must</td><td>结构化输出 · JSON Schema</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>6225</td><td>—</td><td>—</td><td>符合 schema</td><td>JSON Schema</td></tr><tr><td><code>must.invalid_mfjs_schema</code></td><td>must</td><td>结构化输出 · 非法 MFJS Schema 反例</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>5670</td><td>334</td><td>2173</td><td>失败: HTTP 200 且响应无 warning</td><td>非法 MFJS Schema 应返回 400 或 warning</td></tr><tr><td><code>must.structured_output</code></td><td>must</td><td>结构化输出 · 汇总</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>6517</td><td>—</td><td>—</td><td>json_object + json_schema 均通过</td><td>结构化输出汇总</td></tr><tr><td><code>must.reasoning_effort</code></td><td>must</td><td>reasoning_effort 三档生效性</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>175724</td><td>—</td><td>—</td><td>三档均有思考（reasoning_content 或 reasoning_tokens）且 low/high 可区分</td><td>reasoning_effort low/high/max</td></tr><tr><td><code>recommend.video_url</code></td><td>recommend</td><td>多模态视频 · video_url</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>502</td><td>909</td><td>—</td><td>—</td><td>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;eligible channels are temporarily unavailable (request id: 202611100840557031642628268d9d6gXT0N3Jk)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;channel_temporarily_unavailable&#x27;}</td><td>video_url 远程</td></tr><tr><td><code>recommend.image_url</code></td><td>recommend</td><td>多模态图像 · image_url</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>8229</td><td>—</td><td>—</td><td>可用（支持公网 URL）</td><td>image_url 远程</td></tr><tr><td><code>note.content_filter</code></td><td>recommend</td><td>审核滤网（需关闭）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>None</td><td>—</td><td>—</td><td>—</td><td>请确认上游已关闭审核滤网；本脚本不主动探测敏感内容</td><td>审核滤网（需关闭，人工确认）</td></tr></tbody></table>
+  <h4>思考生效 + 参数约束</h4>
+  <table><thead><tr><th>Case</th><th>级别</th><th>名称</th><th>结果</th><th>HTTP</th><th>E2E ms</th><th>TTFB ms</th><th>TTFT ms</th><th>说明</th><th>检查项</th></tr></thead><tbody><tr><td><code>thinking_default_on</code></td><td>must</td><td>思考 · 默认行为（K3 始终开启）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>8841</td><td>—</td><td>—</td><td>默认开启思考 · reasoning_tokens=131</td><td>思考实际生效</td></tr><tr><td><code>enable_thinking_true_active</code></td><td>must</td><td>思考 · enable_thinking=true（非官方参数）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>9955</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=153</td><td>思考实际生效</td></tr><tr><td><code>enable_thinking_false_effective</code></td><td>must</td><td>思考 · enable_thinking=false（K3 不能关）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>11894</td><td>—</td><td>—</td><td>官方 K3 不能关思考 · 仍开启 reasoning_tokens=169</td><td>思考实际生效</td></tr><tr><td><code>thinking_type_disabled_effective</code></td><td>must</td><td>思考 · thinking.type=disabled（K3 不支持 thinking，应拒绝或仍思考）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>14717</td><td>—</td><td>—</td><td>仍开启思考（忽略 thinking.type） · reasoning_tokens=324</td><td>思考实际生效</td></tr><tr><td><code>thinking_type_enabled_active</code></td><td>must</td><td>思考 · thinking.type=enabled（K3 无此参数）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>11447</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=217</td><td>思考实际生效</td></tr><tr><td><code>chat_template_kwargs_enable_thinking_on</code></td><td>must</td><td>思考 · chat_template_kwargs.enable_thinking=true（非官方参数）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>10654</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=177</td><td>思考实际生效</td></tr><tr><td><code>chat_template_kwargs_enable_thinking_off</code></td><td>must</td><td>思考 · chat_template_kwargs.enable_thinking=false（K3 不能关）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>12035</td><td>—</td><td>—</td><td>官方 K3 不能关思考 · 仍开启 reasoning_tokens=212</td><td>思考实际生效</td></tr><tr><td><code>chat_template_kwargs_thinking_on</code></td><td>must</td><td>思考 · chat_template_kwargs.thinking=true（非官方参数）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>63894</td><td>—</td><td>—</td><td>reasoning_content 存在，思考开启 · reasoning_tokens=250</td><td>思考实际生效</td></tr><tr><td><code>chat_template_kwargs_thinking_off</code></td><td>must</td><td>思考 · chat_template_kwargs.thinking=false（K3 不能关）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>7915</td><td>—</td><td>—</td><td>官方 K3 不能关思考 · 仍开启 reasoning_tokens=96</td><td>思考实际生效</td></tr><tr><td><code>param_omit_sampling</code></td><td>must</td><td>参数约束 · 不传采样参数（应接受）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>3549</td><td>—</td><td>—</td><td>基础请求正常</td><td>参数约束</td></tr><tr><td><code>param_fixed_temperature</code></td><td>must</td><td>参数约束 · temperature=1.0（官方固定值，应接受）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>3463</td><td>—</td><td>—</td><td>固定值 temperature=1.0 被接受</td><td>参数约束</td></tr><tr><td><code>param_fixed_top_p</code></td><td>must</td><td>参数约束 · top_p=0.95（官方固定值，应接受）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>3590</td><td>—</td><td>—</td><td>固定值 top_p=0.95 被接受</td><td>参数约束</td></tr><tr><td><code>param_fixed_n</code></td><td>must</td><td>参数约束 · n=1（官方固定值，应接受）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>3779</td><td>—</td><td>—</td><td>固定值 n=1 被接受</td><td>参数约束</td></tr><tr><td><code>param_fixed_presence_penalty</code></td><td>must</td><td>参数约束 · presence_penalty=0（官方固定值，应接受）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>2982</td><td>—</td><td>—</td><td>固定值 presence_penalty=0 被接受</td><td>参数约束</td></tr><tr><td><code>param_fixed_frequency_penalty</code></td><td>must</td><td>参数约束 · frequency_penalty=0（官方固定值，应接受）</td><td style='color:#067d3c;font-weight:700'>PASS</td><td>200</td><td>3001</td><td>—</td><td>—</td><td>固定值 frequency_penalty=0 被接受</td><td>参数约束</td></tr><tr><td><code>param_reject_temperature_0_7</code></td><td>must</td><td>参数约束 · temperature=0.7（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>397</td><td>—</td><td>—</td><td>应拒绝但请求成功 · temperature=0.7</td><td>参数约束</td></tr><tr><td><code>param_reject_temperature_1_1</code></td><td>must</td><td>参数约束 · temperature=1.1（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>498</td><td>—</td><td>—</td><td>应拒绝但请求成功 · temperature=1.1</td><td>参数约束</td></tr><tr><td><code>param_reject_temperature_2_0</code></td><td>must</td><td>参数约束 · temperature=2.0（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>815</td><td>—</td><td>—</td><td>应拒绝但请求成功 · temperature=2.0</td><td>参数约束</td></tr><tr><td><code>param_reject_temperature_neg</code></td><td>must</td><td>参数约束 · temperature=-0.1（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>424</td><td>—</td><td>—</td><td>应拒绝但请求成功 · temperature=-0.1</td><td>参数约束</td></tr><tr><td><code>param_reject_temperature_0_6</code></td><td>must</td><td>参数约束 · temperature=0.6（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>418</td><td>—</td><td>—</td><td>应拒绝但请求成功 · temperature=0.6</td><td>参数约束</td></tr><tr><td><code>param_reject_top_p_0_8</code></td><td>must</td><td>参数约束 · top_p=0.8（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>442</td><td>—</td><td>—</td><td>应拒绝但请求成功 · top_p=0.8</td><td>参数约束</td></tr><tr><td><code>param_reject_n_2</code></td><td>must</td><td>参数约束 · n=2（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>476</td><td>—</td><td>—</td><td>应拒绝但请求成功 · n=2</td><td>参数约束</td></tr><tr><td><code>param_reject_presence_penalty_0_5</code></td><td>must</td><td>参数约束 · presence_penalty=0.5（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>360</td><td>—</td><td>—</td><td>应拒绝但请求成功 · presence_penalty=0.5</td><td>参数约束</td></tr><tr><td><code>param_reject_frequency_penalty_0_5</code></td><td>must</td><td>参数约束 · frequency_penalty=0.5（应拒绝）</td><td style='color:#b42318;font-weight:700'>FAIL</td><td>200</td><td>459</td><td>—</td><td>—</td><td>应拒绝但请求成功 · frequency_penalty=0.5</td><td>参数约束</td></tr></tbody></table>
+  
+  <h4>缓存命中率 · 长文固定 + 随机数变化</h4>
+  <p class="meta">同一段长文 · 每条「简洁一点，随机数=…」不同（流式 user.content 两段 text）
+     · 模型 <code>kimi-k3.1-pro</code>
+     · 前缀≈2048 token
+     · 预热 1 + 测量 5
+     </p>
+  <div class="cache-head">
+    <span class="cache-title">OpenAI Chat Completions</span>
+    <span class="cache-pill" style="background:#e8f6ee;color:#067d3c">全部命中 · 覆盖率 90.9%</span>
+  </div>
+  <div class="cache-stats">
+    <div class="cache-stat">
+      <div class="l">请求级命中率</div>
+      <div class="v" style="color:#067d3c">100.0%</div>
+      <div class="s">5/5 轮</div>
+    </div>
+    <div class="cache-stat">
+      <div class="l">Token 覆盖率</div>
+      <div class="v">90.9%</div>
+    </div>
+    <div class="cache-stat">
+      <div class="l">节省 Token</div>
+      <div class="v">6400</div>
+    </div>
+    <div class="cache-stat">
+      <div class="l">缓存写入</div>
+      <div class="v">—</div>
+    </div>
+    <div class="cache-stat">
+      <div class="l">命中均延迟</div>
+      <div class="v">5084 ms</div>
+      <div class="s">预热 5543 → 命中 5084 ms</div>
+    </div>
+  </div>
+  <table class="cache-rounds">
+    <thead><tr>
+      <th>轮次</th><th>判定</th><th style="text-align:right">HTTP</th>
+      <th style="text-align:right">总输入</th><th style="text-align:right">缓存读</th>
+      <th style="text-align:right">缓存写</th><th style="text-align:right">未缓存</th>
+      <th style="text-align:right">输出</th><th style="text-align:right">耗时</th>
+    </tr></thead>
+    <tbody><tr><td class='mono'>预热</td><td><span class='cache-pill' style='background:#f0f0f0;color:#6b7280'>预热</span></td><td class='mono' style='text-align:right'>200</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right;color:#9ca3af'>0</td><td class='mono' style='text-align:right;color:#9ca3af'>—</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right'>62</td><td class='mono' style='text-align:right'>5543 ms</td></tr><tr><td class='mono'>#1</td><td><span class='cache-pill' style='background:#e8f6ee;color:#067d3c'>命中</span></td><td class='mono' style='text-align:right'>200</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right;color:#067d3c'>1280</td><td class='mono' style='text-align:right;color:#9ca3af'>—</td><td class='mono' style='text-align:right'>128</td><td class='mono' style='text-align:right'>64</td><td class='mono' style='text-align:right'>6259 ms</td></tr><tr><td class='mono'>#2</td><td><span class='cache-pill' style='background:#e8f6ee;color:#067d3c'>命中</span></td><td class='mono' style='text-align:right'>200</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right;color:#067d3c'>1280</td><td class='mono' style='text-align:right;color:#9ca3af'>—</td><td class='mono' style='text-align:right'>128</td><td class='mono' style='text-align:right'>59</td><td class='mono' style='text-align:right'>4302 ms</td></tr><tr><td class='mono'>#3</td><td><span class='cache-pill' style='background:#e8f6ee;color:#067d3c'>命中</span></td><td class='mono' style='text-align:right'>200</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right;color:#067d3c'>1280</td><td class='mono' style='text-align:right;color:#9ca3af'>—</td><td class='mono' style='text-align:right'>128</td><td class='mono' style='text-align:right'>64</td><td class='mono' style='text-align:right'>4816 ms</td></tr><tr><td class='mono'>#4</td><td><span class='cache-pill' style='background:#e8f6ee;color:#067d3c'>命中</span></td><td class='mono' style='text-align:right'>200</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right;color:#067d3c'>1280</td><td class='mono' style='text-align:right;color:#9ca3af'>—</td><td class='mono' style='text-align:right'>128</td><td class='mono' style='text-align:right'>64</td><td class='mono' style='text-align:right'>5046 ms</td></tr><tr><td class='mono'>#5</td><td><span class='cache-pill' style='background:#e8f6ee;color:#067d3c'>命中</span></td><td class='mono' style='text-align:right'>200</td><td class='mono' style='text-align:right'>1408</td><td class='mono' style='text-align:right;color:#067d3c'>1280</td><td class='mono' style='text-align:right;color:#9ca3af'>—</td><td class='mono' style='text-align:right'>128</td><td class='mono' style='text-align:right'>64</td><td class='mono' style='text-align:right'>4997 ms</td></tr></tbody>
+  </table>
+  <div class="cache-chart-wrap">
+    <div class="cache-chart-title">每轮输入 Token 构成</div>
+    <div class="cache-legend">
+      <span><i class="lg read"></i>缓存读取</span>
+      <span><i class="lg write"></i>缓存写入</span>
+      <span><i class="lg uncached"></i>未缓存输入</span>
+    </div>
+    <div class="cache-chart"><div class='cache-bar-col'><div class='cache-bar' title='读0 / 写0 / 未缓存1408'><div class='seg read' style='height:0.00%'></div><div class='seg write' style='height:0.00%'></div><div class='seg uncached' style='height:100.00%'></div></div><div class='cache-bar-label'>预热</div></div><div class='cache-bar-col'><div class='cache-bar' title='读1280 / 写0 / 未缓存128'><div class='seg read' style='height:90.91%'></div><div class='seg write' style='height:0.00%'></div><div class='seg uncached' style='height:9.09%'></div></div><div class='cache-bar-label'>#1</div></div><div class='cache-bar-col'><div class='cache-bar' title='读1280 / 写0 / 未缓存128'><div class='seg read' style='height:90.91%'></div><div class='seg write' style='height:0.00%'></div><div class='seg uncached' style='height:9.09%'></div></div><div class='cache-bar-label'>#2</div></div><div class='cache-bar-col'><div class='cache-bar' title='读1280 / 写0 / 未缓存128'><div class='seg read' style='height:90.91%'></div><div class='seg write' style='height:0.00%'></div><div class='seg uncached' style='height:9.09%'></div></div><div class='cache-bar-label'>#3</div></div><div class='cache-bar-col'><div class='cache-bar' title='读1280 / 写0 / 未缓存128'><div class='seg read' style='height:90.91%'></div><div class='seg write' style='height:0.00%'></div><div class='seg uncached' style='height:9.09%'></div></div><div class='cache-bar-label'>#4</div></div><div class='cache-bar-col'><div class='cache-bar' title='读1280 / 写0 / 未缓存128'><div class='seg read' style='height:90.91%'></div><div class='seg write' style='height:0.00%'></div><div class='seg uncached' style='height:9.09%'></div></div><div class='cache-bar-label'>#5</div></div></div>
+    <p class="meta" style="margin-top:10px">理想形态：预热轮主要为「缓存写入 / 未缓存输入」，
+      后续轮次绝大部分为「缓存读取」。</p>
+  </div>
+
+  
+  <h4>返回模型汇总（思考/参数套件）</h4>
+  <p class="meta">请求模型：<code>kimi-k3.1-pro</code>
+     · 响应去重数：1</p>
+  <p class='ok'><b>模型一致性</b>：通过 · 模型一致性通过 · 仅一种响应 model：`kimi-k3.1-pro`</p>
+  <table><thead><tr><th>响应 model</th><th>次数</th><th>用例 ID</th></tr></thead>
+  <tbody><tr><td><code>kimi-k3.1-pro</code></td><td>15</td><td style='font-size:12px'>thinking_default_on, enable_thinking_true_active, enable_thinking_false_effective, thinking_type_disabled_effective, thinking_type_enabled_active, chat_template_kwargs_enable_thinking_on, chat_template_kwargs_enable_thinking_off, chat_template_kwargs_thinking_on, chat_template_kwargs_thinking_off, param_omit_sampling, param_fixed_temperature, param_fixed_top_p, param_fixed_n, param_fixed_presence_penalty, param_fixed_frequency_penalty</td></tr></tbody></table>
+
+  
+  <h4>延迟 · TTFT / TTFB / E2E</h4>
+  <p class="meta">TTFT=流式首个可见 token；非流式仅有 E2E（及可选 TTFB）
+ · TTFT n=10 avg=3309 p50=3233 p95=4822 · E2E p50=5046 p95=19411 ms</p>
+  <table>
+    <thead><tr><th>指标</th><th>n</th><th>avg</th><th>p50</th><th>p95</th><th>min</th><th>max</th></tr></thead>
+    <tbody>
+      <tr><td>TTFT（流式）</td><td>10</td><td>3309</td>
+        <td>3233</td><td>4822</td>
+        <td>2173</td><td>5743</td></tr>
+      <tr><td>TTFB</td><td>11</td><td>401</td>
+        <td>370</td><td>668</td>
+        <td>268</td><td>754</td></tr>
+      <tr><td>E2E</td><td>61</td><td>10373</td>
+        <td>5046</td><td>19411</td>
+        <td>360</td><td>175724</td></tr>
+    </tbody>
+  </table>
+  <h5>流式用例 TTFT 明细</h5>
+  <table><thead><tr><th>Case</th><th>TTFT ms</th><th>TTFB ms</th><th>E2E ms</th></tr></thead>
+  <tbody><tr><td><code>must.stream_integrity</code></td><td>2471</td><td>331</td><td>5644</td></tr><tr><td><code>must.usage_stream</code></td><td>3402</td><td>320</td><td>4050</td></tr><tr><td><code>must.invalid_mfjs_schema</code></td><td>2173</td><td>334</td><td>5670</td></tr><tr><td><code>cache.round_0</code></td><td>3323</td><td>393</td><td>5543</td></tr><tr><td><code>cache.round_1</code></td><td>5743</td><td>754</td><td>6259</td></tr><tr><td><code>cache.round_2</code></td><td>2615</td><td>268</td><td>4302</td></tr><tr><td><code>cache.round_3</code></td><td>3695</td><td>582</td><td>4816</td></tr><tr><td><code>cache.round_4</code></td><td>3383</td><td>400</td><td>5046</td></tr><tr><td><code>cache.round_5</code></td><td>3143</td><td>370</td><td>4997</td></tr><tr><td><code>must.cache_hit_rate</code></td><td>3143</td><td>370</td><td>4997</td></tr></tbody></table>
+
+  
+  <h4 id="failures-kimi-k3.1-pro">失败详情（原因 / 证据 / 输入输出）</h4>
+  <div class="fail-box">
+    <h5>失败评分子项</h5>
+    <ul><li><code>video_base64</code> · Video_base64<div class='err'>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</div></li></ul>
+    <h5>失败能力用例</h5>
+    <div class='fail-case'><h5><code>must.video_base64</code> · 多模态视频 · Video_base64</h5><p><b>结果</b>：FAIL · HTTP 502 · E2E 732 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</span></p><p><b>错误</b>：<span class='err'>HTTP 502 · {&#x27;message&#x27;: &#x27;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;model_not_f</span></p><p><b>检查项</b>：Video_base64</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;mode&quot;: &quot;video_url+data_uri&quot;,
+  &quot;fallback&quot;: {
+    &quot;status&quot;: 400,
+    &quot;error&quot;: &quot;HTTP 400 · {&#x27;message&#x27;: &#x27;{\&quot;code\&quot;:11101,\&quot;msg\&quot;:\&quot;Parse message failed: unsupported content type at index 0: video_base64\&quot;,\&quot;requestId\&quot;:\&quot;9a3d40cf22ac72327d3d5db12da43910\&quot;,\&quot;retry_policy\&quot;:{\&quot;retry\&quot;:false},\&quot;displayMsg\&quot;:{\&quot;&quot;
+  }
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;max_tokens&quot;: 128,
+  &quot;stream&quot;: false,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: [
+        {
+          &quot;type&quot;: &quot;video_url&quot;,
+          &quot;video_url&quot;: {
+            &quot;url&quot;: &quot;data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAxZtZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73…&lt;2310 chars&gt;&quot;
+          }
+        },
+        {
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;text&quot;: &quot;用一句话描述视频画面。&quot;
+        }
+      ]
+    }
+  ]
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;error&quot;: {
+    &quot;message&quot;: &quot;No available channel for model kimi-k3.1-pro under group T (distributor) (request id: 202611100833211894417298268d9d66rVJHbIY)&quot;,
+    &quot;type&quot;: &quot;new_api_error&quot;,
+    &quot;param&quot;: &quot;&quot;,
+    &quot;code&quot;: &quot;model_not_found&quot;
+  }
+}</pre></div><div class='fail-case'><h5><code>must.dynamic_tool_with_content_rejected</code> · 动态加载工具 · tools 与 content 互斥</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 571 ms · TTFB 289 ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>未按预期拒绝: SSE 分片不足: 1（需 ≥2）</span></p><p><b>错误</b>：<span class='err'>SSE 分片不足: 1（需 ≥2）</span></p><p><b>检查项</b>：动态 tools system 消息携带 content 应返回 HTTP 400</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;status&quot;: 200,
+  &quot;error&quot;: &quot;SSE 分片不足: 1（需 ≥2）&quot;
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;帮我计算一下 23 * 47 的结果。&quot;
+    },
+    {
+      &quot;role&quot;: &quot;system&quot;,
+      &quot;content&quot;: &quot;多余的 content&quot;,
+      &quot;tools&quot;: [
+        {
+          &quot;type&quot;: &quot;function&quot;,
+          &quot;function&quot;: {
+            &quot;name&quot;: &quot;Calculator&quot;,
+            &quot;description&quot;: &quot;计算器，只支持单个算术表达式的求值&quot;,
+            &quot;parameters&quot;: {
+              &quot;type&quot;: &quot;object&quot;,
+              &quot;properties&quot;: {
+                &quot;expr&quot;: {
+                  &quot;type&quot;: &quot;string&quot;,
+                  &quot;description&quot;: &quot;算术表达式，支持四则运算、指数运算、对数函数、三角函数，使用 javascript 语法&quot;
+                }
+              },
+              &quot;required&quot;: [
+                &quot;expr&quot;
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  &quot;max_completion_tokens&quot;: 1024,
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;stream&quot;: true,
+  &quot;object&quot;: &quot;chat.completion.chunk&quot;,
+  &quot;chunk_count&quot;: 1,
+  &quot;saw_done&quot;: true,
+  &quot;usage&quot;: null,
+  &quot;warnings&quot;: [],
+  &quot;content&quot;: &quot;&quot;,
+  &quot;model&quot;: null,
+  &quot;choices&quot;: [
+    {
+      &quot;message&quot;: {
+        &quot;role&quot;: &quot;assistant&quot;,
+        &quot;content&quot;: &quot;&quot;
+      }
+    }
+  ]
+}</pre></div><div class='fail-case'><h5><code>must.invalid_mfjs_schema</code> · 结构化输出 · 非法 MFJS Schema 反例</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 5670 ms · TTFB 334 ms · TTFT 2173 ms</p><p><b>原因</b>：<span class='err'>失败: HTTP 200 且响应无 warning</span></p><p><b>检查项</b>：非法 MFJS Schema 应返回 400 或 warning</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;http_status&quot;: 200,
+  &quot;warning&quot;: null,
+  &quot;invalid_required_field&quot;: &quot;not_exist_field&quot;
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;任意输出&quot;
+    }
+  ],
+  &quot;response_format&quot;: {
+    &quot;type&quot;: &quot;json_schema&quot;,
+    &quot;json_schema&quot;: {
+      &quot;name&quot;: &quot;bad&quot;,
+      &quot;strict&quot;: true,
+      &quot;schema&quot;: {
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+          &quot;a&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          }
+        },
+        &quot;required&quot;: [
+          &quot;not_exist_field&quot;
+        ]
+      }
+    }
+  },
+  &quot;max_completion_tokens&quot;: 1024,
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;stream&quot;: true,
+  &quot;object&quot;: &quot;chat.completion.chunk&quot;,
+  &quot;chunk_count&quot;: 111,
+  &quot;saw_done&quot;: true,
+  &quot;usage&quot;: {
+    &quot;prompt_tokens&quot;: 168,
+    &quot;completion_tokens&quot;: 123,
+    &quot;total_tokens&quot;: 291,
+    &quot;prompt_tokens_details&quot;: {
+      &quot;audio_tokens&quot;: 0,
+      &quot;cached_tokens&quot;: 0,
+      &quot;cache_write_tokens&quot;: 0,
+      &quot;cache_write_5m_tokens&quot;: 0,
+      &quot;cache_write_1h_tokens&quot;: 0,
+      &quot;text_tokens&quot;: 0,
+      &quot;image_tokens&quot;: 0,
+      &quot;video_tokens&quot;: 0
+    },
+    &quot;completion_tokens_details&quot;: {
+      &quot;audio_tokens&quot;: 0,
+      &quot;reasoning_tokens&quot;: 101,
+      &quot;accepted_prediction_tokens&quot;: 0,
+      &quot;rejected_prediction_tokens&quot;: 0,
+      &quot;text_tokens&quot;: 0,
+      &quot;image_tokens&quot;: 0,
+      &quot;video_tokens&quot;: 0
+    }
+  },
+  &quot;warnings&quot;: [],
+  &quot;content&quot;: &quot;用户说\&quot;任意输出\&quot;（输出任意内容）。我需要按照指令输出一个符合 JSON Schema 的 JSON 值。Schema 要求必须包含 \&quot;not_exist_field\&quot; 属性（required），类型未指定其值，同时 properties 里定义了 \&quot;a\&quot; 为 string，但 additionalProperties 未禁止。所以最稳妥输出 {\&quot;not_exist_field\&quot;:null} 或 {\&quot;not_exist_field\&quot;:\&quot;\&quot;}。required 只要存在即可，值…&lt;274 chars total&gt;&quot;,
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;choices&quot;: [
+    {
+      &quot;message&quot;: {
+        &quot;role&quot;: &quot;assistant&quot;,
+        &quot;content&quot;: &quot;用户说\&quot;任意输出\&quot;（输出任意内容）。我需要按照指令输出一个符合 JSON Schema 的 JSON 值。Schema 要求必须包含 \&quot;not_exist_field\&quot; 属性（required），类型未指定其值，同时 properties 里定义了 \&quot;a\&quot; 为 string，但 additionalProperties 未禁止。所以最稳妥输出 {\&quot;not_exist_field\&quot;:null} 或 {\&quot;not_exist_field\&quot;:\&quot;\&quot;}。required 只要存在即可，值…&lt;274 chars total&gt;&quot;
+      }
+    }
+  ]
+}</pre></div><div class='fail-case'><h5><code>recommend.video_url</code> · 多模态视频 · video_url</h5><p><b>结果</b>：FAIL · HTTP 502 · E2E 909 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>不可用: HTTP 502 · {&#x27;message&#x27;: &#x27;eligible channels are temporarily unavailable (request id: 202611100840557031642628268d9d6gXT0N3Jk)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;channel_temporarily_unavailable&#x27;}</span></p><p><b>错误</b>：<span class='err'>HTTP 502 · {&#x27;message&#x27;: &#x27;eligible channels are temporarily unavailable (request id: 202611100840557031642628268d9d6gXT0N3Jk)&#x27;, &#x27;type&#x27;: &#x27;new_api_error&#x27;, &#x27;param&#x27;: &#x27;&#x27;, &#x27;code&#x27;: &#x27;channel_temporarily_unavailable&#x27;}</span></p><p><b>检查项</b>：video_url 远程</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;expect&quot;: &quot;ok_or_official_reject_public_url&quot;,
+  &quot;unsupported_public_url&quot;: false,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;max_tokens&quot;: 128,
+  &quot;stream&quot;: false,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: [
+        {
+          &quot;type&quot;: &quot;video_url&quot;,
+          &quot;video_url&quot;: {
+            &quot;url&quot;: &quot;https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4&quot;
+          }
+        },
+        {
+          &quot;type&quot;: &quot;text&quot;,
+          &quot;text&quot;: &quot;用一句话描述视频内容。&quot;
+        }
+      ]
+    }
+  ]
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;error&quot;: {
+    &quot;message&quot;: &quot;eligible channels are temporarily unavailable (request id: 202611100840557031642628268d9d6gXT0N3Jk)&quot;,
+    &quot;type&quot;: &quot;new_api_error&quot;,
+    &quot;param&quot;: &quot;&quot;,
+    &quot;code&quot;: &quot;channel_temporarily_unavailable&quot;
+  }
+}</pre></div><div class='fail-case'><h5><code>param_reject_temperature_0_7</code> · 参数约束 · temperature=0.7（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 397 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · temperature=0.7</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;temperature&quot;,
+  &quot;value&quot;: 0.7,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;temperature&quot;: 0.7,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;invalid temperature: only 1 is allowed for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_temperature_1_1</code> · 参数约束 · temperature=1.1（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 498 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · temperature=1.1</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;temperature&quot;,
+  &quot;value&quot;: 1.1,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;temperature&quot;: 1.1,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;invalid temperature: only 1 is allowed for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_temperature_2_0</code> · 参数约束 · temperature=2.0（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 815 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · temperature=2.0</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;temperature&quot;,
+  &quot;value&quot;: 2.0,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;temperature&quot;: 2.0,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;invalid temperature: only 1 is allowed for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_temperature_neg</code> · 参数约束 · temperature=-0.1（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 424 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · temperature=-0.1</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;temperature&quot;,
+  &quot;value&quot;: -0.1,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;temperature&quot;: -0.1,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;invalid temperature: only 1 is allowed for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_temperature_0_6</code> · 参数约束 · temperature=0.6（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 418 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · temperature=0.6</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;temperature&quot;,
+  &quot;value&quot;: 0.6,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;temperature&quot;: 0.6,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;invalid temperature: only 1 is allowed for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_top_p_0_8</code> · 参数约束 · top_p=0.8（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 442 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · top_p=0.8</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;top_p&quot;,
+  &quot;value&quot;: 0.8,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;top_p&quot;: 0.8,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;top_p must be 0.95 for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_n_2</code> · 参数约束 · n=2（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 476 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · n=2</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;n&quot;,
+  &quot;value&quot;: 2,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;n&quot;: 2,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;n must be 1 for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_presence_penalty_0_5</code> · 参数约束 · presence_penalty=0.5（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 360 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · presence_penalty=0.5</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;presence_penalty&quot;,
+  &quot;value&quot;: 0.5,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;presence_penalty&quot;: 0.5,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;presence_penalty must be 0 for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div><div class='fail-case'><h5><code>param_reject_frequency_penalty_0_5</code> · 参数约束 · frequency_penalty=0.5（应拒绝）</h5><p><b>结果</b>：FAIL · HTTP 200 · E2E 459 ms · TTFB — ms · TTFT — ms</p><p><b>原因</b>：<span class='err'>应拒绝但请求成功 · frequency_penalty=0.5</span></p><p><b>检查项</b>：参数约束</p><p><b>证据 evidence</b></p><pre class="io">{
+  &quot;param&quot;: &quot;frequency_penalty&quot;,
+  &quot;value&quot;: 0.5,
+  &quot;expect&quot;: &quot;reject&quot;,
+  &quot;http_status&quot;: 200,
+  &quot;infra_auth_error&quot;: false
+}</pre><p><b>请求输入 request</b></p><pre class="io">{
+  &quot;model&quot;: &quot;kimi-k3.1-pro&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;你好&quot;
+    }
+  ],
+  &quot;frequency_penalty&quot;: 0.5,
+  &quot;max_completion_tokens&quot;: 64,
+  &quot;stream&quot;: true,
+  &quot;stream_options&quot;: {
+    &quot;include_usage&quot;: true
+  }
+}</pre><p><b>响应输出 response</b></p><pre class="io">{
+  &quot;_raw&quot;: &quot;: ping\n\n: ping\n\ndata: {\&quot;error\&quot;:{\&quot;message\&quot;:\&quot;frequency_penalty must be 0 for this model\&quot;,\&quot;type\&quot;:\&quot;invalid_request_error\&quot;,\&quot;param\&quot;:\&quot;\&quot;,\&quot;code\&quot;:\&quot;invalid_request\&quot;}}\n\ndata: [DONE]\n\n&quot;
+}</pre></div>
+  </div>
+
+</section>
+
+<footer class="report-disclaimer" style="margin-top:32px;padding-top:16px;border-top:1px solid #e6e1da;color:#555;font-size:13px;line-height:1.7"><p>本报告用于 Kimi-K3 能力验收与对外沟通。</p><p>免责声明：本报告为基于公开接口协议的本地自测结果整理，仅供参考，不构成官方认证、官方测评或任何形式的合规/准入背书；测试环境、参数与样本可能影响结果，请以实际业务验证为准。</p><p>原始运行 ID：e1bcd2b0-23f3-4dbe-9011-89e8ac41dcfa　·　生成时间：2026-11-10 16:44</p></footer>
+</body></html>

@@ -21,7 +21,7 @@ import (
 	"github.com/QuantumNous/new-api/service"
 )
 
-const maxVideoBytes = 64 << 20
+const maxVideoBytes = 256 << 20
 
 // Bound CPU and temporary-file usage independently of relay concurrency.
 var videoSlots = make(chan struct{}, 2)
@@ -164,14 +164,14 @@ func loadVideo(ctx context.Context, ref string) ([]byte, error) {
 			return nil, fmt.Errorf("video data must be a base64 video data URL")
 		}
 		if len(data) > base64.StdEncoding.EncodedLen(maxVideoBytes) {
-			return nil, fmt.Errorf("video exceeds 64 MiB")
+			return nil, fmt.Errorf("video exceeds 256 MiB")
 		}
 		decoded, err := base64.StdEncoding.DecodeString(data)
 		if err != nil {
 			return nil, fmt.Errorf("invalid video base64")
 		}
 		if len(decoded) > maxVideoBytes {
-			return nil, fmt.Errorf("video exceeds 64 MiB")
+			return nil, fmt.Errorf("video exceeds 256 MiB")
 		}
 		return decoded, nil
 	}
@@ -195,14 +195,14 @@ func loadVideo(ctx context.Context, ref string) ([]byte, error) {
 		return nil, fmt.Errorf("video download returned HTTP %d", resp.StatusCode)
 	}
 	if resp.ContentLength > maxVideoBytes {
-		return nil, fmt.Errorf("video exceeds 64 MiB")
+		return nil, fmt.Errorf("video exceeds 256 MiB")
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxVideoBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("could not read video download")
 	}
 	if len(data) > maxVideoBytes {
-		return nil, fmt.Errorf("video exceeds 64 MiB")
+		return nil, fmt.Errorf("video exceeds 256 MiB")
 	}
 	return data, nil
 }

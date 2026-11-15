@@ -1,0 +1,1942 @@
+kimi-k3.1-pro · 实时复测结果
+LIVE RETEST
+/ API 定向复测
+打印 / 另存 PDF
+API.HUANXING.AI · KIMI-K3.1-PRO
+这些问题还在吗？
+部分仍在，部分本次未复现。
+已使用用户提供的接口与密钥完成实测。
+工具消息校验、low 档答错、偶发格式不符，以及流式缓存字段和 1h 归类问题仍存在。
+多轮状态、非流式缓存写读和本次多轮缓存样本表现正常。
+客户端记录时间（北京时间）：2026-11-12 22:40:39 ～ 2026-11-12 22:46:47
+端点：https://api.huanxing.ai · 模型：kimi-k3.1-pro · 41 次 POST 生成请求 + 1 次模型列表查询
+41
+生成请求
+41 / 41
+HTTP 200；不等于业务断言全过
+6 / 10
+算术题严格格式通过
+3 / 3
+首轮精确回复 OK
+当前建议：
+仍不能给出“旧问题全部消失”的结论。先处理可复现的协议校验、严格输出和缓存 TTL/字段问题；未复现项应使用原始测试参数复验后再标记已修复。
+01 / 旧问题与本次结果
+原问题
+本次判断
+实测证据
+孤立 tool 消息
+仍可复现
+HTTP 200，直接回答天气；未拒绝无配对调用的 tool 消息。
+输入 Token 固定偏差
+相对历史基线仍存在
+重放两份完整旧请求：1,045 / 4,117；历史官方参考 1,118 / 4,190，均差 −73。未调用实时官方基线。
+推理与严格输出
+仍可复现，但部分档位改善
+low 0/3；high 2/3；max 3/3；缺省 1/1。严格只输出 423 共 6/10。
+多轮首轮 OK / 更新金额
+本次未复现
+首轮 3/3 只返回 OK；一次连续更新准确返回 A-102,108。第二轮为本次补充设计。
+非流式 5m 缓存写读差异
+本次样本未复现
+Chat、Messages、Responses 均写入 5,632，随后命中 5,632；非流式写入响应头存在。
+Messages 1h TTL 归类
+仍可复现
+明确请求 ttl:1h，写入仍计入 5m；非流式 1h 字段为 0，流式写入缺少 1h 字段。
+流式缓存头 / TTL 字段
+仍可复现
+三协议均缺少两种 Msh 缓存写入头；Messages 流式写入缺少 ephemeral_1h_input_tokens。
+多轮缓存不足 90%
+本次构造样本未复现
+Messages 三轮 96.09%–97.41%；Responses 三轮 96.79%–97.49%。不能等价判定原用例已修复。
+02 / 工具校验、推理与多轮状态
+孤立工具消息仍被接受
+请求只包含 user 与 tool(call_abc123)，没有前置 assistant tool_calls。接口返回 HTTP 200，正文为：
+今天天气**晴朗** ☀️
+天气不错，是个外出活动的好日子！记得如果阳光较强的话，可以做好防晒措施哦。
+还有什么我可以帮您的吗？
+流式返回了 finish_reason=stop 与 [DONE]，因此这里失败的是消息序列校验，不是流式结束。stop 控制正确在“橘子”前结束；tool_choice=none 未产生工具调用。
+同一道算术题重复 10 次
+题目与原报告相同，max_completion_tokens=8192，非流式；未额外指定 temperature / seed。按去空白后的精确字符串 423 判定。没有使用删 Markdown 或抽取数字的宽松判定。
+reasoning_effort
+实际正文（逐次）
+严格通过
+low
+**997**
+997
+**997**
+0/3
+high
+423
+423
+**423**
+2/3
+max
+423
+423
+423
+3/3
+default
+423
+1/1
+数值正确 7/10，严格格式正确 6/10。low 三次均为 997；high 的一个 **423** 数值对但格式错。未再次看到 [tokenLUN1]，但样本有限，不能证明该尾缀问题已根除。max 3/3 和缺省 1/1 通过，也不足以证明长期稳定。
+多轮格式与事实更新本次正常
+重放“订单 A-102，原金额 100，只回复 OK”共 3 次，均只返回 OK。将第一轮实际回复回传，再要求金额加 8 并按 A-102,108 输出，准确返回该字符串。第二轮提示由本次补充设计，不能冒充原测试的完全重放。
+03 / 输入 Token：旧请求重放，固定差值未变化
+旧请求 ID
+输入字符数
+本次 Token
+旧渠道 Token
+历史官方参考
+差值
+1373974
+6,712
+1,045
+1,045
+1,118
+−73 / −6.53%
+1373976
+26,736
+4,117
+4,117
+4,190
+−73 / −1.74%
+这两份请求从 Markdown 的完整 JSON 中解析后原样重放，max_tokens=512；两档增量均为 3,072，与历史参考增量相同。确认的是“当前返回与旧渠道计量相同、仍比历史参考少 73”。本次没有官方密钥对照，不能视为实时官方基线验证。8,192 档完整请求未恢复，未做该档复测。usage 差异仍不是账单多扣的证据。
+04 / 缓存：实际命中正常，TTL 与字段契约仍有缺口
+模式
+写入总量
+回读命中
+首次写入响应头
+首次写入 TTL 明细
+chat_json_5m
+5,632
+5632
+5m=5632；1h=0
+{&quot;ttl_5m_tokens&quot;: 5632, &quot;ttl_1h_tokens&quot;: 0}
+messages_json_5m
+5,632
+5632
+5m=5632；1h=0
+{&quot;ephemeral_5m_input_tokens&quot;: 5632, &quot;ephemeral_1h_input_tokens&quot;: 0}
+responses_json_5m
+5,632
+5632
+5m=5632；1h=0
+无 TTL 拆分字段
+messages_json_1h
+5,632
+5632
+5m=5632；1h=0
+{&quot;ephemeral_5m_input_tokens&quot;: 5632, &quot;ephemeral_1h_input_tokens&quot;: 0}
+chat_stream_5m
+5,632
+5632
+5m=缺失；1h=缺失
+无 TTL 拆分字段
+messages_stream_5m
+5,632
+5632
+5m=缺失；1h=缺失
+{&quot;ephemeral_5m_input_tokens&quot;: 5632}
+responses_stream_5m
+5,632
+5632
+5m=缺失；1h=缺失
+无 TTL 拆分字段
+messages_stream_1h
+5,632
+5632
+5m=缺失；1h=缺失
+{&quot;ephemeral_5m_input_tokens&quot;: 5632}
+非流式改善：
+Chat / Responses 的 5m 写入与回读相等；Messages 非流式现在明确返回 5m 与 1h 两个计量字段，包括 0 值。
+仍存在：
+Messages 请求的 content 文本块明确带 cache_control:{type:"ephemeral",ttl:"1h"}，但非流式写入 5m=5632、1h=0；流式写入仍只含 5m=5632。三协议流式都没有 Msh-Usage-Cache-Write-Tokens-5m / 1h 两个响应头。Chat 流式首次写入的 usage 只有 cache_write_tokens，缺少 TTL 拆分。
+结束事件正常：
+Chat 收到 [DONE]；Messages 收到 message_stop；Responses 收到 response.completed。Messages / Responses 不需要采用 Chat 的 [DONE] 标记。
+TTL 测试检查的是参数与上报字段，未等待 5 分钟或 1 小时验证实际过期时间。Chat / Responses 本轮观察默认缓存计量，未显式发送已证实有效的 TTL 参数；原报告对应请求被截断，不能声称完整重放。
+05 / 多轮缓存：本次三轮样本均超过 90%
+协议
+追问轮次
+缓存读取 Token
+总输入 Token
+缓存占比
+messages
+1
+5632
+5782
+97.41%
+messages
+2
+5632
+5861
+96.09%
+messages
+3
+5632
+5824
+96.70%
+responses
+1
+5632
+5777
+97.49%
+responses
+2
+5632
+5798
+97.14%
+responses
+3
+5632
+5819
+96.79%
+每个协议先完成相同长前缀的写入与重复读取，再将接口实际返回的 assistant 内容回传，连续加入三次短追问。Messages 回传 content 块，Responses 回传 output 项；未使用 previous_response_id。
+计算口径：Messages = cache_read_input_tokens ÷ (input_tokens + cache_creation_input_tokens + cache_read_input_tokens)；Responses = input_tokens_details.cached_tokens ÷ input_tokens。表中比率只统计预热后的三个追问请求，不包含冷启动。
+本次样本是 320 条合成仓库记录加短追问，长前缀占比高；原报告的具体多轮负载和命中率公式未完整提供。当前结果说明此样本能达标，不能据此宣布原来的 83.4% / 81.3% 用例已修复。
+06 / 范围与复核建议
+模型列表包含 kimi-k3.1-pro，所有测试都使用该模型名。但本次密钥实际路由到的上游渠道未核实，不能保证就是旧报告的“亿客”渠道。
+41 个生成请求全部返回 HTTP 200；这些请求的语义、格式和缓存字段断言仍有失败。未执行压力、吞吐、完整准入或长期稳定性测试。
+请求最大输出采用原始值或明确的测试预算；孤立工具与控制测试额外限制为 1,024，缓存样本使用 256。原始请求与响应均保存在脱敏证据文件中。
+优先修复孤立 tool 校验、1h 归类与流式字段；然后用原测试 V4 复跑。格式问题应分开统计“数字算对”和“精确输出”。
+本次没有读取服务器日志或修改配置。密钥仅用于请求认证，未写入 HTML、测试证据或仓库。
+下载本次请求 / 原始响应 / 响应头证据 JSON
+·
+查看原始问题分析与截图
+07 / 请求索引
+以下保留正文、usage、选定响应头及 request ID；完整 payload 与原始返回见证据 JSON。
+orphan_tool · HTTP 200
+{
+&quot;name&quot;: &quot;orphan_tool&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:08.387Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;今天天气**晴朗** ☀️\n\n天气不错，是个外出活动的好日子！记得如果阳光较强的话，可以做好防晒措施哦。\n\n还有什么我可以帮您的吗？&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 24,
+&quot;completion_tokens&quot;: 114,
+&quot;total_tokens&quot;: 138,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 75
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: true,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214401834809827e1220a0eKoKp3sHz&quot;
+},
+&quot;elapsed_ms&quot;: 6852
+}
+multiturn_first · HTTP 200
+{
+&quot;name&quot;: &quot;multiturn_first&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:15.247Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 103,
+&quot;completion_tokens&quot;: 3,
+&quot;total_tokens&quot;: 106,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 0
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvm6vr8qe3phhdad0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144022402687999e1220a0eyl0UhY3D&quot;,
+&quot;x-request-id&quot;: &quot;97917ca6-6174-464b-b32e-b35fa382436f&quot;
+},
+&quot;elapsed_ms&quot;: 2448
+}
+multiturn_update · HTTP 200
+{
+&quot;name&quot;: &quot;multiturn_update&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:32.792Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;A-102,108&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 162,
+&quot;completion_tokens&quot;: 9,
+&quot;total_tokens&quot;: 171,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 2
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvqjvao60fjk372qg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144040783658436e1220a0ejENc9Yp3&quot;,
+&quot;x-request-id&quot;: &quot;6f47ad89-1efc-4221-b63e-9f4df2d4ba3c&quot;
+},
+&quot;elapsed_ms&quot;: 2612
+}
+multiturn_first_repeat_1 · HTTP 200
+{
+&quot;name&quot;: &quot;multiturn_first_repeat_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:35.405Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 103,
+&quot;completion_tokens&quot;: 3,
+&quot;total_tokens&quot;: 106,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 0
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvr4vbov273edqjh0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144042560127709e1220a0eYVR21XZ0&quot;,
+&quot;x-request-id&quot;: &quot;c6d6c251-72ac-4c07-84e4-07b7813da562&quot;
+},
+&quot;elapsed_ms&quot;: 2061
+}
+multiturn_first_repeat_2 · HTTP 200
+{
+&quot;name&quot;: &quot;multiturn_first_repeat_2&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:37.467Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 103,
+&quot;completion_tokens&quot;: 3,
+&quot;total_tokens&quot;: 106,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 0
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvrkkj3ijrg6hne90&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144044623204970e1220a0eeMlwj0YC&quot;,
+&quot;x-request-id&quot;: &quot;469a97f2-9262-4a80-8da4-9eaf266a601e&quot;
+},
+&quot;elapsed_ms&quot;: 2393
+}
+reasoning_low_1 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_low_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:39.861Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;**997**&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 64,
+&quot;total_tokens&quot;: 175,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 58
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvt1661njfjudfaeg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214404729816038e1220a0eL7YQtfsG&quot;,
+&quot;x-request-id&quot;: &quot;3d9804d6-28c5-463d-a89f-5761a33cd3b0&quot;
+},
+&quot;elapsed_ms&quot;: 5634
+}
+reasoning_low_2 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_low_2&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:39.861Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;997&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 168,
+&quot;total_tokens&quot;: 279,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 164
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvth4b108smll6tbg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144047137880001e1220a0eTu1GXN0h&quot;,
+&quot;x-request-id&quot;: &quot;ef0a0b73-21f9-4899-812b-094752db3b4d&quot;
+},
+&quot;elapsed_ms&quot;: 9106
+}
+reasoning_low_3 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_low_3&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:48.968Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;**997**&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 67,
+&quot;total_tokens&quot;: 178,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 61
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqsvv08rr3qevftpb3g&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144056122989475e1220a0eiWJDMHb3&quot;,
+&quot;x-request-id&quot;: &quot;602e92ba-1080-444b-a4fd-c7d8a0a3fcb9&quot;
+},
+&quot;elapsed_ms&quot;: 4116
+}
+reasoning_high_1 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_high_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:48.969Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;423&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 570,
+&quot;total_tokens&quot;: 681,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 566
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt00butdhu1dnm1gcg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144056123585168e1220a0e32jA5Wis&quot;,
+&quot;x-request-id&quot;: &quot;5664e199-f402-48e0-90f0-b27f66106fcd&quot;
+},
+&quot;elapsed_ms&quot;: 9800
+}
+reasoning_high_3 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_high_3&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:58.770Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;**423**&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 492,
+&quot;total_tokens&quot;: 603,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 486
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt02v6lhoh14rcvsu0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144105926921742e1220a0eAW33RImi&quot;,
+&quot;x-request-id&quot;: &quot;4bd55592-27f5-4cd4-be97-2672ccacecd9&quot;
+},
+&quot;elapsed_ms&quot;: 9686
+}
+reasoning_high_2 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_high_2&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:41:58.770Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;423&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 374,
+&quot;total_tokens&quot;: 485,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 370
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt03tnkb83otnpbg40&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214410868001904e1220a0ecvr78pjS&quot;,
+&quot;x-request-id&quot;: &quot;8aceb604-7a7b-4d87-8fdd-84ed5866c0fb&quot;
+},
+&quot;elapsed_ms&quot;: 13975
+}
+reasoning_max_1 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_max_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:12.746Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;423&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 110,
+&quot;completion_tokens&quot;: 377,
+&quot;total_tokens&quot;: 487,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 373
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0715spemnighk790&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144119901874838e1220a0e5X5ktMsJ&quot;,
+&quot;x-request-id&quot;: &quot;38ef9fa8-ee0b-4ce7-8eeb-17890aa5ec73&quot;
+},
+&quot;elapsed_ms&quot;: 13041
+}
+reasoning_max_2 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_max_2&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:12.746Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;423&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 110,
+&quot;completion_tokens&quot;: 398,
+&quot;total_tokens&quot;: 508,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 394
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt076enblk1gihrb00&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144123311995088e1220a0eIakjg8aR&quot;,
+&quot;x-request-id&quot;: &quot;e94d11e7-8a10-4dce-befd-6359bccf7ca7&quot;
+},
+&quot;elapsed_ms&quot;: 13158
+}
+reasoning_default_1 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_default_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:25.905Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;423&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 110,
+&quot;completion_tokens&quot;: 366,
+&quot;total_tokens&quot;: 476,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 362
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt09l3ihh5n7vj6k7g&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214413361906873e1220a0eB62iX0QW&quot;,
+&quot;x-request-id&quot;: &quot;8073c73f-633e-43c4-b486-d67e228832f3&quot;
+},
+&quot;elapsed_ms&quot;: 9193
+}
+reasoning_max_3 · HTTP 200
+{
+&quot;name&quot;: &quot;reasoning_max_3&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:25.905Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;423&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 110,
+&quot;completion_tokens&quot;: 379,
+&quot;total_tokens&quot;: 489,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 375
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt09gb8jn9kdkkga0g&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214413361719797e1220a0eVe9i4wcV&quot;,
+&quot;x-request-id&quot;: &quot;1104d81b-0489-4872-811d-d1b65859a0b8&quot;
+},
+&quot;elapsed_ms&quot;: 9473
+}
+accounting_original_1373976 · HTTP 200
+{
+&quot;name&quot;: &quot;accounting_original_1373976&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:50.955Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 4117,
+&quot;completion_tokens&quot;: 54,
+&quot;total_tokens&quot;: 4171,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 51
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 4096,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 4096,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json; charset=UTF-8&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0elrld5rg6egt1p0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;4096&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144158598059053e1220a0elD5UJPQL&quot;,
+&quot;x-request-id&quot;: &quot;2449d55e-67ad-49d5-9140-3a9c10b6ab76&quot;
+},
+&quot;elapsed_ms&quot;: 4601
+}
+accounting_original_1373974 · HTTP 200
+{
+&quot;name&quot;: &quot;accounting_original_1373974&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:50.955Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 1045,
+&quot;completion_tokens&quot;: 109,
+&quot;total_tokens&quot;: 1154,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 106
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 1024,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 1024,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json; charset=UTF-8&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0enerv6fdqctqq3g&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;1024&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144159270761028e1220a0evWaDvfOW&quot;,
+&quot;x-request-id&quot;: &quot;c3933ac4-9bb4-420b-b507-2f6bdff1edc7&quot;
+},
+&quot;elapsed_ms&quot;: 5383
+}
+stop_control · HTTP 200
+{
+&quot;name&quot;: &quot;stop_control&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:56.339Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;苹果、香蕉、&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 111,
+&quot;completion_tokens&quot;: 11,
+&quot;total_tokens&quot;: 122,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 0
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: true,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144203495503250e1220a0eHRHvzUae&quot;
+},
+&quot;elapsed_ms&quot;: 3652
+}
+tool_none_control · HTTP 200
+{
+&quot;name&quot;: &quot;tool_none_control&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:42:56.339Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;当前会话没有可用的 `get_weather` 工具结果，且本轮不允许发起工具调用，因此我不能可靠地完成这项请求，也不会编造数据。请在支持 `get_weather` 的环境中重试，或提供该工具的返回结果。&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 279,
+&quot;completion_tokens&quot;: 108,
+&quot;total_tokens&quot;: 387,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 58
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: true,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144203497324854e1220a0eLCxoQD6l&quot;
+},
+&quot;elapsed_ms&quot;: 7350
+}
+cache_chat_json_5m_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_chat_json_5m_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:43:22.271Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 5761,
+&quot;completion_tokens&quot;: 144,
+&quot;total_tokens&quot;: 5905,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 141
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 5632,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0ntl89pd7r55d1ug&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;5632&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144229596424697e1220a0e9JOcu6nb&quot;,
+&quot;x-request-id&quot;: &quot;4e7c59ad-2886-4d59-8082-3798c7754fb2&quot;
+},
+&quot;elapsed_ms&quot;: 9943
+}
+cache_chat_json_5m_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_chat_json_5m_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:43:32.215Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 5761,
+&quot;completion_tokens&quot;: 74,
+&quot;total_tokens&quot;: 5835,
+&quot;cached_tokens&quot;: 5632,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 71
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0ogse9qocuoblgb0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144239371772668e1220a0eJxHrYIep&quot;,
+&quot;x-request-id&quot;: &quot;9275c55f-cc6b-4195-a6f5-09e18bd16e0c&quot;
+},
+&quot;elapsed_ms&quot;: 3507
+}
+cache_messages_json_5m_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_json_5m_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:43:35.724Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 129,
+&quot;cache_creation_input_tokens&quot;: 5632,
+&quot;cache_read_input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 123,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 5632,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5761,
+&quot;completion_tokens&quot;: 123,
+&quot;total_tokens&quot;: 5884,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 5632,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 120
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0q1j3irk1r1qia90&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;5632&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144242882125415e1220a0eiDRO61Nm&quot;,
+&quot;x-request-id&quot;: &quot;702400c5-f268-4cca-ad7f-c4830884f4d6&quot;
+},
+&quot;elapsed_ms&quot;: 5488
+}
+cache_messages_json_5m_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_json_5m_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:43:41.214Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 129,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 61,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5761,
+&quot;completion_tokens&quot;: 61,
+&quot;total_tokens&quot;: 5822,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 58
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0rh7151mp9j38thg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144248387325082e1220a0elH9kkB6P&quot;,
+&quot;x-request-id&quot;: &quot;19da8918-5e93-4818-ab7d-dbdab64b73ba&quot;
+},
+&quot;elapsed_ms&quot;: 6408
+}
+cache_responses_json_5m_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_responses_json_5m_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:43:59.366Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5756,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 126,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 123
+},
+&quot;total_tokens&quot;: 5882
+},
+&quot;finish&quot;: &quot;completed&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt0vjhscuesfo322f0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;5632&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144306998885067e1220a0eULjM439I&quot;,
+&quot;x-request-id&quot;: &quot;1f189a51-1f9f-4973-a2ef-2e2235d75a28&quot;
+},
+&quot;elapsed_ms&quot;: 4496,
+&quot;error&quot;: null
+}
+cache_responses_json_5m_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_responses_json_5m_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:03.864Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5756,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 62,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 59
+},
+&quot;total_tokens&quot;: 5818
+},
+&quot;finish&quot;: &quot;completed&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt10mpt5hjunb4vgr0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214431129981567e1220a0e4f04OVlh&quot;,
+&quot;x-request-id&quot;: &quot;afb8d9b0-a35f-486b-8ea0-ede84f84e9cf&quot;
+},
+&quot;elapsed_ms&quot;: 4081,
+&quot;error&quot;: null
+}
+cache_messages_json_1h_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_json_1h_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:07.947Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 125,
+&quot;cache_creation_input_tokens&quot;: 5632,
+&quot;cache_read_input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 37,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 5632,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5757,
+&quot;completion_tokens&quot;: 37,
+&quot;total_tokens&quot;: 5794,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 5632,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 34
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json; charset=UTF-8&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt11j96t9qulsfv9pg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;5632&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144315105341896e1220a0eLaSB408P&quot;,
+&quot;x-request-id&quot;: &quot;448a2a39-7c62-494b-9428-a3f5f8f27ea1&quot;
+},
+&quot;elapsed_ms&quot;: 3989
+}
+cache_messages_json_1h_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_json_1h_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:11.938Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 125,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 135,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5757,
+&quot;completion_tokens&quot;: 135,
+&quot;total_tokens&quot;: 5892,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 132
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json; charset=UTF-8&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt12h295tpor1g90d0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214431996768793e1220a0e33CHPmjl&quot;,
+&quot;x-request-id&quot;: &quot;cb7aa780-f2d1-4c62-aebc-6c7415a6742a&quot;
+},
+&quot;elapsed_ms&quot;: 4810
+}
+cache_chat_stream_5m_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_chat_stream_5m_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:25.029Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 5760,
+&quot;completion_tokens&quot;: 130,
+&quot;total_tokens&quot;: 5890,
+&quot;cached_tokens&quot;: 0,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 127
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: true,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144332311325168e1220a0e4WAMWbTe&quot;
+},
+&quot;elapsed_ms&quot;: 4344
+}
+cache_chat_stream_5m_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_chat_stream_5m_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:29.375Z&quot;,
+&quot;path&quot;: &quot;/v1/chat/completions&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;prompt_tokens&quot;: 5760,
+&quot;completion_tokens&quot;: 31,
+&quot;total_tokens&quot;: 5791,
+&quot;cached_tokens&quot;: 5632,
+&quot;completion_tokens_details&quot;: {
+&quot;reasoning_tokens&quot;: 28
+},
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens&quot;: 0,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;stop&quot;,
+&quot;done&quot;: true,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144336534774359e1220a0eroHDR4PK&quot;
+},
+&quot;elapsed_ms&quot;: 3618
+}
+cache_messages_stream_5m_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_stream_5m_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:32.995Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 123,
+&quot;cache_creation_input_tokens&quot;: 5632,
+&quot;cache_read_input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 114,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5755,
+&quot;completion_tokens&quot;: 114,
+&quot;total_tokens&quot;: 5869,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 109
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+},
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 5632
+}
+},
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144340156613981e1220a0eYsF7bD5W&quot;
+},
+&quot;elapsed_ms&quot;: 5002
+}
+cache_messages_stream_5m_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_stream_5m_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:37.999Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 123,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 46,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5755,
+&quot;completion_tokens&quot;: 46,
+&quot;total_tokens&quot;: 5801,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 43
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144345159314982e1220a0ezxTUIwr8&quot;
+},
+&quot;elapsed_ms&quot;: 4243
+}
+cache_responses_stream_5m_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_responses_stream_5m_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:50.941Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5758,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 86,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 83
+},
+&quot;total_tokens&quot;: 5844
+},
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144358735590695e1220a0eAtCjbDKO&quot;
+},
+&quot;elapsed_ms&quot;: 5250
+}
+cache_responses_stream_5m_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_responses_stream_5m_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:44:56.194Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5758,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 56,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 53
+},
+&quot;total_tokens&quot;: 5814
+},
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144403351995114e1220a0evtsUFwON&quot;
+},
+&quot;elapsed_ms&quot;: 5276
+}
+cache_messages_stream_1h_write · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_stream_1h_write&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:45:01.473Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 126,
+&quot;cache_creation_input_tokens&quot;: 5632,
+&quot;cache_read_input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 80,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5758,
+&quot;completion_tokens&quot;: 80,
+&quot;total_tokens&quot;: 5838,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 77
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+},
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 5632
+}
+},
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144408631448978e1220a0eep6EXW8C&quot;
+},
+&quot;elapsed_ms&quot;: 3382
+}
+cache_messages_stream_1h_read · HTTP 200
+{
+&quot;name&quot;: &quot;cache_messages_stream_1h_read&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:45:04.858Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 126,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 51,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5758,
+&quot;completion_tokens&quot;: 51,
+&quot;total_tokens&quot;: 5809,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 48
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;text/event-stream&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;2026111214441220021748e1220a0e3OmlyxAK&quot;
+},
+&quot;elapsed_ms&quot;: 3650
+}
+multicache_messages_1 · HTTP 200
+{
+&quot;name&quot;: &quot;multicache_messages_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:45:29.565Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 150,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 68,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5782,
+&quot;completion_tokens&quot;: 68,
+&quot;total_tokens&quot;: 5850,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 64
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt1qn6npg7ud8aq00g&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144437158435692e1220a0eQjNGenhM&quot;,
+&quot;x-request-id&quot;: &quot;edfd165d-147b-4ca7-9883-992b98693e90&quot;
+},
+&quot;elapsed_ms&quot;: 22225
+}
+multicache_messages_2 · HTTP 200
+{
+&quot;name&quot;: &quot;multicache_messages_2&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:45:51.793Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 229,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 43,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5861,
+&quot;completion_tokens&quot;: 43,
+&quot;total_tokens&quot;: 5904,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 40
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt1rs9681setion0n0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144459119274813e1220a0eLxG1abSz&quot;,
+&quot;x-request-id&quot;: &quot;25dd18a2-7ab4-4d8f-9995-e9ebb75c6792&quot;
+},
+&quot;elapsed_ms&quot;: 5028
+}
+multicache_messages_3 · HTTP 200
+{
+&quot;name&quot;: &quot;multicache_messages_3&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:45:56.823Z&quot;,
+&quot;path&quot;: &quot;/v1/messages&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 192,
+&quot;cache_creation_input_tokens&quot;: 0,
+&quot;cache_read_input_tokens&quot;: 5632,
+&quot;output_tokens&quot;: 41,
+&quot;cache_creation&quot;: {
+&quot;ephemeral_5m_input_tokens&quot;: 0,
+&quot;ephemeral_1h_input_tokens&quot;: 0
+},
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0,
+&quot;billing_usage&quot;: {
+&quot;source&quot;: &quot;oai_chat&quot;,
+&quot;semantic&quot;: &quot;openai&quot;,
+&quot;openai_usage&quot;: {
+&quot;prompt_tokens&quot;: 5824,
+&quot;completion_tokens&quot;: 41,
+&quot;total_tokens&quot;: 5865,
+&quot;prompt_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;cache_write_tokens_details&quot;: {
+&quot;ttl_5m_tokens&quot;: 0,
+&quot;ttl_1h_tokens&quot;: 0
+},
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;cache_write_tokens&quot;: 0
+},
+&quot;completion_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 38
+},
+&quot;input_tokens&quot;: 0,
+&quot;output_tokens&quot;: 0,
+&quot;input_tokens_details&quot;: null,
+&quot;claude_cache_creation_5_m_tokens&quot;: 0,
+&quot;claude_cache_creation_1_h_tokens&quot;: 0
+}
+}
+},
+&quot;finish&quot;: &quot;end_turn&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt1sssgaad5goasm70&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144503985173852e1220a0e9CxDkeGc&quot;,
+&quot;x-request-id&quot;: &quot;48ec769c-987f-47cb-bf79-41bbc4da6acd&quot;
+},
+&quot;elapsed_ms&quot;: 3872
+}
+multicache_responses_1 · HTTP 200
+{
+&quot;name&quot;: &quot;multicache_responses_1&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:46:00.698Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5777,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 64,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 61
+},
+&quot;total_tokens&quot;: 5841
+},
+&quot;finish&quot;: &quot;completed&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt1tr6rhklppm34jag&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144507860156199e1220a0e3PzdlDey&quot;,
+&quot;x-request-id&quot;: &quot;472333d1-8e1a-4755-a64f-305c41fba461&quot;
+},
+&quot;elapsed_ms&quot;: 3705,
+&quot;error&quot;: null
+}
+multicache_responses_2 · HTTP 200
+{
+&quot;name&quot;: &quot;multicache_responses_2&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:46:04.406Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5798,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 50,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 46
+},
+&quot;total_tokens&quot;: 5848
+},
+&quot;finish&quot;: &quot;completed&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt1uoq2pri0ssasqjg&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144511569389590e1220a0eFVYhSmVC&quot;,
+&quot;x-request-id&quot;: &quot;0794d54f-200d-4b78-818a-500c5b95e9aa&quot;
+},
+&quot;elapsed_ms&quot;: 3783,
+&quot;error&quot;: null
+}
+multicache_responses_3 · HTTP 200
+{
+&quot;name&quot;: &quot;multicache_responses_3&quot;,
+&quot;time&quot;: &quot;2026-11-12T14:46:08.192Z&quot;,
+&quot;path&quot;: &quot;/v1/responses&quot;,
+&quot;status&quot;: 200,
+&quot;text&quot;: &quot;OK&quot;,
+&quot;usage&quot;: {
+&quot;input_tokens&quot;: 5819,
+&quot;input_tokens_details&quot;: {
+&quot;cached_tokens&quot;: 5632,
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0
+},
+&quot;output_tokens&quot;: 22,
+&quot;output_tokens_details&quot;: {
+&quot;text_tokens&quot;: 0,
+&quot;audio_tokens&quot;: 0,
+&quot;image_tokens&quot;: 0,
+&quot;reasoning_tokens&quot;: 19
+},
+&quot;total_tokens&quot;: 5841
+},
+&quot;finish&quot;: &quot;completed&quot;,
+&quot;done&quot;: false,
+&quot;headers&quot;: {
+&quot;content-type&quot;: &quot;application/json&quot;,
+&quot;msh-trace-mode&quot;: &quot;on&quot;,
+&quot;msh-uid&quot;: &quot;dbqt1vl7g4tkldc1tim0&quot;,
+&quot;msh-usage-cache-write-tokens-1h&quot;: &quot;0&quot;,
+&quot;msh-usage-cache-write-tokens-5m&quot;: &quot;0&quot;,
+&quot;x-oneapi-request-id&quot;: &quot;20261112144515354068236e1220a0edBiu2itP&quot;,
+&quot;x-request-id&quot;: &quot;4ab19806-349b-49e4-981b-acf5b7bb695c&quot;
+},
+&quot;elapsed_ms&quot;: 3572,
+&quot;error&quot;: null
+}
+定向复测结论仅覆盖此次接口、模型、密钥路由与样本；“本次未复现”不等于已确认永久修复。
