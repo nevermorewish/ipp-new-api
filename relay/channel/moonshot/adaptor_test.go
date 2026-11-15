@@ -1062,3 +1062,42 @@ func TestKVVK31RequestValidation(t *testing.T) {
 		})
 	}
 }
+
+// TestKVVK31MediaStringShorthand covers the official string shorthand for
+// image_url and video_url. Kimi upstreams answer the string form with a 400, so
+// the K3.1 switch rewrites it into the object form; without the switch the body
+// is forwarded unchanged.
+func TestKVVK31MediaStringShorthand(t *testing.T) {
+	const body = `{"messages":[{"role":"user","content":[` +
+		`{"type":"text","text":"describe"},` +
+		`{"type":"image_url","image_url":"https://example.com/a.png","detail_hint":"keep"},` +
+		`{"type":"video_url","video_url":"https://example.com/v.mp4"},` +
+		`{"type":"image_url","image_url":{"url":"https://example.com/b.png"}}]}]}`
+	for _, tc := range []struct {
+		name                 string
+		compat               bool
+		wantImage, wantVideo string
+	}{
+		{name: "switch off forwards the string form", wantImage: `"https://example.com/a.png"`, wantVideo: `"https://example.com/v.mp4"`},
+		{name: "switch on rewrites into the object form", compat: true, wantImage: `{"url":"https://example.com/a.png"}`, wantVideo: `{"url":"https://example.com/v.mp4"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(body, &request))
+			request.Model = "kimi-k3.1-pro"
+			info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: tc.compat},
+			}}
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.wantImage, gjson.GetBytes(wire, "messages.0.content.1.image_url").Raw)
+			assert.JSONEq(t, tc.wantVideo, gjson.GetBytes(wire, "messages.0.content.2.video_url").Raw)
+			// Sibling members survive the rewrite, and an object form is never touched.
+			assert.Equal(t, "keep", gjson.GetBytes(wire, "messages.0.content.1.detail_hint").String())
+			assert.JSONEq(t, `{"url":"https://example.com/b.png"}`, gjson.GetBytes(wire, "messages.0.content.3.image_url").Raw)
+		})
+	}
+}
