@@ -1920,7 +1920,7 @@ export function ChannelMutateDrawer({
               <FormLabel>{t('KVV adaptation')}</FormLabel>
               <FormDescription>
                 {t(
-                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.'
+                  'Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking unless K3.1 parameter compatibility is on. Disable global and channel body passthrough before use.'
                 )}
               </FormDescription>
             </div>
@@ -1969,7 +1969,7 @@ export function ChannelMutateDrawer({
               <FormLabel>{t('K3.1 parameter compatibility')}</FormLabel>
               <FormDescription>
                 {t(
-                  'Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.'
+                  'Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters, disabled thinking and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.'
                 )}
               </FormDescription>
             </div>

@@ -656,7 +656,7 @@
     "Apply disable rules to upstream request errors and scheduled or bulk health checks": "将停用规则应用于上游请求错误，以及定时或批量健康检查",
     "Apply Filters": "应用筛选器",
     "Apply IP Filter to Resolved Domains": "对已解析的域应用 IP 筛选器",
-    "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking. Disable global and channel body passthrough before use.": "为 kimi-k3 和 kimi-k3.1-pro 聊天请求启用 KVV 参数校验、默认思考设置和动态工具兼容。K3.1 Pro 必须开启思考。使用前请关闭全局和渠道请求体透传。",
+    "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 and kimi-k3.1-pro chat requests. K3.1 Pro requires thinking unless K3.1 parameter compatibility is on. Disable global and channel body passthrough before use.": "为 kimi-k3 和 kimi-k3.1-pro 聊天请求启用 KVV 参数校验、默认思考设置和动态工具兼容。K3.1 Pro 必须开启思考，开启 K3.1 参数兼容时除外。使用前请关闭全局和渠道请求体透传。",
     "Apply KVV parameter validation, thinking defaults and dynamic tool compatibility to kimi-k3 chat requests. Disable global and channel body passthrough before use.": "对 kimi-k3 对话请求启用 KVV 参数校验、思考默认值和动态工具兼容。使用前请关闭全局及渠道请求体透传。",
     "Apply Overwrite": "应用覆盖",
     "Apply plan": "应用方案",
@@ -7539,6 +7539,6 @@
     "KVV parameter compatibility": "KVV 参数兼容",
     "K3.1 parameter compatibility": "K3.1 参数兼容",
     "Requires KVV adaptation. Rewrite instead of rejecting: accept any temperature from 0 to 1 and send 1, and map reasoning effort minimal, medium and xhigh to low, high and max, ignoring case. Other invalid values still return 400. The legacy effort rewrite is ignored while K3.1 parameter compatibility is on.": "需先开启 KVV 适配。以改写代替拒绝：0–1 之间的 temperature 一律按 1 发送；reasoning effort 的 minimal、medium、xhigh 分别映射为 low、high、max，不区分大小写。其他非法值仍返回 400。开启 K3.1 参数兼容时，本项对 reasoning effort 的改写不生效。",
-    "Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.": "需先开启 KVV 适配。仅适用于 kimi-k3.1 系列，判定与官方 API 完全一致：接受字符串形式的媒体简写、无 parameters 的 tools，并在不超过模型上限时下调输出预算；对官方拒绝的固定采样值、空消息、非法的 prediction 或缓存参数、low/high/max 之外的 reasoning effort，以及超过模型上限的输出预算，一律返回 400。优先级高于 KVV 参数兼容。"
+    "Requires KVV adaptation. Applies to kimi-k3.1 models only, and answers exactly like the official API: accept string media shorthand, tools without parameters, disabled thinking and output-budget lowering below the model maximum, and return 400 for a fixed sampling value it rejects, an empty message, an invalid prediction or cache option, a reasoning effort outside low, high and max, or an output budget above the model maximum. Takes precedence over KVV parameter compatibility.": "需先开启 KVV 适配。仅适用于 kimi-k3.1 系列，判定与官方 API 完全一致：接受字符串形式的媒体简写、无 parameters 的 tools、关闭思考，并在不超过模型上限时下调输出预算；对官方拒绝的固定采样值、空消息、非法的 prediction 或缓存参数、low/high/max 之外的 reasoning effort，以及超过模型上限的输出预算，一律返回 400。优先级高于 KVV 参数兼容。"
   }
 }

@@ -1063,6 +1063,50 @@ func TestKVVK31RequestValidation(t *testing.T) {
 	}
 }
 
+// TestKVVK31DisabledThinking covers disabled thinking on K3.1, which a named
+// tool_choice requires. The official API accepts it, so the K3.1 switch
+// forwards it in the official shape; without the switch the gateway still
+// rejects it.
+func TestKVVK31DisabledThinking(t *testing.T) {
+	const namedTool = `"tools":[{"type":"function","function":{"name":"get_weather","parameters":{"type":"object","properties":{"city":{"type":"string"}}}}}],` +
+		`"tool_choice":{"type":"function","function":{"name":"get_weather"}},"messages":[{"role":"user","content":"北京天气怎么样？"}]`
+	for _, tc := range []struct {
+		name, model, body, wantError string
+		compat                       bool
+	}{
+		{name: "switch off rejects", model: "kimi-k3.1-pro", body: `{"thinking":{"type":"disabled"},` + namedTool + `}`, wantError: "thinking must be enabled"},
+		{name: "thinking type", model: "kimi-k3.1-pro", compat: true, body: `{"thinking":{"type":"disabled"},` + namedTool + `}`},
+		{name: "reasoning effort none", model: "kimi-k3.1-pro", compat: true, body: `{"reasoning_effort":"none",` + namedTool + `}`},
+		{name: "non-thinking temperature", model: "kimi-k3.1-pro", compat: true, body: `{"thinking":{"type":"disabled"},"temperature":0.6,` + namedTool + `}`},
+		{name: "highspeed", model: "kimi-k3.1-pro-highspeed", compat: true, body: `{"thinking":{"type":"disabled","keep":"all"},` + namedTool + `}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.GeneralOpenAIRequest
+			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
+			request.Model = tc.model
+			info := &relaycommon.RelayInfo{RelayMode: relayconstant.RelayModeChatCompletions, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: tc.model,
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: tc.compat},
+			}}
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, &request)
+			if tc.wantError != "" {
+				var apiErr *types.NewAPIError
+				require.ErrorAs(t, err, &apiErr)
+				assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
+				assert.EqualError(t, err, tc.wantError)
+				return
+			}
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			assert.JSONEq(t, `{"type":"disabled"}`, gjson.GetBytes(wire, "thinking").Raw)
+			assert.False(t, gjson.GetBytes(wire, "reasoning_effort").Exists())
+			assert.JSONEq(t, gjson.Get(tc.body, "tool_choice").Raw, gjson.GetBytes(wire, "tool_choice").Raw)
+			assert.Equal(t, gjson.Get(tc.body, "temperature").Raw, gjson.GetBytes(wire, "temperature").Raw)
+		})
+	}
+}
+
 // TestKVVK31MediaStringShorthand covers the official string shorthand for
 // image_url and video_url. Kimi upstreams answer the string form with a 400, so
 // the K3.1 switch rewrites it into the object form; without the switch the body

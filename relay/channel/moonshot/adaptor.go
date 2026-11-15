@@ -155,8 +155,16 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		if err := adaptKVVRequest(request, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
-		if strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro") && request.ReasoningEffort == "none" {
-			return nil, types.NewOpenAIError(fmt.Errorf("thinking must be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+		if request.ReasoningEffort == "none" {
+			switch {
+			case kvvOfficialCompat(info):
+				// The official API accepts disabled thinking on K3.1, which a
+				// named tool_choice requires. thinking.type alone turns it off;
+				// none is not one of the official reasoning_effort levels.
+				request.ReasoningEffort = ""
+			case strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro"):
+				return nil, types.NewOpenAIError(fmt.Errorf("thinking must be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+			}
 		}
 	}
 	if request.Temperature != nil && isTemperatureOneOnlyModel(getUpstreamModelName(info, request.Model)) && *request.Temperature != 1.0 {
