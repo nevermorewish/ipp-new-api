@@ -171,6 +171,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		rewriteKimiMediaStringShorthand(request)
 	}
 	disableThinking := channelDisablesThinking(info) && info.RelayMode == constant.RelayModeChatCompletions
+	emulateNamedToolChoice := false
 	if KVVEnabled(info) {
 		if err := adaptKVVRequest(request, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -182,7 +183,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 				// named tool_choice requires. thinking.type alone turns it off;
 				// none is not one of the official reasoning_effort levels.
 				request.ReasoningEffort = ""
-				a.namedToolCall = emulateKVVNamedToolChoice(request)
+				emulateNamedToolChoice = true
 			case strings.EqualFold(getUpstreamModelName(info, request.Model), "kimi-k3.1-pro"):
 				return nil, types.NewOpenAIError(fmt.Errorf("thinking must be enabled"), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 			}
@@ -203,7 +204,15 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 			}
 		}
 		if isKimiK3FamilyModel(getUpstreamModelName(info, request.Model)) {
-			a.namedToolCall = emulateKVVNamedToolChoice(request)
+			emulateNamedToolChoice = true
+		}
+	}
+	// TextHelper converts a KVV request a second time, on the body this pass
+	// already rewrote. That pass finds no named tool_choice, so it must keep
+	// the call recorded here for the response.
+	if emulateNamedToolChoice {
+		if call := emulateKVVNamedToolChoice(request); call != nil {
+			a.namedToolCall = call
 		}
 	}
 	if request.Temperature != nil && isTemperatureOneOnlyModel(getUpstreamModelName(info, request.Model)) && *request.Temperature != 1.0 {

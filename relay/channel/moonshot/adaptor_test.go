@@ -1113,13 +1113,14 @@ func TestKVVK31NamedToolChoice(t *testing.T) {
 	const weatherFormat = `{"type":"json_schema","json_schema":{"name":"get_weather","description":"Get the weather of a city.","schema":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}`
 	const named = `"tool_choice":{"type":"function","function":{"name":"get_weather"}}`
 	const user = `{"role":"user","content":"北京天气怎么样？"}`
-	newInfo := func(stream bool) *relaycommon.RelayInfo {
+	k31Compat := dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: true}
+	newInfo := func(stream bool, settings dto.ChannelSettings) *relaycommon.RelayInfo {
 		return &relaycommon.RelayInfo{
 			RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
 			IsStream: stream, DisablePing: true,
 			ChannelMeta: &relaycommon.ChannelMeta{
 				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
-				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: true},
+				ChannelSetting: settings,
 			},
 		}
 	}
@@ -1143,7 +1144,7 @@ func TestKVVK31NamedToolChoice(t *testing.T) {
 			var request dto.GeneralOpenAIRequest
 			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
 			request.Model = "kimi-k3.1-pro"
-			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, newInfo(false), &request)
+			converted, err := (&Adaptor{}).ConvertOpenAIRequest(nil, newInfo(false, k31Compat), &request)
 			require.NoError(t, err)
 			wire, err := common.Marshal(converted)
 			require.NoError(t, err)
@@ -1173,60 +1174,76 @@ func TestKVVK31NamedToolChoice(t *testing.T) {
 	upstreamStream += `data: {"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}],"created":1794743397,"id":"chatcmpl-7a7b","model":"kimi-k3.1-pro","object":"chat.completion.chunk",` + usage + "}\n\ndata: [DONE]\n\n"
 	upstreamJSON := `{"choices":[{"index":0,"message":{"role":"assistant","content":"{\"city\": \"北京\"}"},"finish_reason":"stop"}],"created":1794743400,"id":"chatcmpl-fcbf","model":"kimi-k3.1-pro","object":"chat.completion",` + usage + `}`
 
-	for _, stream := range []bool{false, true} {
-		t.Run(fmt.Sprintf("response stream=%t", stream), func(t *testing.T) {
-			var request dto.GeneralOpenAIRequest
-			require.NoError(t, common.UnmarshalJsonStr(`{"thinking":{"type":"disabled"},"tools":[`+weather+`],`+named+`,"messages":[`+user+`]}`, &request))
-			request.Model = "kimi-k3.1-pro"
-			request.Stream = common.GetPointer(stream)
-			info := newInfo(stream)
-			adaptor := &Adaptor{}
-			_, err := adaptor.ConvertOpenAIRequest(nil, info, &request)
-			require.NoError(t, err)
+	for _, path := range []struct {
+		name, thinking string
+		settings       dto.ChannelSettings
+	}{
+		{name: "client disables thinking", thinking: `"thinking":{"type":"disabled"},`, settings: k31Compat},
+		{name: "channel disables thinking", settings: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotDisableThinking: true}},
+	} {
+		for _, stream := range []bool{false, true} {
+			t.Run(fmt.Sprintf("response %s stream=%t", path.name, stream), func(t *testing.T) {
+				var request dto.GeneralOpenAIRequest
+				require.NoError(t, common.UnmarshalJsonStr(`{`+path.thinking+`"tools":[`+weather+`],`+named+`,"messages":[`+user+`]}`, &request))
+				request.Model = "kimi-k3.1-pro"
+				request.Stream = common.GetPointer(stream)
+				info := newInfo(stream, path.settings)
+				adaptor := &Adaptor{}
+				converted, err := adaptor.ConvertOpenAIRequest(nil, info, &request)
+				require.NoError(t, err)
+				// TextHelper converts a KVV request again on the final body, which
+				// is already rewritten; the call must survive that pass.
+				wire, err := common.Marshal(converted)
+				require.NoError(t, err)
+				var final dto.GeneralOpenAIRequest
+				require.NoError(t, common.Unmarshal(wire, &final))
+				_, err = adaptor.ConvertOpenAIRequest(nil, info, &final)
+				require.NoError(t, err)
 
-			recorder := httptest.NewRecorder()
-			c, _ := gin.CreateTestContext(recorder)
-			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-			upstream, contentType := upstreamJSON, "application/json"
-			if stream {
-				upstream, contentType = upstreamStream, "text/event-stream"
-			}
-			resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {contentType}}, Body: io.NopCloser(strings.NewReader(upstream))}
-			usageResult, apiErr := adaptor.DoResponse(c, resp, info)
-			require.Nil(t, apiErr)
-			// Usage is the upstream's own; only the answer's shape changes.
-			assert.Equal(t, 158, usageResult.(*dto.Usage).PromptTokens)
+				recorder := httptest.NewRecorder()
+				c, _ := gin.CreateTestContext(recorder)
+				c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+				upstream, contentType := upstreamJSON, "application/json"
+				if stream {
+					upstream, contentType = upstreamStream, "text/event-stream"
+				}
+				resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {contentType}}, Body: io.NopCloser(strings.NewReader(upstream))}
+				usageResult, apiErr := adaptor.DoResponse(c, resp, info)
+				require.Nil(t, apiErr)
+				// Usage is the upstream's own; only the answer's shape changes.
+				assert.Equal(t, 158, usageResult.(*dto.Usage).PromptTokens)
 
-			var id, name, arguments, content, finish string
-			if !stream {
-				body := recorder.Body.Bytes()
-				id = gjson.GetBytes(body, "choices.0.message.tool_calls.0.id").String()
-				name = gjson.GetBytes(body, "choices.0.message.tool_calls.0.function.name").String()
-				arguments = gjson.GetBytes(body, "choices.0.message.tool_calls.0.function.arguments").String()
-				content = gjson.GetBytes(body, "choices.0.message.content").String()
-				finish = gjson.GetBytes(body, "choices.0.finish_reason").String()
-				assert.Equal(t, "function", gjson.GetBytes(body, "choices.0.message.tool_calls.0.type").String())
-			}
-			for line := range strings.SplitSeq(recorder.Body.String(), "\n") {
-				event, ok := strings.CutPrefix(line, "data: ")
-				if !stream || !ok || !strings.HasPrefix(event, "{") {
-					continue
+				var id, name, arguments, content, finish string
+				if !stream {
+					body := recorder.Body.Bytes()
+					id = gjson.GetBytes(body, "choices.0.message.tool_calls.0.id").String()
+					name = gjson.GetBytes(body, "choices.0.message.tool_calls.0.function.name").String()
+					arguments = gjson.GetBytes(body, "choices.0.message.tool_calls.0.function.arguments").String()
+					content = gjson.GetBytes(body, "choices.0.message.content").String()
+					finish = gjson.GetBytes(body, "choices.0.finish_reason").String()
+					assert.Equal(t, "function", gjson.GetBytes(body, "choices.0.message.tool_calls.0.type").String())
 				}
-				delta := gjson.Get(event, "choices.0.delta")
-				id += delta.Get("tool_calls.0.id").String()
-				name += delta.Get("tool_calls.0.function.name").String()
-				arguments += delta.Get("tool_calls.0.function.arguments").String()
-				content += delta.Get("content").String()
-				if reason := gjson.Get(event, "choices.0.finish_reason").String(); reason != "" {
-					finish = reason
+				for line := range strings.SplitSeq(recorder.Body.String(), "\n") {
+					event, ok := strings.CutPrefix(line, "data: ")
+					if !stream || !ok || !strings.HasPrefix(event, "{") {
+						continue
+					}
+					delta := gjson.Get(event, "choices.0.delta")
+					id += delta.Get("tool_calls.0.id").String()
+					name += delta.Get("tool_calls.0.function.name").String()
+					arguments += delta.Get("tool_calls.0.function.arguments").String()
+					content += delta.Get("content").String()
+					if reason := gjson.Get(event, "choices.0.finish_reason").String(); reason != "" {
+						finish = reason
+					}
 				}
-			}
-			assert.Regexp(t, `^get_weather_0_[0-9a-f]{8}$`, id)
-			assert.Equal(t, "get_weather", name)
-			assert.Equal(t, `{"city": "北京"}`, arguments)
-			assert.Empty(t, content)
-			assert.Equal(t, "tool_calls", finish)
-		})
+				assert.Regexp(t, `^get_weather_0_[0-9a-f]{8}$`, id)
+				assert.Equal(t, "get_weather", name)
+				assert.Equal(t, `{"city": "北京"}`, arguments)
+				assert.Empty(t, content)
+				assert.Equal(t, "tool_calls", finish)
+			})
+		}
 	}
 }
 
