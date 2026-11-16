@@ -347,6 +347,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 				return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 			}
 		}
+		// After frame conversion, so a video sent as frames is not downloaded again.
+		if info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotMediaURLToBase64 {
+			payload, err = inlineKimiMediaURLs(c, payload, info.RelayFormat)
+			if err != nil {
+				return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+			}
+		}
 		normalized, _, err := normalizeKimiToolSchemaRefsBody(payload)
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())

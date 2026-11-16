@@ -42,6 +42,7 @@ const ADVANCED_SETTINGS_FIELDS = new Set<FieldPath<ChannelFormValues>>([
   'moonshot_disable_thinking',
   'moonshot_hoist_dynamic_tools',
   'moonshot_split_cache_text',
+  'moonshot_media_url_to_base64',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'pass_through_body_enabled',

@@ -309,6 +309,7 @@ const SENSITIVE_FORM_FIELDS = [
   'moonshot_disable_thinking',
   'moonshot_hoist_dynamic_tools',
   'moonshot_split_cache_text',
+  'moonshot_media_url_to_base64',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
   'proxy',
@@ -2093,6 +2094,35 @@ export function ChannelMutateDrawer({
             <FormDescription>
               {t(
                 'Sends long system and user text of Chat Completions requests to Kimi K3 models as several text parts, cut at fixed positions and before its last two lines. Unlike the official API, which matches the prompt cache on the token prefix, some upstreams reuse it only at message or part boundaries, so a request whose text changes only at the end would miss. The model receives the same text and prompt tokens do not change; each conversation misses the cache once after the switch is turned on.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const mediaURLToBase64Field = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_media_url_to_base64'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>{t('Send media URLs as base64')}</FormLabel>
+            <FormDescription>
+              {t(
+                'Downloads http(s) image and video URLs in Chat Completions and Messages requests and sends the media as base64, because Kimi accepts media only as base64 data or uploaded file IDs. Downloads follow the SSRF Protection settings and the MAX_FILE_DOWNLOAD_MB limit, and a URL that cannot be downloaded fails the request with 400. Kimi documents video input only for Chat Completions.'
               )}
             </FormDescription>
           </div>
@@ -5007,6 +5037,7 @@ export function ChannelMutateDrawer({
                 {disableThinkingField}
                 {hoistDynamicToolsField}
                 {splitCacheTextField}
+                {mediaURLToBase64Field}
                 <OpenAIGPTSettings
                   control={form.control}
                   channelType={currentType}

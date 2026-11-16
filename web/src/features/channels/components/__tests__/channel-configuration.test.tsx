@@ -1660,6 +1660,7 @@ const MOONSHOT_SWITCHES = [
     label: 'Split long text for prompt cache',
     key: 'moonshot_split_cache_text',
   },
+  { label: 'Send media URLs as base64', key: 'moonshot_media_url_to_base64' },
 ] as const
 
 test.each(
