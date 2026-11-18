@@ -90,6 +90,12 @@ func adaptKVVRequest(request *dto.GeneralOpenAIRequest, info *relaycommon.RelayI
 		if err := clampKVVOutputBudget(request, info); err != nil {
 			return err
 		}
+		// Run before the inference below fills an absent type in: the official
+		// API rejects an enum node that declares none, and a repaired request
+		// would reach the upstream with the 400 already lost.
+		if err := validateKimiToolEnumTypes(request.Tools, "tools"); err != nil {
+			return err
+		}
 		// A tool without parameters is valid for K3.1. Fill an empty schema so
 		// the upstream's stricter structure check accepts the same request.
 		normalizeKimiFunctionParameterSchemas(request.Tools)
@@ -490,12 +496,13 @@ func compatKVVEffort(effort string) string {
 }
 
 // isOfficialKVVEffort reports whether the official K3.1 API accepts the level.
-// The official enum is exactly low, high and max; the wider OpenAI and
-// Anthropic levels stay a legacy-compat rewrite, so a client sending medium
-// gets the official 400 instead of a silent translation.
+// The official enum is the full six-level set: minimal, low, medium, high,
+// xhigh and max. Each level maps to its own reasoning budget, and medium is
+// larger than high, so the wider levels must be forwarded untouched rather
+// than translated.
 func isOfficialKVVEffort(effort string) bool {
 	switch effort {
-	case "low", "high", "max":
+	case "minimal", "low", "medium", "high", "xhigh", "max":
 		return true
 	default:
 		return false

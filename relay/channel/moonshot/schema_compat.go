@@ -182,6 +182,10 @@ func normalizeKimiNamedSchemaChildren(value any, depth int) bool {
 // Moonshot requires each anyOf item to define its own type and rejects a type
 // on the parent node. Only infer a type when the node's structural keywords or
 // literal values make it unambiguous.
+//
+// This is the baseline behavior and runs for every channel. The official K3.1
+// contract is stricter for enum nodes and is enforced separately in
+// validateKimiToolSchemaEnumTypes.
 func inferMissingKimiFunctionSchemaType(schema map[string]any) bool {
 	if schema == nil || !isMissingKimiFunctionSchemaType(schema["type"]) {
 		return false

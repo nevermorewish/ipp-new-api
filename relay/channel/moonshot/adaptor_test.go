@@ -1019,11 +1019,11 @@ func TestKVVK31ParamCompat(t *testing.T) {
 		{name: "on rejects unsupported temperature", compat: true, body: `{"temperature":0.99}`, wantError: "temperature"},
 		{name: "on accepts fixed temperature", compat: true, body: `{"temperature":1}`, wantTemperature: 1},
 		{name: "off maps medium to nothing", body: `{"reasoning_effort":"medium"}`, wantError: "reasoning effort"},
-		{name: "on rejects medium", compat: true, body: `{"reasoning_effort":"medium"}`, wantError: "reasoning effort"},
 		{name: "on accepts low", compat: true, body: `{"reasoning_effort":"low"}`},
-		{name: "on rejects minimal", compat: true, body: `{"reasoning_effort":"minimal"}`, wantError: "reasoning effort"},
-		{name: "on rejects xhigh", compat: true, body: `{"reasoning_effort":"xhigh"}`, wantError: "reasoning effort"},
-		{name: "official wins over legacy rewrite", compat: true, legacy: true, body: `{"reasoning_effort":"medium"}`, wantError: "reasoning effort"},
+		{name: "on accepts medium", compat: true, body: `{"reasoning_effort":"medium"}`},
+		{name: "on accepts minimal", compat: true, body: `{"reasoning_effort":"minimal"}`},
+		{name: "on accepts xhigh", compat: true, body: `{"reasoning_effort":"xhigh"}`},
+		{name: "official wins over legacy rewrite", compat: true, legacy: true, body: `{"reasoning_effort":"medium"}`},
 		{name: "both reject top_p", body: `{"top_p":0.5}`, wantError: "top_p"},
 		{name: "on rejects top_p", compat: true, body: `{"top_p":0.5}`, wantError: "top_p"},
 	} {
@@ -1547,6 +1547,137 @@ func TestKimiSplitCacheTextSwitch(t *testing.T) {
 				assert.JSONEq(t, `[`+tool+`]`, gjson.GetBytes(received[0], "tools").Raw)
 				assert.Len(t, gjson.GetBytes(received[0], "messages").Array(), 1)
 			}
+		})
+	}
+}
+
+// TestKimiToolSchemaRecursion covers the official answer for a tool schema whose
+// recursion has no finite instance. The verdicts below were measured against
+// api.moonshot.cn: a cycle is rejected only when every edge on it is mandatory.
+func TestKimiToolSchemaRecursion(t *testing.T) {
+	for _, tc := range []struct {
+		name, parameters string
+		wantError        bool
+	}{
+		{name: "self reference is required", wantError: true,
+			parameters: `{"type":"object","properties":{"n":{"$ref":"#"}},"required":["n"]}`},
+		{name: "self reference is optional",
+			parameters: `{"type":"object","properties":{"n":{"$ref":"#"}}}`},
+		{name: "required names another property",
+			parameters: `{"type":"object","properties":{"n":{"$ref":"#"}},"required":["zzz"]}`},
+		{name: "$defs cycle through required", wantError: true,
+			parameters: `{"type":"object","properties":{"n":{"$ref":"#/$defs/N"}},"required":["n"],"$defs":{"N":{"type":"object","properties":{"x":{"$ref":"#/$defs/N"}},"required":["x"]}}}`},
+		{name: "$defs cycle through optional",
+			parameters: `{"type":"object","properties":{"n":{"$ref":"#/$defs/N"}},"$defs":{"N":{"type":"object","properties":{"x":{"$ref":"#/$defs/N"}}}}}`},
+		{name: "mutual cycle closed on required", wantError: true,
+			parameters: `{"type":"object","properties":{"a":{"$ref":"#/$defs/A"}},"required":["a"],"$defs":{"A":{"type":"object","properties":{"b":{"$ref":"#/$defs/B"}},"required":["b"]},"B":{"type":"object","properties":{"a":{"$ref":"#/$defs/A"}},"required":["a"]}}}`},
+		{name: "mutual cycle with one free edge",
+			parameters: `{"type":"object","properties":{"a":{"$ref":"#/$defs/A"}},"required":["a"],"$defs":{"A":{"type":"object","properties":{"b":{"$ref":"#/$defs/B"}},"required":["b"]},"B":{"type":"object","properties":{"a":{"$ref":"#/$defs/A"}}}}}`},
+		{name: "array items without minItems",
+			parameters: `{"type":"object","properties":{"n":{"type":"array","items":{"$ref":"#"}}},"required":["n"]}`},
+		{name: "array items with minItems", wantError: true,
+			parameters: `{"type":"object","properties":{"n":{"type":"array","items":{"$ref":"#"},"minItems":1}},"required":["n"]}`},
+		{name: "anyOf with one free branch",
+			parameters: `{"type":"object","properties":{"n":{"anyOf":[{"$ref":"#"},{"type":"string"}]}},"required":["n"]}`},
+		{name: "anyOf with every branch cycling", wantError: true,
+			parameters: `{"type":"object","properties":{"n":{"anyOf":[{"$ref":"#"},{"$ref":"#"}]}},"required":["n"]}`},
+		{name: "allOf is not mandatory",
+			parameters: `{"type":"object","properties":{"n":{"allOf":[{"$ref":"#"}]}},"required":["n"]}`},
+		{name: "not is mandatory", wantError: true,
+			parameters: `{"type":"object","properties":{"n":{"not":{"$ref":"#"}}},"required":["n"]}`},
+		{name: "then is mandatory", wantError: true,
+			parameters: `{"type":"object","properties":{"n":{"if":{"type":"object"},"then":{"$ref":"#"}}},"required":["n"]}`},
+		// A $ref in a data keyword is not a constraint.
+		{name: "reference inside default",
+			parameters: `{"type":"object","properties":{"n":{"type":"string","default":{"$ref":"#"}}}}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := `{"tools":[{"type":"function","function":{"name":"f","description":"f","parameters":` + tc.parameters + `}}]}`
+			err := validateKimiToolSchemaRecursion([]byte(body))
+			if !tc.wantError {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, "infinite recursion without termination condition")
+		})
+	}
+}
+
+// TestKimiToolSchemaRecursionWorkspace checks that tools declared inside a
+// system message and nested tool containers are searched too.
+func TestKimiToolSchemaRecursionWorkspace(t *testing.T) {
+	const recursive = `{"type":"object","properties":{"n":{"$ref":"#"}},"required":["n"]}`
+	for _, tc := range []struct{ name, body string }{
+		{name: "system message tools",
+			body: `{"messages":[{"role":"system","content":"","tools":[{"type":"function","function":{"name":"f","parameters":` + recursive + `}}]}]}`},
+		{name: "nested tool container",
+			body: `{"tools":[{"type":"namespace","tools":[{"type":"function","function":{"name":"f","parameters":` + recursive + `}}]}]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.ErrorContains(t, validateKimiToolSchemaRecursion([]byte(tc.body)),
+				"infinite recursion without termination condition")
+		})
+	}
+}
+
+// TestKimiToolSchemaRecursionGatedByK31Switch pins the compatibility switch: the
+// baseline still forwards a recursive schema for the upstream to judge.
+func TestKimiToolSchemaRecursionGatedByK31Switch(t *testing.T) {
+	const recursive = `{"type":"function","function":{"name":"f","parameters":{"type":"object","properties":{"n":{"$ref":"#"}},"required":["n"]}}}`
+	for _, tc := range []struct {
+		name   string
+		compat bool
+	}{
+		{name: "switch off leaves the schema to the upstream"},
+		{name: "switch on validates locally", compat: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			info := &relaycommon.RelayInfo{
+				RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+				ChannelMeta: &relaycommon.ChannelMeta{
+					ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+					ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: tc.compat},
+				},
+			}
+			assert.Equal(t, tc.compat, kvvOfficialCompat(info))
+		})
+	}
+}
+
+// TestKimiToolSchemaEnumTypes covers the official 400 for an enum node without a
+// type. Baseline inference fills that type in, so the check only runs under the
+// K3.1 switch and must not weaken the cases the official API accepts.
+func TestKimiToolSchemaEnumTypes(t *testing.T) {
+	for _, tc := range []struct {
+		name, parameters string
+		wantError        bool
+	}{
+		{name: "enum without type", wantError: true,
+			parameters: `{"type":"object","properties":{"v":{"enum":["a","b"]}},"required":["v"]}`},
+		{name: "enum inside anyOf branch", wantError: true,
+			parameters: `{"type":"object","properties":{"v":{"anyOf":[{"type":"string"},{"enum":["a"]}]}},"required":["v"]}`},
+		{name: "enum with type",
+			parameters: `{"type":"object","properties":{"v":{"type":"string","enum":["a","b"]}},"required":["v"]}`},
+		{name: "empty type string", wantError: true,
+			parameters: `{"type":"object","properties":{"v":{"type":"","enum":["a"]}},"required":["v"]}`},
+		{name: "const without type",
+			parameters: `{"type":"object","properties":{"v":{"const":"a"}},"required":["v"]}`},
+		{name: "oneOf without type",
+			parameters: `{"type":"object","properties":{"v":{"oneOf":[{"type":"string"},{"type":"integer"}]}},"required":["v"]}`},
+		{name: "structural keyword without type",
+			parameters: `{"type":"object","properties":{"v":{"properties":{"x":{"type":"string"}}}},"required":["v"]}`},
+		{name: "enum inside $defs", wantError: true,
+			parameters: `{"type":"object","properties":{"v":{"$ref":"#/$defs/E"}},"required":["v"],"$defs":{"E":{"enum":["a"]}}}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var tools []dto.ToolCallRequest
+			require.NoError(t, common.UnmarshalJsonStr(`[{"type":"function","function":{"name":"f","description":"f","parameters":`+tc.parameters+`}}]`, &tools))
+			err := validateKimiToolEnumTypes(tools, "tools")
+			if !tc.wantError {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, "enum without type")
 		})
 	}
 }

@@ -358,6 +358,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		if err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
+		// A recursive schema with no finite instance is the official 400. It stays
+		// behind the K3.1 switch because the baseline forwards such a schema.
+		if kvvOfficialCompat(info) {
+			if err := validateKimiToolSchemaRecursion(payload); err != nil {
+				return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+			}
+		}
 		if err := validateKimiToolResultPairing(normalized, info); err != nil {
 			return nil, types.NewOpenAIError(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 		}
