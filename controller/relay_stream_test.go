@@ -16,6 +16,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay/channel"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -28,7 +29,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestRelayChannelResponseHeaders(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		first, final int
+		stream       bool
+	}{
+		{"json after retry to moonshot", constant.ChannelTypeOpenAI, constant.ChannelTypeMoonshot, false},
+		{"stream after retry away from moonshot", constant.ChannelTypeMoonshot, constant.ChannelTypeOpenAI, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			common.SetContextKey(c, constant.ContextKeyChannelType, tc.first)
+			c.Writer = &relayHeaderWriter{ResponseWriter: c.Writer, ctx: c}
+			common.SetContextKey(c, constant.ContextKeyChannelType, tc.final)
+			c.Header("X-New-Api-Version", "upstream-version")
+			c.Header("Via", "1.1 Caddy")
+			c.Writer.Header().Add("Via", "another proxy")
+			c.Header(common.RequestIdKey, "local-request")
+			if tc.stream {
+				c.Writer.Flush()
+			} else {
+				c.JSON(http.StatusOK, gin.H{"ok": true})
+			}
+			response := recorder.Result()
+			defer response.Body.Close()
+			assert.Equal(t, "local-request", response.Header.Get(common.RequestIdKey))
+			if tc.final == constant.ChannelTypeMoonshot {
+				assert.Equal(t, []string{"2.0 Caddy"}, response.Header.Values("Via"))
+				assert.Equal(t, []string{"v2.0.39"}, response.Header.Values("X-New-Api-Version"))
+				assert.Equal(t, []string{"losangeles-cn2"}, response.Header.Values("X-Node"))
+			} else {
+				assert.Equal(t, []string{"1.1 Caddy", "another proxy"}, response.Header.Values("Via"))
+				assert.Equal(t, "upstream-version", response.Header.Get("X-New-Api-Version"))
+				assert.Empty(t, response.Header.Values("X-Node"))
+			}
+		})
+	}
+}
+
+func setupRelayFirstTokenMonitor(t *testing.T) {
+	t.Helper()
+	previous := model.DB
+	model.DB, _ = openTaskDialectDatabase(t, &model.BotMonitorLatencyBinding{})
+	t.Cleanup(func() { model.DB = previous })
+}
+
 func TestRelayKeepAliveDuringImagePreparation(t *testing.T) {
+	setupRelayFirstTokenMonitor(t)
 	settings := operation_setting.GetGeneralSetting()
 	previousEnabled, previousInterval := settings.PingIntervalEnabled, settings.PingIntervalSeconds
 	previousCount, previousMedia := constant.CountToken, constant.GetMediaToken
@@ -56,6 +105,7 @@ func TestRelayKeepAliveDuringImagePreparation(t *testing.T) {
 	defer imageServer.Close()
 	engine := gin.New()
 	engine.POST("/v1/messages", func(c *gin.Context) {
+		common.SetContextKey(c, constant.ContextKeyChannelType, constant.ChannelTypeMoonshot)
 		common.SetContextKey(c, constant.ContextKeyOriginalModel, "claude-sonnet-4-20250514")
 		Relay(c, types.RelayFormatClaude)
 	})
@@ -70,6 +120,9 @@ func TestRelayKeepAliveDuringImagePreparation(t *testing.T) {
 	defer response.Body.Close()
 	require.Equal(t, http.StatusOK, response.StatusCode)
 	require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
+	assert.Equal(t, []string{"2.0 Caddy"}, response.Header.Values("Via"))
+	assert.Equal(t, []string{"v2.0.39"}, response.Header.Values("X-New-Api-Version"))
+	assert.Equal(t, []string{"losangeles-cn2"}, response.Header.Values("X-Node"))
 	reader := bufio.NewReader(response.Body)
 	for range 2 {
 		line, readErr := reader.ReadString('\n')
@@ -236,6 +289,7 @@ func TestStreamKeepAlivePreservesFastHTTPFailures(t *testing.T) {
 }
 
 func TestRelayKeepAliveHonorsStreamSettings(t *testing.T) {
+	setupRelayFirstTokenMonitor(t)
 	settings := operation_setting.GetGeneralSetting()
 	previousEnabled := settings.PingIntervalEnabled
 	previousCount, previousMedia, previousNonStreamMedia := constant.CountToken, constant.GetMediaToken, constant.GetMediaTokenNotStream

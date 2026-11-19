@@ -88,6 +88,10 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 			return
 		}
 		defer ws.Close()
+	} else {
+		writer := &relayHeaderWriter{ResponseWriter: c.Writer, ctx: c}
+		c.Writer = writer
+		defer writer.applyChannelHeaders() // Gin commits an empty response after the handler returns.
 	}
 
 	defer func() {
