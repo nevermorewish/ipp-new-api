@@ -10,6 +10,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -21,17 +22,6 @@ import (
 // maxToolNestingDepth bounds recursion through container tools so a
 // deeply-nested or cyclic-looking payload cannot exhaust the stack.
 const maxToolNestingDepth = 64
-
-var includeValues = map[string]struct{}{
-	"code_interpreter_call.outputs":         {},
-	"computer_call_output.output.image_url": {},
-	"file_search_call.results":              {},
-	"message.input_image.image_url":         {},
-	"message.output_text.logprobs":          {},
-	"reasoning.encrypted_content":           {},
-	"web_search_call.action.sources":        {},
-	"web_search_call.results":               {},
-}
 
 var reasoningEfforts = map[string]struct{}{
 	"none": {}, "minimal": {}, "low": {}, "medium": {}, "high": {}, "xhigh": {}, "max": {},
@@ -491,18 +481,17 @@ func validatePromptCacheOptions(raw json.RawMessage) error {
 	return nil
 }
 
+// validateInclude checks the array shape. The upstream owns the include vocabulary.
 func validateInclude(raw json.RawMessage) error {
 	if len(raw) == 0 || common.GetJsonType(raw) == "null" {
 		return nil
 	}
-	var values []string
+	var values []*string // Preserve JSON null elements so they can be rejected.
 	if err := common.Unmarshal(raw, &values); err != nil {
 		return fmt.Errorf("include must be an array of strings: %w", err)
 	}
-	for _, value := range values {
-		if _, ok := includeValues[value]; !ok {
-			return fmt.Errorf("invalid include value %q", value)
-		}
+	if slices.Contains(values, nil) {
+		return fmt.Errorf("include must be an array of strings")
 	}
 	return nil
 }

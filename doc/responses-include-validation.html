@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>new-api 如何放开 Responses 的 include 取值校验</title>
+<style>
+*{box-sizing:border-box}html{background:#f4f6f5;color:#20342e;font:17px/1.75 "Source Sans 3","Microsoft YaHei",sans-serif}body{max-width:54rem;margin:2rem auto;padding:clamp(1.25rem,5vw,3.4rem);background:white;border-top:5px solid #17634f}h1,h2{line-height:1.35;text-wrap:balance}h1{font-size:clamp(1.75rem,5vw,2.55rem);margin:0 0 1rem}h2{margin:2rem 0 .65rem;font-size:1.35rem;color:#155542}p{margin:.6rem 0}code{font: .9em/1.55 "IBM Plex Mono",Consolas,monospace;overflow-wrap:anywhere}pre{background:#edf3f0;border-left:3px solid #488774;padding:1rem;overflow-x:auto;tab-size:4}pre code{overflow-wrap:normal}li+li{margin-top:.4rem}@media print{html{background:white}body{padding:0;margin:0;max-width:none}pre{white-space:pre-wrap}h2{break-after:avoid}}
+</style>
+<main>
+<h1>new-api 如何放开 Responses 的 <code>include</code> 取值校验</h1>
+<p>适用于使用 <code>relay/channel/openaigpt</code> 处理 <code>POST /v1/responses</code> 的分支。网关检查 <code>include</code> 的 JSON 格式，具体支持哪些字符串由上游模型服务决定。</p>
+<h2>用原请求定位拦截点</h2>
+<pre><code>{
+  "model": "gpt-6.1-sol",
+  "input": "OK",
+  "include": ["reasoning.encrypted_content", "output.encrypted_content"]
+}</code></pre>
+<p>旧版在转发前逐项查询 <code>includeValues</code>。第二个值未收录，网关直接返回 HTTP 400 和 <code>invalid include value "output.encrypted_content"</code>。可以在要修改的分支根目录查找这段逻辑：</p>
+<pre><code>rg -n 'includeValues|invalid include value|func validateInclude' relay/channel/openaigpt</code></pre>
+<h2>修改 OpenAI-GPT 渠道的校验函数</h2>
+<p>打开 <code>relay/channel/openaigpt/validation.go</code>，删除 <code>includeValues</code> 映射和逐项查询该映射的循环，在导入区加入 <code>"slices"</code>。保留 <code>ValidateResponsesRequest</code> 对 <code>validateInclude</code> 的调用，将函数改为：</p>
+<pre><code>func validateInclude(raw json.RawMessage) error {
+	if len(raw) == 0 || common.GetJsonType(raw) == &quot;null&quot; {
+		return nil
+	}
+	var values []*string // Preserve JSON null elements so they can be rejected.
+	if err := common.Unmarshal(raw, &amp;values); err != nil {
+		return fmt.Errorf(&quot;include must be an array of strings: %w&quot;, err)
+	}
+	if slices.Contains(values, nil) {
+		return fmt.Errorf(&quot;include must be an array of strings&quot;)
+	}
+	return nil
+}</code></pre>
+<p>字段缺省、顶层 <code>null</code> 和空数组均可通过。使用 <code>[]*string</code> 可以识别数组内的 <code>null</code> 并报格式错误。校验器只读取数组，发送给上游的请求体仍使用原值。若渠道启用了“兼容 Azure GPT”，已有的兼容逻辑会单独移除 <code>reasoning.encrypted_content</code>。</p>
+<h2>验证修改</h2>
+<p>在仓库根目录运行本次同步的回归测试。测试通过 <code>PrepareResponsesBody</code> 检查实际准备转发的 JSON。</p>
+<pre><code>go test ./relay/channel/openaigpt -run '^TestResponsesIncludeValidation$' -count=1
+go test ./relay/channel/openaigpt ./relay -count=1</code></pre>
+<ul><li>默认渠道设置下，原请求中的两个值应按原顺序出现在转发体中。新增的上游扩展值也应通过本地校验。</li><li>把 <code>include</code> 改成单个字符串、<code>[1]</code> 或 <code>[null]</code>，应得到 <code>include must be an array of strings</code>。</li></ul>
+<h2>发布后核对实际链路</h2>
+<p>用修改后的代码构建并发布网关。若渠道的上游也是一层 new-api，请同时核对该实例的版本。用上面的请求走目标渠道，将网关的 <code>upstream_request_id</code> 与下一跳的 <code>request_id</code> 对照。下一跳收到该数组即可确认本层已放行；最终响应取决于上游是否支持所请求的值。</p>
+<p>主站参考提交 <code>e03e7fa73610cee9bfa26669eb3cc96b4e0d84f7</code>。本次移植另外保留了对数组内 <code>null</code> 的格式检查。</p>
+</main>
+</html>

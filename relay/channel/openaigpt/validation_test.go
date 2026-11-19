@@ -82,3 +82,30 @@ func TestValidationIsScopedToThisChannel(t *testing.T) {
 	}
 	require.NoError(t, ValidateResponsesRequest(&request))
 }
+
+func TestResponsesIncludeValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		include string
+		valid   bool
+	}{
+		{"reported pair", `["reasoning.encrypted_content","output.encrypted_content"]`, true},
+		{"provider extension", `["provider.future_field"]`, true},
+		{"empty array", `[]`, true},
+		{"optional null", `null`, true},
+		{"scalar", `"reasoning.encrypted_content"`, false},
+		{"numeric member", `["reasoning.encrypted_content",1]`, false},
+		{"null member", `[null]`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := []byte(`{"model":"gpt-6.1-sol","input":"OK","include":` + tc.include + `}`)
+			prepared, _, _, err := PrepareResponsesBody(body, "", dto.ChannelOtherSettings{})
+			if !tc.valid {
+				require.ErrorContains(t, err, "include must be an array of strings")
+				return
+			}
+			require.NoError(t, err)
+			require.JSONEq(t, string(body), string(prepared))
+		})
+	}
+}
