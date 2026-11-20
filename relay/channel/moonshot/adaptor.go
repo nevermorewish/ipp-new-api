@@ -47,6 +47,12 @@ func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayIn
 // return, and a body-level lifetime is lifted to the request level because the
 // official endpoint reads only the top-level field and would otherwise fall
 // back to the default 5m lifetime.
+//
+// The upstream rejects cache_control inside a message content part as a Chat
+// Completions field ("cache_control is not supported on Chat Completions; use
+// prompt_cache_options"), so the mark must not survive the lift. Every block
+// mark is removed once its lifetime has moved to the request level; the
+// request-level mark itself is left exactly as the client wrote it.
 func adaptKVVMessagesCacheControl(info *relaycommon.RelayInfo, request *dto.ClaudeRequest) error {
 	if !kvvMessagesCacheCompat(info, request) {
 		return nil
@@ -54,19 +60,29 @@ func adaptKVVMessagesCacheControl(info *relaycommon.RelayInfo, request *dto.Clau
 	if err := validateKVVMessagesCacheControl(request.CacheControl, "cache_control"); err != nil {
 		return err
 	}
+	marked := false
+	for blockIndex, control := range claudeContentCacheControls(request.System) {
+		if err := validateKVVMessagesCacheControl(control, fmt.Sprintf("system[%d].cache_control", blockIndex)); err != nil {
+			return err
+		}
+		marked = true
+	}
 	for messageIndex := range request.Messages {
 		for blockIndex, control := range claudeContentCacheControls(request.Messages[messageIndex].Content) {
 			path := fmt.Sprintf("messages[%d].content[%d].cache_control", messageIndex, blockIndex)
 			if err := validateKVVMessagesCacheControl(control, path); err != nil {
 				return err
 			}
+			marked = true
 		}
 	}
-	ttl, ok := kimiMessagesCacheTTL(request)
-	if !ok {
+	if !marked {
 		return nil
 	}
-	request.CacheControl, _ = common.Marshal(map[string]string{"type": "ephemeral", "ttl": ttl})
+	if ttl, ok := kimiMessagesCacheTTL(request); ok {
+		request.CacheControl, _ = common.Marshal(map[string]string{"type": "ephemeral", "ttl": ttl})
+	}
+	stripClaudeContentCacheControls(request)
 	return nil
 }
 

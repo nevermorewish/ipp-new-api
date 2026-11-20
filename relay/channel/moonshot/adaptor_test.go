@@ -1762,3 +1762,84 @@ func TestMoonshotMessagesCacheControlFallback(t *testing.T) {
 		})
 	}
 }
+
+// TestKVVK31MessagesCacheControl covers the official Messages cache contract. A
+// decoded body carries content blocks as []any, which is the shape that
+// actually reaches the adapter, so the block-level mark must be validated from
+// that shape and not only from the typed one.
+//
+// The upstream answers a Chat Completions content part carrying cache_control
+// with a 400, so a lifted mark must leave the body entirely: the lifetime moves
+// to the request level and no block keeps the member.
+func TestKVVK31MessagesCacheControl(t *testing.T) {
+	for _, tc := range []struct {
+		name, body, wantError string
+		compat                bool
+		wantTTL               string
+		wantBlockMark         bool
+	}{
+		{
+			name:      "unsupported member is rejected",
+			compat:    true,
+			body:      `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":[{"type":"text","text":"hi","cache_control":{"type":"ephemeral","mode":"readonly"}}]}]}`,
+			wantError: "cache_control.mode",
+		},
+		{
+			name:    "clean block mark is lifted and removed",
+			compat:  true,
+			body:    `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":[{"type":"text","text":"hi","cache_control":{"type":"ephemeral","ttl":"1h"}}]}]}`,
+			wantTTL: "1h",
+		},
+		{
+			name:    "block mark without a lifetime still lifts",
+			compat:  true,
+			body:    `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":[{"type":"text","text":"hi","cache_control":{"type":"ephemeral"}}]}]}`,
+			wantTTL: "5m",
+		},
+		{
+			name:    "system block mark is lifted and removed",
+			compat:  true,
+			body:    `{"model":"kimi-k3.1-pro","system":[{"type":"text","text":"sys","cache_control":{"type":"ephemeral","ttl":"1h"}}],"messages":[{"role":"user","content":"hi"}]}`,
+			wantTTL: "1h",
+		},
+		{
+			name:    "request level mark wins over a block mark",
+			compat:  true,
+			body:    `{"model":"kimi-k3.1-pro","cache_control":{"type":"ephemeral","ttl":"1h"},"messages":[{"role":"user","content":[{"type":"text","text":"hi","cache_control":{"type":"ephemeral","ttl":"5m"}}]}]}`,
+			wantTTL: "1h",
+		},
+		{
+			name:      "bad type is rejected",
+			compat:    true,
+			body:      `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":[{"type":"text","text":"hi","cache_control":{"type":"persistent"}}]}]}`,
+			wantError: "cache_control.type",
+		},
+		{
+			name:          "switch off leaves the mark alone",
+			body:          `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":[{"type":"text","text":"hi","cache_control":{"type":"ephemeral","mode":"readonly"}}]}]}`,
+			wantBlockMark: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var request dto.ClaudeRequest
+			require.NoError(t, common.UnmarshalJsonStr(tc.body, &request))
+			info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatClaude, Request: &request, ChannelMeta: &relaycommon.ChannelMeta{
+				ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro",
+				ChannelSetting: dto.ChannelSettings{MoonshotKVVEnabled: true, MoonshotK31ParamCompat: tc.compat},
+			}}
+			converted, err := (&Adaptor{}).ConvertClaudeRequest(nil, info, &request)
+			if tc.wantError != "" {
+				var apiErr *types.NewAPIError
+				require.ErrorAs(t, err, &apiErr)
+				assert.Equal(t, 400, apiErr.StatusCode)
+				assert.ErrorContains(t, err, tc.wantError)
+				return
+			}
+			require.NoError(t, err)
+			wire, err := common.Marshal(converted)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantTTL, gjson.GetBytes(wire, "cache_control.ttl").String())
+			assert.Equal(t, tc.wantBlockMark, strings.Contains(string(wire), "messages\":[{\"role\":\"user\",\"content\":[{\"cache_control\""))
+		})
+	}
+}

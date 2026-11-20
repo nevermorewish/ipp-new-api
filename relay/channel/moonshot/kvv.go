@@ -404,11 +404,16 @@ func claudeContentCacheControls(content any) map[int]json.RawMessage {
 	return controls
 }
 
-// kimiMessagesCacheTTL returns the TTL a Claude Messages request asks for.
-// The official endpoint honours only the request-level cache_control and
-// ignores body marks, so a client that marks a content block would silently
-// fall back to the default 5m lifetime. Under the compatibility switch the
-// block mark is lifted to the request level so the requested lifetime wins.
+// kimiMessagesCacheTTL reports whether a Claude Messages request marks any
+// block for caching and which lifetime it asks for. The endpoint honours only
+// the request-level cache_control and rejects the same mark inside a message
+// content block, so the mark must be read from every block to be lifted and
+// then removed.
+//
+// The mark is read in request order — the request level, the system blocks,
+// then the message blocks — and the first stated lifetime wins, matching the
+// order Claude itself resolves them in. A mark without a lifetime is a request
+// for the default 5m lifetime, so it still counts.
 func kimiMessagesCacheTTL(request *dto.ClaudeRequest) (string, bool) {
 	if request == nil {
 		return "", false
@@ -416,10 +421,15 @@ func kimiMessagesCacheTTL(request *dto.ClaudeRequest) (string, bool) {
 	if ttl, ok := claudeCacheControlTTL(request.CacheControl); ok {
 		return ttl, true
 	}
+	for _, control := range claudeContentCacheControls(request.System) {
+		if ttl, ok := claudeCacheControlTTL(control); ok {
+			return ttl, true
+		}
+	}
 	for messageIndex := range request.Messages {
 		controls := claudeContentCacheControls(request.Messages[messageIndex].Content)
-		// Block order decides which TTL wins, so iterate by index rather than
-		// over the map.
+		// Block order decides which lifetime wins, so iterate by index rather
+		// than over the map.
 		for blockIndex := 0; blockIndex < len(controls); blockIndex++ {
 			if ttl, ok := claudeCacheControlTTL(controls[blockIndex]); ok {
 				return ttl, true
@@ -429,6 +439,9 @@ func kimiMessagesCacheTTL(request *dto.ClaudeRequest) (string, bool) {
 	return "", false
 }
 
+// claudeCacheControlTTL returns the lifetime a cache_control mark asks for.
+// ok reports that the mark is present and valid; a mark without a lifetime
+// asks for the default 5m one.
 func claudeCacheControlTTL(raw json.RawMessage) (string, bool) {
 	if len(raw) == 0 {
 		return "", false
@@ -439,10 +452,57 @@ func claudeCacheControlTTL(raw json.RawMessage) (string, bool) {
 	if err := common.Unmarshal(raw, &control); err != nil {
 		return "", false
 	}
-	if control.TTL != "5m" && control.TTL != "1h" {
-		return "", false
+	if control.TTL == "1h" {
+		return "1h", true
 	}
-	return control.TTL, true
+	return "5m", true
+}
+
+// stripClaudeContentCacheControls removes the cache_control mark from every
+// system and message content block, in both the decoded and the typed shape.
+// The endpoint rejects that member inside a Chat Completions content part, and
+// the lifetime it states has already moved to the request level, so the mark
+// carries nothing the upstream reads.
+func stripClaudeContentCacheControls(request *dto.ClaudeRequest) {
+	if request == nil {
+		return
+	}
+	if blocks, ok := request.System.([]any); ok {
+		request.System = stripCacheControlsFromDecodedBlocks(blocks)
+	}
+	if blocks, ok := request.System.([]dto.ClaudeMediaMessage); ok {
+		for index := range blocks {
+			blocks[index].CacheControl = nil
+		}
+		request.System = blocks
+	}
+	for messageIndex := range request.Messages {
+		switch blocks := request.Messages[messageIndex].Content.(type) {
+		case []any:
+			request.Messages[messageIndex].Content = stripCacheControlsFromDecodedBlocks(blocks)
+		case []dto.ClaudeMediaMessage:
+			for blockIndex := range blocks {
+				blocks[blockIndex].CacheControl = nil
+			}
+			request.Messages[messageIndex].Content = blocks
+		}
+	}
+}
+
+// stripCacheControlsFromDecodedBlocks drops cache_control from blocks decoded
+// into map[string]any. Blocks of any other shape are left as they are.
+func stripCacheControlsFromDecodedBlocks(blocks []any) []any {
+	for index, rawBlock := range blocks {
+		block, ok := rawBlock.(map[string]any)
+		if !ok {
+			continue
+		}
+		if _, marked := block["cache_control"]; marked {
+			delete(block, "cache_control")
+			blocks[index] = block
+		}
+	}
+	return blocks
 }
 
 // clampKVVOutputBudget reproduces the official behavior for an output budget
