@@ -1681,3 +1681,84 @@ func TestKimiToolSchemaEnumTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestMoonshotMessagesCacheControlFallback(t *testing.T) {
+	service.InitHttpClient()
+	const marked = `{"model":"kimi-k3.1-pro","cache_control":{"type":"ephemeral"},"tools":[{"name":"lookup","cache_control":{"type":"ephemeral"},"input_schema":{"type":"object","properties":{"cache_control":{"type":"integer"}}}}],"system":[{"type":"text","text":"cache_control","cache_control":{"type":"ephemeral"}}],"messages":[{"role":"assistant","content":[{"type":"tool_use","name":"lookup","id":"a","input":{"cache_control":9007199254740993},"cache_control":{"type":"ephemeral"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"a","content":[{"type":"text","text":"ok","cache_control":{"type":"ephemeral"}}]}]}]}`
+	const unmarked = `{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":"cache_control"}],"tools":[{"name":"test","input_schema":{"properties":{"cache_control":{}}}}]}`
+	const rejected = `{"error":{"message":"cache_control is not supported on Chat Completions; use prompt_cache_options"}}`
+	const alternate = `{"error":{"message":"This endpoint does not support the cache_control field"}}`
+	for _, tc := range []struct {
+		name, body, reply               string
+		firstStatus, finalStatus, calls int
+		stream                          bool
+	}{
+		{"accepted breakpoint", marked, `{"ok":true}`, 200, 200, 1, false},
+		{"known rejection", marked, rejected, 400, 200, 2, false},
+		{"stream", marked, alternate, 400, 200, 2, true},
+		{"second rejection", marked, rejected, 400, 400, 2, false},
+		{"no breakpoints", unmarked, rejected, 400, 400, 1, false},
+		{"unrelated bad request", marked, `{"error":{"message":"cache_control.ttl is not supported"}}`, 400, 400, 1, false},
+		{"server error", marked, rejected, 500, 500, 1, false},
+		{"oversized response", marked, rejected + strings.Repeat(" ", 65536), 400, 400, 1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var requests [][]byte
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/v1/messages", r.URL.Path)
+				body, err := io.ReadAll(r.Body)
+				assert.NoError(t, err)
+				requests = append(requests, body)
+				if len(requests) == 1 {
+					w.WriteHeader(tc.firstStatus)
+					_, _ = io.WriteString(w, tc.reply)
+					return
+				}
+				if tc.stream {
+					w.Header().Set("Content-Type", "text/event-stream")
+				}
+				w.WriteHeader(tc.finalStatus)
+				if tc.finalStatus == 400 {
+					_, _ = io.WriteString(w, rejected)
+				} else if tc.stream {
+					_, _ = io.WriteString(w, "event: message_stop\n\n")
+				} else {
+					_, _ = io.WriteString(w, `{"type":"message"}`)
+				}
+			}))
+			defer upstream.Close()
+			ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+			ctx.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+			info := &relaycommon.RelayInfo{RelayFormat: types.RelayFormatClaude, IsStream: tc.stream, ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeMoonshot, ChannelBaseUrl: upstream.URL, UpstreamModelName: "kimi-k3.1-pro"}}
+			input := tc.body
+			if tc.stream {
+				input = strings.Replace(input, `{"model"`, `{"stream":true,"model"`, 1)
+			}
+			response, err := (&Adaptor{}).DoRequest(ctx, info, strings.NewReader(input))
+			require.NoError(t, err)
+			resp := response.(*http.Response)
+			defer resp.Body.Close()
+			result, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Len(t, requests, tc.calls)
+			assert.Equal(t, input, string(requests[0]))
+			assert.Equal(t, tc.finalStatus, resp.StatusCode)
+			if tc.calls == 1 {
+				assert.Equal(t, tc.reply, string(result))
+				return
+			}
+			// Compare the whole request: schema property, tool argument, large
+			// integer, literal text and stream flag all survive the second send.
+			expected := strings.ReplaceAll(input, `,"cache_control":{"type":"ephemeral"}`, "")
+			assert.JSONEq(t, expected, string(requests[1]))
+			assert.Equal(t, "9007199254740993", gjson.GetBytes(requests[1], "messages.0.content.0.input.cache_control").Raw)
+			if tc.stream {
+				assert.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+				assert.Equal(t, "event: message_stop\n\n", string(result))
+			}
+			if tc.finalStatus == 400 {
+				assert.Equal(t, rejected, string(result))
+			}
+		})
+	}
+}

@@ -45,6 +45,18 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 	if err != nil || !eligible || resp == nil || resp.StatusCode != http.StatusBadRequest || resp.Body == nil {
 		return resp, err
 	}
+	message := moonshotBadRequestMessage(resp)
+	if message != "tool_choice 'required' requires at least one tool" && message != `tool_choice "required" requires at least one tool` {
+		return resp, nil
+	}
+	if c.Request.Context().Err() != nil {
+		return resp, nil
+	}
+	_ = resp.Body.Close()
+	return channel.DoApiRequest(a, c, info, bytes.NewReader(fallback))
+}
+
+func moonshotBadRequestMessage(resp *http.Response) string {
 	// Bound inspection and restore every byte when this is not the known error.
 	const limit = 64 * 1024
 	rejection, readErr := io.ReadAll(io.LimitReader(resp.Body, limit+1))
@@ -54,17 +66,9 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 		io.Closer
 	}{io.MultiReader(bytes.NewReader(rejection), original), original}
 	if readErr != nil || len(rejection) > limit {
-		return resp, nil
+		return ""
 	}
-	message := gjson.GetBytes(rejection, "error.message").String()
-	if message != "tool_choice 'required' requires at least one tool" && message != `tool_choice "required" requires at least one tool` {
-		return resp, nil
-	}
-	if c.Request.Context().Err() != nil {
-		return resp, nil
-	}
-	_ = resp.Body.Close()
-	return channel.DoApiRequest(a, c, info, bytes.NewReader(fallback))
+	return gjson.GetBytes(rejection, "error.message").String()
 }
 
 // promoteRequiredDynamicTools keeps raw tool definitions and required semantics.

@@ -378,7 +378,11 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 		}
 		requestBody = bytes.NewReader(normalized)
 	}
-	return a.doRequestWithDynamicToolFallback(c, info, requestBody)
+	resp, err := a.doRequestWithDynamicToolFallback(c, info, requestBody)
+	if err == nil && info.RelayFormat == types.RelayFormatClaude && resp != nil && resp.StatusCode == http.StatusBadRequest && resp.Body != nil {
+		return a.retryUnsupportedMessagesCacheControl(c, info, resp)
+	}
+	return resp, err
 }
 
 func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
