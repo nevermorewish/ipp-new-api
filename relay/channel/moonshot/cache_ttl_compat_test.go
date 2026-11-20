@@ -107,6 +107,8 @@ func TestMoonshotCacheTTLCompatibility(t *testing.T) {
 					assert.False(t, ojson.Get(final, "usage.cache_ttl_simulated").Exists())
 					// Simulation changes no cache token totals used for billing.
 					assert.Equal(t, int(tc.five+tc.hour), billed.(*dto.Usage).PromptTokensDetails.CacheWriteTokens)
+					// The consume log keeps how the split was obtained.
+					assert.Equal(t, tc.source, common.GetContextKeyString(c, constant.ContextKeyMoonshotCacheTTLSource))
 				}
 				// The relay adds no header of its own: the client reads exactly
 				// what the upstream sent, including when there is none.

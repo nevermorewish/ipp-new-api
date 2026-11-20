@@ -176,6 +176,10 @@ func enrichMoonshotCacheTTL(c *gin.Context, info *relaycommon.RelayInfo, body []
 		// This extension describes relay observations; standard usage counters
 		// and upstream cache_creation remain unchanged.
 		outputUsage["cache_ttl"], _ = common.Marshal(association)
+		common.SetContextKey(c, constant.ContextKeyMoonshotCacheTTLStatus, association.Status)
+	}
+	if resolved.Source != "" {
+		common.SetContextKey(c, constant.ContextKeyMoonshotCacheTTLSource, resolved.Source)
 	}
 	encoded, err := common.Marshal(outputUsage)
 	if err != nil {
