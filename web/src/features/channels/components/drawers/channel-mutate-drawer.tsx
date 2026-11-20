@@ -309,6 +309,7 @@ const SENSITIVE_FORM_FIELDS = [
   'moonshot_disable_thinking',
   'moonshot_hoist_dynamic_tools',
   'moonshot_split_cache_text',
+  'moonshot_cache_ttl_compat',
   'moonshot_media_url_to_base64',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
@@ -2076,6 +2077,34 @@ export function ChannelMutateDrawer({
               onBlur={field.onBlur}
               name={field.name}
               ref={field.ref}
+            />
+          </FormControl>
+        </FormItem>
+      )}
+    />
+  )
+
+  const cacheTTLCompatField = currentType === 25 && (
+    <FormField
+      control={form.control}
+      name='moonshot_cache_ttl_compat'
+      render={({ field }) => (
+        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
+          <div className='space-y-0.5'>
+            <FormLabel>
+              {t('Cache TTL compatibility (simulation fallback)')}
+            </FormLabel>
+            <FormDescription>
+              {t(
+                'For Kimi K3 Chat Completions, expose reported cache writes as 5m/1h buckets. When the upstream omits TTL evidence, infer the split from the request and mark it as simulated. Missing request IDs receive a relay-generated ID. Does not prove retention or change billing.'
+              )}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <Switch
+              disabled={sensitiveLocked}
+              checked={field.value === true}
+              onCheckedChange={field.onChange}
             />
           </FormControl>
         </FormItem>
@@ -5037,6 +5066,7 @@ export function ChannelMutateDrawer({
                 {disableThinkingField}
                 {hoistDynamicToolsField}
                 {splitCacheTextField}
+                {cacheTTLCompatField}
                 {mediaURLToBase64Field}
                 <OpenAIGPTSettings
                   control={form.control}

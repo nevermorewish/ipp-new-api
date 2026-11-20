@@ -91,6 +91,7 @@ export interface ChannelSettings {
   moonshot_disable_thinking?: boolean
   moonshot_hoist_dynamic_tools?: boolean
   moonshot_split_cache_text?: boolean
+  moonshot_cache_ttl_compat?: boolean
   moonshot_media_url_to_base64?: boolean
   proxy?: string
   pass_through_body_enabled?: boolean

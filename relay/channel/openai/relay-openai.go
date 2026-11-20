@@ -26,6 +26,14 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 	if data == "" {
 		return nil
 	}
+	if moonshotTTLCompatEnabled(info) {
+		data = string(enrichMoonshotCacheTTL(c, info, []byte(data)))
+		// A standalone usage frame has no delta to format. Preserve its raw
+		// counters, explicit zeros and compatibility provenance even in force mode.
+		if ojson.Get(data, "usage").IsObject() && len(ojson.Get(data, "choices").Array()) == 0 {
+			return helper.StringData(c, data)
+		}
+	}
 
 	if !forceFormat && !thinkToContent {
 		return helper.StringData(c, data)
@@ -204,6 +212,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	}
 
 	applyUsagePostProcessing(info, usage, common.StringToByteSlice(usageFrame))
+	originalSplitInlineUsage := splitInlineUsage
 
 	if isMoonshot {
 		// The write headers left with the response before this usage arrived, so
@@ -233,7 +242,10 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 			Id: responseId, Object: "chat.completion.chunk", Created: createAt, Model: model,
 			SystemFingerprint: systemFingerprint, Choices: []any{}, Usage: json.RawMessage(splitInlineUsage),
 		}
-		_ = helper.ObjectData(c, chunk)
+		encoded, marshalErr := common.Marshal(chunk)
+		if marshalErr == nil {
+			_ = helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, encoded, []byte(`{"usage":`+originalSplitInlineUsage+`}`))))
+		}
 	}
 
 	for _, name := range streamFunctionCallNames {
@@ -432,6 +444,8 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		}
 	}
 
+	originalBody := responseBody
+
 	switch info.RelayFormat {
 	case types.RelayFormatOpenAI:
 		if usageModified {
@@ -479,6 +493,7 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		responseBody = geminiRespStr
 	}
 
+	responseBody = enrichMoonshotCacheTTL(c, info, responseBody, originalBody)
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 
 	return &simpleResponse.Usage, nil
