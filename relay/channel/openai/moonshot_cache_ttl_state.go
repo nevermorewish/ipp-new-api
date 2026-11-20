@@ -32,9 +32,8 @@ type moonshotTTLBinding struct {
 }
 
 type moonshotTTLAssociation struct {
-	CacheKey  string `json:"cache_key"`
-	Status    string `json:"status"`
-	Estimated bool   `json:"estimated"`
+	CacheKey string `json:"cache_key"`
+	Status   string `json:"status"`
 	// The association is inferred from identical prompt inputs and reported
 	// usage. It does not assert access to the provider's physical cache.
 	Basis string `json:"basis"`
@@ -184,7 +183,7 @@ func associateMoonshotTTL(c *gin.Context, usage moonshotTTLUsage) (moonshotTTLUs
 		}
 		moonshotTTLMemory.Unlock()
 	}
-	association := &moonshotTTLAssociation{CacheKey: "relay-cache-" + key, Status: status, Estimated: true, Basis: "exact-prompt-observation"}
+	association := &moonshotTTLAssociation{CacheKey: "relay-cache-" + key, Status: status, Basis: "exact-prompt-observation"}
 	if err != nil {
 		_, resolved, _ = transitionMoonshotTTL(moonshotTTLBinding{}, usage, time.Now())
 		association.Status = "untracked"

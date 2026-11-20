@@ -108,15 +108,15 @@ func TestMoonshotCacheTTLCompatibility(t *testing.T) {
 					// Simulation changes no cache token totals used for billing.
 					assert.Equal(t, int(tc.five+tc.hour), billed.(*dto.Usage).PromptTokensDetails.CacheWriteTokens)
 				}
-				if !tc.enabled {
-					assert.Empty(t, result.Header.Get("Msh-Request-Id"))
-				} else if tc.headers.Get("Msh-Request-Id") != "" {
+				// The relay adds no header of its own: the client reads exactly
+				// what the upstream sent, including when there is none.
+				if tc.headers.Get("Msh-Request-Id") != "" {
 					assert.Equal(t, "official-id", result.Header.Get("Msh-Request-Id"))
-					assert.Empty(t, result.Header.Get("X-Huanxing-Msh-Request-Id-Source"))
 				} else {
-					assert.True(t, strings.HasPrefix(result.Header.Get("Msh-Request-Id"), "relay-"))
-					assert.Equal(t, "relay-generated", result.Header.Get("X-Huanxing-Msh-Request-Id-Source"))
+					assert.Empty(t, result.Header.Get("Msh-Request-Id"))
 				}
+				assert.Empty(t, result.Header.Get("X-Huanxing-Cache-TTL-Mode"))
+				assert.Empty(t, result.Header.Get("X-Huanxing-Msh-Request-Id-Source"))
 			})
 		}
 	}
@@ -135,9 +135,18 @@ func TestMoonshotCacheTTLCompatibilityDoesNotApplyToOtherModelsOrProtocols(t *te
 			c, _ := gin.CreateTestContext(recorder)
 			info := &relaycommon.RelayInfo{RelayMode: tc.mode, RelayFormat: types.RelayFormatOpenAI,
 				ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: tc.model, ChannelSetting: dto.ChannelSettings{MoonshotCacheTTLCompat: true}}}
+			openai.RememberMoonshotCacheTTL(c, info, []byte(`{"messages":[{"role":"user","content":"other"}],"prompt_cache_options":{"ttl":"1h"}}`))
 			resp := &http.Response{StatusCode: 200, Header: make(http.Header)}
-			openai.PrepareMoonshotCacheTTLResponse(c, info, resp)
+			openai.CaptureMoonshotCacheTTLHeaders(c, info, resp)
 			assert.Empty(t, resp.Header)
+			if tc.mode != relayconstant.RelayModeChatCompletions {
+				return
+			}
+			body := `{"id":"ttl-limit","choices":[{"index":0,"message":{"role":"assistant","content":"OK"},"finish_reason":"stop"}],"usage":{"prompt_tokens":16,"prompt_tokens_details":{"cache_write_tokens":8}}}`
+			resp.Body = io.NopCloser(strings.NewReader(body))
+			_, apiErr := (&Adaptor{}).DoResponse(c, resp, info)
+			assert.Nil(t, apiErr)
+			assert.JSONEq(t, body, recorder.Body.String(), "the setting leaves other models untouched")
 		})
 	}
 }
@@ -203,15 +212,7 @@ func TestMoonshotCacheTTLBinding(t *testing.T) {
 						assert.Equal(t, "5m", ojson.Get(first, "usage.cache_ttl.ttl").String())
 						assert.False(t, ojson.Get(first, "usage.cache_ttl.simulated").Exists())
 						assert.Equal(t, "request-inferred", ojson.Get(first, "usage.cache_ttl.source").String())
-						if server != nil {
-							// Existing Redis entries from the previous release may still
-							// contain the removed field. Reading them must keep the binding.
-							key := "new-api:moonshot_cache_ttl:v1:" + strings.TrimPrefix(id, "relay-cache-")
-							raw, err := server.Get(key)
-							require.NoError(t, err)
-							require.NoError(t, server.Set(key, strings.TrimSuffix(raw, "}")+`,"simulated":true}`))
-							server.SetTTL(key, 5*time.Minute)
-						}
+						assert.False(t, ojson.Get(first, "usage.cache_ttl.estimated").Exists())
 						advance := func(d time.Duration) {
 							if server != nil {
 								server.FastForward(d)

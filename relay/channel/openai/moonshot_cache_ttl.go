@@ -58,19 +58,12 @@ func RememberMoonshotCacheTTL(c *gin.Context, info *relaycommon.RelayInfo, body 
 	}
 }
 
-// PrepareMoonshotCacheTTLResponse never impersonates a provider-issued ID.
-// The provenance headers are sent before SSE starts; no stream buffering is needed.
-func PrepareMoonshotCacheTTLResponse(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) {
+// CaptureMoonshotCacheTTLHeaders snapshots the upstream headers before the relay
+// rewrites them, so the write report can still be read when the usage arrives.
+// It adds no header of its own: the client reads exactly the upstream's headers.
+func CaptureMoonshotCacheTTLHeaders(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) {
 	if c == nil || !moonshotTTLCompatEnabled(info) || resp == nil || resp.StatusCode != http.StatusOK {
 		return
-	}
-	if resp.Header == nil {
-		resp.Header = make(http.Header)
-	}
-	resp.Header.Set("X-Huanxing-Cache-TTL-Mode", "compat; cache-associated")
-	if resp.Header.Get("Msh-Request-Id") == "" {
-		resp.Header.Set("Msh-Request-Id", "relay-"+common.NewRequestId())
-		resp.Header.Set("X-Huanxing-Msh-Request-Id-Source", "relay-generated")
 	}
 	c.Set(moonshotTTLHeadersContext, resp.Header.Clone())
 }
@@ -78,7 +71,9 @@ func PrepareMoonshotCacheTTLResponse(c *gin.Context, info *relaycommon.RelayInfo
 // enrichMoonshotCacheTTL changes only the client-facing representation, after
 // billing usage has been selected. It never invents cache reads/writes, changes
 // real splits, or treats the requested lifetime as evidence of actual retention.
-func enrichMoonshotCacheTTL(c *gin.Context, info *relaycommon.RelayInfo, body []byte, original ...[]byte) []byte {
+// upstreamUsage is the upstream usage object when body is not the upstream body
+// itself; an empty string means the body already is the upstream report.
+func enrichMoonshotCacheTTL(c *gin.Context, info *relaycommon.RelayInfo, body []byte, upstreamUsage string) []byte {
 	if c == nil || !moonshotTTLCompatEnabled(info) {
 		return body
 	}
@@ -91,13 +86,9 @@ func enrichMoonshotCacheTTL(c *gin.Context, info *relaycommon.RelayInfo, body []
 		return body
 	}
 	outputUsage := usage
-	if len(original) > 0 {
-		var evidence map[string]json.RawMessage
-		if common.Unmarshal(original[0], &evidence) != nil {
-			return body
-		}
+	if upstreamUsage != "" {
 		usage = nil
-		if common.Unmarshal(evidence["usage"], &usage) != nil || usage == nil {
+		if common.UnmarshalJsonStr(upstreamUsage, &usage) != nil || usage == nil {
 			return body
 		}
 	}

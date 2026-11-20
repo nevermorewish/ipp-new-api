@@ -26,13 +26,13 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 	if data == "" {
 		return nil
 	}
-	if moonshotTTLCompatEnabled(info) {
-		data = string(enrichMoonshotCacheTTL(c, info, []byte(data)))
-		// A standalone usage frame has no delta to format. Preserve its raw
-		// counters, explicit zeros and compatibility provenance even in force mode.
-		if ojson.Get(data, "usage").IsObject() && len(ojson.Get(data, "choices").Array()) == 0 {
-			return helper.StringData(c, data)
-		}
+	// Only a frame that reports usage carries anything the TTL setting rewrites,
+	// and the substring check keeps ordinary deltas from being parsed twice. A
+	// standalone usage frame has no delta to format, so its raw counters, explicit
+	// zeros and TTL evidence are forwarded unchanged even in force mode.
+	if moonshotTTLCompatEnabled(info) && strings.Contains(data, `"usage"`) &&
+		ojson.Get(data, "usage").IsObject() && len(ojson.Get(data, "choices").Array()) == 0 {
+		return helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, []byte(data), "")))
 	}
 
 	if !forceFormat && !thinkToContent {
@@ -45,7 +45,7 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 	}
 
 	if !thinkToContent {
-		return helper.ObjectData(c, lastStreamResponse)
+		return sendFormattedStreamChunk(c, info, lastStreamResponse)
 	}
 
 	hasThinkingContent := false
@@ -73,12 +73,12 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 			}
 			info.ThinkingContentInfo.IsFirstThinkingContent = false
 			info.ThinkingContentInfo.HasSentThinkingContent = true
-			return helper.ObjectData(c, response)
+			return sendFormattedStreamChunk(c, info, response)
 		}
 	}
 
 	if lastStreamResponse.Choices == nil || len(lastStreamResponse.Choices) == 0 {
-		return helper.ObjectData(c, lastStreamResponse)
+		return sendFormattedStreamChunk(c, info, lastStreamResponse)
 	}
 
 	// Process each choice
@@ -93,7 +93,7 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 				response.Choices[j].Delta.Reasoning = nil
 			}
 			info.ThinkingContentInfo.SendLastThinkingContent = true
-			helper.ObjectData(c, response)
+			_ = sendFormattedStreamChunk(c, info, response)
 		}
 
 		// Convert reasoning content to regular content if any
@@ -108,7 +108,21 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 		}
 	}
 
-	return helper.ObjectData(c, lastStreamResponse)
+	return sendFormattedStreamChunk(c, info, lastStreamResponse)
+}
+
+// sendFormattedStreamChunk emits a chunk rebuilt from its typed form. The typed
+// struct cannot carry the TTL evidence, so it is applied to the marshalled bytes
+// rather than to the parsed chunk.
+func sendFormattedStreamChunk(c *gin.Context, info *relaycommon.RelayInfo, chunk any) error {
+	if !moonshotTTLCompatEnabled(info) {
+		return helper.ObjectData(c, chunk)
+	}
+	encoded, err := common.Marshal(chunk)
+	if err != nil {
+		return fmt.Errorf("error marshalling object: %w", err)
+	}
+	return helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, encoded, "")))
 }
 
 func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
@@ -244,7 +258,7 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 		}
 		encoded, marshalErr := common.Marshal(chunk)
 		if marshalErr == nil {
-			_ = helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, encoded, []byte(`{"usage":`+originalSplitInlineUsage+`}`))))
+			_ = helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, encoded, originalSplitInlineUsage)))
 		}
 	}
 
@@ -493,7 +507,7 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		responseBody = geminiRespStr
 	}
 
-	responseBody = enrichMoonshotCacheTTL(c, info, responseBody, originalBody)
+	responseBody = enrichMoonshotCacheTTL(c, info, responseBody, ojson.GetBytes(originalBody, "usage").Raw)
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 
 	return &simpleResponse.Usage, nil

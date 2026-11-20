@@ -2092,11 +2092,11 @@ export function ChannelMutateDrawer({
         <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
           <div className='space-y-0.5'>
             <FormLabel>
-              {t('Cache TTL compatibility (simulation fallback)')}
+              {t('Cache TTL compatibility')}
             </FormLabel>
             <FormDescription>
               {t(
-                'For Kimi K3 Chat Completions, expose reported cache writes as 5m/1h buckets. When the upstream omits TTL evidence, infer the split from the request and mark it as simulated. Missing request IDs receive a relay-generated ID. Does not prove retention or change billing.'
+                'For Kimi K3 Chat Completions, forward reported cache writes as 5m/1h buckets and report the observed lifetime of an identical prompt. No split is invented without upstream evidence. Does not prove retention or change billing.'
               )}
             </FormDescription>
           </div>

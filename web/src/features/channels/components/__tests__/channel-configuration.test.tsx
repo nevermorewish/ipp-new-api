@@ -1661,6 +1661,7 @@ const MOONSHOT_SWITCHES = [
     key: 'moonshot_split_cache_text',
   },
   { label: 'Send media URLs as base64', key: 'moonshot_media_url_to_base64' },
+  { label: 'Cache TTL compatibility', key: 'moonshot_cache_ttl_compat' },
 ] as const
 
 test.each(
