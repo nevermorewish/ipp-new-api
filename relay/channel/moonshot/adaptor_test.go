@@ -1843,3 +1843,43 @@ func TestKVVK31MessagesCacheControl(t *testing.T) {
 		})
 	}
 }
+
+// A cache write is a subset of the prompt it belongs to, so the relay must
+// never forward a write count larger than prompt_tokens. Upstream accounting
+// drifts; forwarding it unchanged makes clients report "write > input".
+func TestMoonshotCacheWriteBoundedByPrompt(t *testing.T) {
+	for _, stream := range []bool{false, true} {
+		t.Run(fmt.Sprintf("stream=%t", stream), func(t *testing.T) {
+			originalTimeout := constant.StreamingTimeout
+			constant.StreamingTimeout = 30
+			t.Cleanup(func() { constant.StreamingTimeout = originalTimeout })
+
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			usage := `"usage":{"prompt_tokens":1024,"completion_tokens":1,"total_tokens":1025,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":4096,"cache_write_tokens_details":{"ttl_5m_tokens":4096}}}`
+			headers := http.Header{"Content-Type": {"application/json"}}
+			body := `{"id":"chatcmpl-kimi","model":"kimi-k3.1-pro","choices":[{"index":0,"message":{"role":"assistant","content":"OK"},"finish_reason":"stop"}],` + usage + `}`
+			if stream {
+				body = "data: " + `{"id":"chatcmpl-kimi","model":"kimi-k3.1-pro","choices":[{"index":0,"delta":{"content":"OK"},"finish_reason":"stop"}],` + usage + "}\n\ndata: [DONE]\n\n"
+				headers.Set("Content-Type", "text/event-stream")
+			}
+			resp := &http.Response{StatusCode: http.StatusOK, Header: headers, Body: io.NopCloser(strings.NewReader(body))}
+			info := &relaycommon.RelayInfo{
+				RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+				IsStream: stream, DisablePing: true, ShouldIncludeUsage: true,
+				ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro"},
+			}
+			_, apiErr := (&Adaptor{}).DoResponse(c, resp, info)
+			require.Nil(t, apiErr)
+
+			forwarded := recorder.Body.String()
+			prompt := gjson.Get(forwarded, "usage.prompt_tokens").Int()
+			written := gjson.Get(forwarded, "usage.prompt_tokens_details.cache_write_tokens").Int()
+			if !stream {
+				require.NotZero(t, prompt, "forwarded body: %s", forwarded)
+			}
+			require.LessOrEqual(t, written, prompt, "cache_write_tokens 不能大于 prompt_tokens: %s", forwarded)
+		})
+	}
+}

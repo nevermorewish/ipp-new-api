@@ -205,6 +205,17 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 
 	applyUsagePostProcessing(info, usage, common.StringToByteSlice(usageFrame))
 
+	if isMoonshot {
+		// The write headers left with the response before this usage arrived, so
+		// they are what the client already read; align the usage to them and
+		// rewrite the forwarded usage object the same way.
+		write := resolveMoonshotCacheWrite(resp.Header, usage, true)
+		setMoonshotCacheWrite(usage, write)
+		if splitInlineUsage != "" {
+			splitInlineUsage = rewriteMoonshotCacheWriteUsageJSON(splitInlineUsage, write)
+		}
+	}
+
 	if splitInlineUsage != "" && info.ShouldIncludeUsage && info.RelayFormat == types.RelayFormatOpenAI {
 		// Forward the upstream usage object verbatim: re-marshalling the typed
 		// DTO would drop explicit zero counts (cache_write_tokens: 0) and
@@ -407,6 +418,19 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 	}
 
 	applyUsagePostProcessing(info, &simpleResponse.Usage, responseBody)
+
+	if info.ChannelType == constant.ChannelTypeMoonshot {
+		// The body has not been written yet, so both statements can still be
+		// reconciled. Only a body that disagrees is rewritten: re-marshalling
+		// an already-correct usage would drop members this DTO does not model.
+		original := moonshotCacheWriteFromUsage(&simpleResponse.Usage)
+		write := resolveMoonshotCacheWrite(resp.Header, &simpleResponse.Usage, false)
+		setMoonshotCacheWrite(&simpleResponse.Usage, write)
+		setMoonshotCacheWriteHeaders(resp.Header, write)
+		if write != original {
+			usageModified = true
+		}
+	}
 
 	switch info.RelayFormat {
 	case types.RelayFormatOpenAI:
