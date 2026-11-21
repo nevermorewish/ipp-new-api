@@ -10,7 +10,6 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	channelconstant "github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/relay/channel"
-	"github.com/QuantumNous/new-api/relay/channel/openai"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -28,7 +27,7 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 	if info == nil || info.ChannelMeta == nil || info.ChannelType != channelconstant.ChannelTypeMoonshot ||
 		info.RelayMode != relayconstant.RelayModeChatCompletions ||
 		info.RelayFormat != types.RelayFormatOpenAI || body == nil {
-		return a.doRequestWithCacheTTL(c, info, body)
+		return channel.DoApiRequest(a, c, info, body)
 	}
 	payload, err := io.ReadAll(body)
 	if err != nil {
@@ -40,9 +39,9 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 	// output limit and returns no tool call. Declared at the top level, the
 	// same tools are called reliably.
 	if eligible && info.ChannelSetting.MoonshotHoistDynamicTools {
-		return a.doRequestWithCacheTTL(c, info, bytes.NewReader(fallback))
+		return channel.DoApiRequest(a, c, info, bytes.NewReader(fallback))
 	}
-	resp, err := a.doRequestWithCacheTTL(c, info, bytes.NewReader(payload))
+	resp, err := channel.DoApiRequest(a, c, info, bytes.NewReader(payload))
 	if err != nil || !eligible || resp == nil || resp.StatusCode != http.StatusBadRequest || resp.Body == nil {
 		return resp, err
 	}
@@ -54,20 +53,7 @@ func (a *Adaptor) doRequestWithDynamicToolFallback(c *gin.Context, info *relayco
 		return resp, nil
 	}
 	_ = resp.Body.Close()
-	return a.doRequestWithCacheTTL(c, info, bytes.NewReader(fallback))
-}
-
-// Capture the actual wire prompt after splitting, overrides and tool fallback.
-func (a *Adaptor) doRequestWithCacheTTL(c *gin.Context, info *relaycommon.RelayInfo, body io.Reader) (*http.Response, error) {
-	if info != nil && info.ChannelMeta != nil && info.ChannelSetting.MoonshotCacheTTLCompat && body != nil {
-		payload, err := io.ReadAll(body)
-		if err != nil {
-			return nil, fmt.Errorf("read cache TTL request: %w", err)
-		}
-		openai.RememberMoonshotCacheTTL(c, info, payload)
-		body = bytes.NewReader(payload)
-	}
-	return channel.DoApiRequest(a, c, info, body)
+	return channel.DoApiRequest(a, c, info, bytes.NewReader(fallback))
 }
 
 func moonshotBadRequestMessage(resp *http.Response) string {

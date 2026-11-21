@@ -1,10 +1,10 @@
 package openai
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/relay/channel/openrouter"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -26,14 +27,6 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 	if data == "" {
 		return nil
 	}
-	// Only a frame that reports usage carries anything the TTL setting rewrites,
-	// and the substring check keeps ordinary deltas from being parsed twice. A
-	// standalone usage frame has no delta to format, so its raw counters, explicit
-	// zeros and TTL evidence are forwarded unchanged even in force mode.
-	if moonshotTTLCompatEnabled(info) && strings.Contains(data, `"usage"`) &&
-		ojson.Get(data, "usage").IsObject() && len(ojson.Get(data, "choices").Array()) == 0 {
-		return helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, []byte(data), "")))
-	}
 
 	if !forceFormat && !thinkToContent {
 		return helper.StringData(c, data)
@@ -45,7 +38,7 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 	}
 
 	if !thinkToContent {
-		return sendFormattedStreamChunk(c, info, lastStreamResponse)
+		return helper.ObjectData(c, lastStreamResponse)
 	}
 
 	hasThinkingContent := false
@@ -73,12 +66,12 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 			}
 			info.ThinkingContentInfo.IsFirstThinkingContent = false
 			info.ThinkingContentInfo.HasSentThinkingContent = true
-			return sendFormattedStreamChunk(c, info, response)
+			return helper.ObjectData(c, response)
 		}
 	}
 
 	if lastStreamResponse.Choices == nil || len(lastStreamResponse.Choices) == 0 {
-		return sendFormattedStreamChunk(c, info, lastStreamResponse)
+		return helper.ObjectData(c, lastStreamResponse)
 	}
 
 	// Process each choice
@@ -93,7 +86,7 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 				response.Choices[j].Delta.Reasoning = nil
 			}
 			info.ThinkingContentInfo.SendLastThinkingContent = true
-			_ = sendFormattedStreamChunk(c, info, response)
+			helper.ObjectData(c, response)
 		}
 
 		// Convert reasoning content to regular content if any
@@ -108,21 +101,7 @@ func sendStreamData(c *gin.Context, info *relaycommon.RelayInfo, data string, fo
 		}
 	}
 
-	return sendFormattedStreamChunk(c, info, lastStreamResponse)
-}
-
-// sendFormattedStreamChunk emits a chunk rebuilt from its typed form. The typed
-// struct cannot carry the TTL evidence, so it is applied to the marshalled bytes
-// rather than to the parsed chunk.
-func sendFormattedStreamChunk(c *gin.Context, info *relaycommon.RelayInfo, chunk any) error {
-	if !moonshotTTLCompatEnabled(info) {
-		return helper.ObjectData(c, chunk)
-	}
-	encoded, err := common.Marshal(chunk)
-	if err != nil {
-		return fmt.Errorf("error marshalling object: %w", err)
-	}
-	return helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, encoded, "")))
+	return helper.ObjectData(c, lastStreamResponse)
 }
 
 func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
@@ -141,15 +120,22 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	var responseTextBuilder strings.Builder
 	var toolCount int
 	var usage = &dto.Usage{}
+	var clientStreamData string
+	var finalUsage moonshotStreamUsagePosition
+	var latestMoonshotUsage *dto.Usage
+	var latestMoonshotFrame string
 	var lastStreamData string
 	var secondLastStreamData string // 保留倒数第二个stream data；部分兼容网关把完整usage放在倒数第二个事件
 	seenStreamToolCalls := make(map[string]struct{})
 	var streamFunctionCallNames []string
 	isMoonshot := info.ChannelType == constant.ChannelTypeMoonshot
+	moonshotChat := isMoonshot && info.RelayFormat == types.RelayFormatOpenAI && info.RelayMode == relayconstant.RelayModeChatCompletions
+	fixPosition := info.ChannelSetting.MoonshotFixUsagePosition
+	normalizeUsage := moonshotChat && (fixPosition == nil || *fixPosition || !info.ShouldIncludeUsage)
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
-		if lastStreamData != "" {
-			if err := HandleStreamFormat(c, info, lastStreamData, info.ChannelSetting.ForceFormat, info.ChannelSetting.ThinkingToContent); err != nil {
+		if clientStreamData != "" {
+			if err := HandleStreamFormat(c, info, clientStreamData, info.ChannelSetting.ForceFormat, info.ChannelSetting.ThinkingToContent); err != nil {
 				common.SysLog(common.LogText("error handling stream format: %s", err.Error()))
 				sr.Error(err)
 			}
@@ -160,6 +146,15 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 			}
 
 			lastStreamData = data
+			clientStreamData = data
+			if normalizeUsage {
+				clientStreamData = finalUsage.take(data)
+			}
+			if moonshotChat && strings.Contains(data, `"usage"`) {
+				if reported := moonshotStreamUsage(data); reported != nil {
+					latestMoonshotUsage, latestMoonshotFrame = reported, data
+				}
+			}
 			observeStreamChoices(info, data, seenStreamToolCalls, &streamFunctionCallNames)
 			if err := processTokenData(info, data, &responseTextBuilder, &toolCount); err != nil {
 				logger.LogError(c, common.LogText("error processing stream token data: %s", err.Error()))
@@ -200,24 +195,13 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 		}
 	}
 
-	// Moonshot reports the terminal usage on the chunk that also carries the
-	// last choice and finish_reason. OpenAI-compatible clients, including the
-	// Kimi cache-usage contract, expect that usage in its own choices=[] chunk
-	// after the finish chunk.
-	forwardLastData := lastStreamData
-	splitInlineUsage := ""
-	if isMoonshot && containStreamUsage && usageFrame == lastStreamData {
-		if stripped, usageJSON, ok := stripInlineStreamUsage(lastStreamData); ok {
-			forwardLastData = stripped
-			splitInlineUsage = usageJSON
-			shouldSendLastResp = true
-		}
+	// Moonshot may report its cumulative usage inside a choice or before a trailer.
+	// Settle from the original report independently of its position on the wire.
+	if latestMoonshotUsage != nil {
+		usage, usageFrame, containStreamUsage = latestMoonshotUsage, latestMoonshotFrame, true
 	}
-
-	if info.RelayFormat == types.RelayFormatOpenAI {
-		if shouldSendLastResp {
-			_ = sendStreamData(c, info, forwardLastData, info.ChannelSetting.ForceFormat, info.ChannelSetting.ThinkingToContent)
-		}
+	if info.RelayFormat == types.RelayFormatOpenAI && clientStreamData != "" && (shouldSendLastResp || clientStreamData != lastStreamData) {
+		_ = sendStreamData(c, info, clientStreamData, info.ChannelSetting.ForceFormat, info.ChannelSetting.ThinkingToContent)
 	}
 
 	if !containStreamUsage {
@@ -226,39 +210,24 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 	}
 
 	applyUsagePostProcessing(info, usage, common.StringToByteSlice(usageFrame))
-	originalSplitInlineUsage := splitInlineUsage
 
 	if isMoonshot {
 		// The write headers left with the response before this usage arrived, so
 		// they are what the client already read; align the usage to them and
 		// rewrite the forwarded usage object the same way.
+		originalWrite := moonshotCacheWriteFromUsage(usage)
 		write := resolveMoonshotCacheWrite(resp.Header, usage, true)
 		setMoonshotCacheWrite(usage, write)
-		if splitInlineUsage != "" {
-			splitInlineUsage = rewriteMoonshotCacheWriteUsageJSON(splitInlineUsage, write)
-		}
-	}
-
-	if splitInlineUsage != "" && info.ShouldIncludeUsage && info.RelayFormat == types.RelayFormatOpenAI {
-		// Forward the upstream usage object verbatim: re-marshalling the typed
-		// DTO would drop explicit zero counts (cache_write_tokens: 0) and
-		// rename Moonshot's TTL split, which the cache contract compares
-		// field by field.
-		chunk := struct {
-			Id                string          `json:"id"`
-			Object            string          `json:"object"`
-			Created           int64           `json:"created"`
-			Model             string          `json:"model"`
-			SystemFingerprint string          `json:"system_fingerprint"`
-			Choices           []any           `json:"choices"`
-			Usage             json.RawMessage `json:"usage"`
-		}{
-			Id: responseId, Object: "chat.completion.chunk", Created: createAt, Model: model,
-			SystemFingerprint: systemFingerprint, Choices: []any{}, Usage: json.RawMessage(splitInlineUsage),
-		}
-		encoded, marshalErr := common.Marshal(chunk)
-		if marshalErr == nil {
-			_ = helper.StringData(c, string(enrichMoonshotCacheTTL(c, info, encoded, originalSplitInlineUsage)))
+		if info.ShouldIncludeUsage && finalUsage.frame != "" {
+			frame := []byte(finalUsage.frame)
+			if finalUsage.inline != "" && write != originalWrite {
+				// Retain the existing cache-write reconciliation for a detached report.
+				rewritten := rewriteMoonshotCacheWriteUsageJSON(finalUsage.inline, write)
+				if updated, err := ojson.SetRawBytes(frame, "usage", []byte(rewritten)); err == nil {
+					frame = updated
+				}
+			}
+			_ = helper.StringData(c, string(frame))
 		}
 	}
 
@@ -266,56 +235,101 @@ func OaiStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Re
 		info.CountBillableToolCall(dto.BuildInCallFunctionCall, name)
 	}
 
-	HandleFinalResponse(c, info, lastStreamData, responseId, createAt, model, systemFingerprint, usage, containStreamUsage)
+	HandleFinalResponse(c, info, lastStreamData, responseId, createAt, model, systemFingerprint, usage, containStreamUsage || finalUsage.frame != "")
 
 	return usage, nil
 }
 
-// stripInlineStreamUsage removes usage members from a chunk that also carries
-// choices and returns the removed top-level usage as raw JSON, so the
-// standalone usage chunk can forward exactly what the upstream reported. A
-// choices=[] usage chunk is already the standard shape and is left untouched,
-// which yields ok=false.
-func stripInlineStreamUsage(data string) (string, string, bool) {
-	var chunk struct {
-		Usage   json.RawMessage `json:"usage"`
+// moonshotStreamUsagePosition retains one client-facing report until [DONE].
+// Accounting continues to observe the untouched upstream chunks.
+type moonshotStreamUsagePosition struct {
+	frame  string
+	inline string // original usage for cache-write reconciliation when detached
+}
+
+func (p *moonshotStreamUsagePosition) take(data string) string {
+	if !strings.Contains(data, `"usage"`) {
+		return data
+	}
+	chunk := ojson.Parse(data)
+	choices := chunk.Get("choices")
+	if !choices.IsArray() {
+		return data
+	}
+	items := choices.Array()
+	usage := chunk.Get("usage")
+	if len(items) == 0 {
+		if !usage.IsObject() {
+			return data
+		}
+		p.frame, p.inline = data, ""
+		return ""
+	}
+	// Only detach a finish event. Intermediate deltas can carry other metadata.
+	if !slices.ContainsFunc(items, func(choice ojson.Result) bool { return choice.Get("finish_reason").String() != "" }) {
+		return data
+	}
+	stripped := data
+	if usage.IsObject() {
+		var err error
+		stripped, err = ojson.Delete(stripped, "usage")
+		if err != nil {
+			return data
+		}
+	}
+	for i := len(items) - 1; i >= 0; i-- {
+		nested := items[i].Get("usage")
+		if !nested.IsObject() {
+			continue
+		}
+		if !usage.IsObject() {
+			usage = nested
+		}
+		var err error
+		stripped, err = ojson.Delete(stripped, fmt.Sprintf("choices.%d.usage", i))
+		if err != nil {
+			return data
+		}
+	}
+	if !usage.IsObject() {
+		return data
+	}
+	// An explicit empty-choices report is authoritative, including its extensions.
+	if p.frame == "" || p.inline != "" {
+		frame, err := ojson.SetRaw(stripped, "choices", "[]")
+		if err != nil {
+			return data
+		}
+		frame, err = ojson.SetRaw(frame, "usage", usage.Raw)
+		if err != nil {
+			return data
+		}
+		p.frame, p.inline = frame, usage.Raw
+	}
+	return stripped
+}
+
+// moonshotStreamUsage selects the same cumulative totals whether they arrive at
+// the top level or inside a choice. Cache fields are processed on the raw frame.
+func moonshotStreamUsage(data string) *dto.Usage {
+	var frame struct {
+		Usage   *dto.Usage `json:"usage"`
 		Choices []struct {
-			Usage json.RawMessage `json:"usage"`
+			Usage *dto.Usage `json:"usage"`
 		} `json:"choices"`
 	}
-	if err := common.UnmarshalJsonStr(data, &chunk); err != nil {
-		return data, "", false
+	if common.UnmarshalJsonStr(data, &frame) != nil {
+		return nil
 	}
-	if len(chunk.Choices) == 0 {
-		return data, "", false
+	if service.ValidUsage(frame.Usage) {
+		return frame.Usage
 	}
-	hasUsage := len(chunk.Usage) > 0 && string(chunk.Usage) != "null"
-	for i := range chunk.Choices {
-		if len(chunk.Choices[i].Usage) > 0 && string(chunk.Choices[i].Usage) != "null" {
-			hasUsage = true
+	for i := len(frame.Choices) - 1; i >= 0; i-- {
+		if service.ValidUsage(frame.Choices[i].Usage) {
+			return frame.Choices[i].Usage
 		}
 	}
-	if !hasUsage {
-		return data, "", false
-	}
-	usageJSON := ""
-	if len(chunk.Usage) > 0 && string(chunk.Usage) != "null" {
-		usageJSON = string(chunk.Usage)
-	}
-	stripped, err := ojson.Delete(data, "usage")
-	if err != nil {
-		return data, "", false
-	}
-	for i := range chunk.Choices {
-		if len(chunk.Choices[i].Usage) > 0 && string(chunk.Choices[i].Usage) != "null" {
-			path := fmt.Sprintf("choices.%d.usage", i)
-			stripped, err = ojson.Delete(stripped, path)
-			if err != nil {
-				return data, "", false
-			}
-		}
-	}
-	return stripped, usageJSON, usageJSON != ""
+	return nil
 }
 
 // observeStreamChoices collects billable function call names and records the
@@ -458,8 +472,6 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		}
 	}
 
-	originalBody := responseBody
-
 	switch info.RelayFormat {
 	case types.RelayFormatOpenAI:
 		if usageModified {
@@ -507,7 +519,6 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		responseBody = geminiRespStr
 	}
 
-	responseBody = enrichMoonshotCacheTTL(c, info, responseBody, ojson.GetBytes(originalBody, "usage").Raw)
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 
 	return &simpleResponse.Usage, nil

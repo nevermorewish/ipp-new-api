@@ -1661,8 +1661,17 @@ const MOONSHOT_SWITCHES = [
     key: 'moonshot_split_cache_text',
   },
   { label: 'Send media URLs as base64', key: 'moonshot_media_url_to_base64' },
-  { label: 'Cache TTL compatibility', key: 'moonshot_cache_ttl_compat' },
+  { label: 'Fix usage position', key: 'moonshot_fix_usage_position' },
 ] as const
+
+test('existing Moonshot channels default to usage position repair', async () => {
+  editingChannel = { ...editingChannel, type: 25, setting: '{}' }
+  const user = userEvent.setup()
+  render(<ConfigurationHarness currentRow={editingChannel} />)
+  await screen.findByDisplayValue('Existing channel')
+  await user.click(screen.getByRole('tab', { name: /Request & Response/ }))
+  expect(screen.getByRole('switch', { name: 'Fix usage position' })).toBeChecked()
+})
 
 test.each(
   MOONSHOT_SWITCHES.flatMap((option) =>

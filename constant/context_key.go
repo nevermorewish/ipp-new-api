@@ -72,11 +72,6 @@ const (
 	// ContextKeyPromptCacheAnchor holds the prompt head fingerprint that chose
 	// the current attempt's key on a multi-key AnthropicOfficial channel.
 	ContextKeyPromptCacheAnchor ContextKey = "prompt_cache_anchor"
-	// ContextKeyMoonshotCacheTTLSource and ContextKeyMoonshotCacheTTLStatus carry
-	// the Moonshot TTL compatibility outcome to the consume log, so an audit can
-	// still tell an upstream report from a request-derived split afterwards.
-	ContextKeyMoonshotCacheTTLSource ContextKey = "moonshot_cache_ttl_source"
-	ContextKeyMoonshotCacheTTLStatus ContextKey = "moonshot_cache_ttl_status"
 
 	// ContextKeyLanguage stores the user's language preference for i18n
 	ContextKeyLanguage             ContextKey = "language"

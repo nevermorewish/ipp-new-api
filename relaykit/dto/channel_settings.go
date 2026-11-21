@@ -45,8 +45,8 @@ type ChannelSettings struct {
 	MoonshotVideoToImages     bool   `json:"moonshot_video_to_images,omitempty"`  // Media compatibility: also turns Chat image_url strings into objects
 	MoonshotDisableThinking   bool   `json:"moonshot_disable_thinking,omitempty"` // Let a Chat Completions client turn thinking off; it stays on by default
 	MoonshotHoistDynamicTools bool   `json:"moonshot_hoist_dynamic_tools,omitempty"`
-	MoonshotSplitCacheText    bool   `json:"moonshot_split_cache_text,omitempty"` // Chat, K3 family: send long user and system text as several text parts so prompt cache is reused
-	MoonshotCacheTTLCompat    bool   `json:"moonshot_cache_ttl_compat,omitempty"` // Chat, K3 family: expose reported TTL splits and the observed lifetime of an identical prompt, labelled by source
+	MoonshotSplitCacheText    bool   `json:"moonshot_split_cache_text,omitempty"`   // Chat, K3 family: send long user and system text as several text parts so prompt cache is reused
+	MoonshotFixUsagePosition  *bool  `json:"moonshot_fix_usage_position,omitempty"` // nil keeps the historical terminal usage split
 	// Chat and Messages: download http(s) image and video URLs and send the media as base64
 	MoonshotMediaURLToBase64  bool   `json:"moonshot_media_url_to_base64,omitempty"`
 	Proxy                     string `json:"proxy"`

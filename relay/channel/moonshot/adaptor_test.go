@@ -1883,3 +1883,66 @@ func TestMoonshotCacheWriteBoundedByPrompt(t *testing.T) {
 		})
 	}
 }
+
+func TestMoonshotStreamUsagePosition(t *testing.T) {
+	originalTimeout := constant.StreamingTimeout
+	constant.StreamingTimeout = 30
+	t.Cleanup(func() { constant.StreamingTimeout = originalTimeout })
+
+	const report = `{"prompt_tokens":10,"completion_tokens":2,"total_tokens":12,"vendor":{"zero":0},"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"cache_write_tokens_details":{"ttl_5m_tokens":0,"ttl_1h_tokens":0}}}`
+	const fields = `"id":"chatcmpl-kimi","created":123,"object":"chat.completion.chunk","model":"kimi-k3.1-pro","system_fingerprint":"fp_test"`
+	const choice = `"index":0,"delta":{"content":"OK"},"finish_reason":"stop"`
+	const stop = `{` + fields + `,"choices":[{` + choice + `}]}`
+	const root = `{` + fields + `,"choices":[{` + choice + `}],"usage":` + report + `}`
+	const nested = `{` + fields + `,"choices":[{` + choice + `,"usage":` + report + `}]}`
+	const standalone = `{` + fields + `,"choices":[],"usage":` + report + `}`
+	const trailer = `{` + fields + `,"choices":[]}`
+	// A real standalone event owns its metadata and extensions.
+	const official = `{` + fields + `,"choices":[],"upstream":true,"usage":` + report + `}`
+	on, off := common.GetPointer(true), common.GetPointer(false)
+	for _, tc := range []struct {
+		name     string
+		fix      *bool
+		include  bool
+		in, want []string
+	}{
+		{"legacy root", nil, true, []string{root}, []string{stop, standalone}},
+		{"root", on, true, []string{root}, []string{stop, standalone}},
+		{"choice only", on, true, []string{nested}, []string{stop, standalone}},
+		{"official dual report", on, true, []string{nested, official}, []string{stop, official}},
+		{"already separate", on, true, []string{stop, official}, []string{stop, official}},
+		{"trailing event", on, true, []string{root, trailer}, []string{stop, trailer, standalone}},
+		{"off keeps root", off, true, []string{root}, []string{root}},
+		{"off keeps choice", off, true, []string{nested}, []string{nested}},
+		{"off keeps official", off, true, []string{nested, official}, []string{nested, official}},
+		{"usage not requested", on, false, []string{nested, official}, []string{stop}},
+		{"usage not requested with fix off", off, false, []string{root}, []string{stop}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			body := "data: " + strings.Join(tc.in, "\n\ndata: ") + "\n\ndata: [DONE]\n\n"
+			resp := &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"text/event-stream"}}, Body: io.NopCloser(strings.NewReader(body))}
+			info := &relaycommon.RelayInfo{
+				RelayFormat: types.RelayFormatOpenAI, RelayMode: relayconstant.RelayModeChatCompletions,
+				IsStream: true, DisablePing: true, ShouldIncludeUsage: tc.include,
+				ChannelMeta: &relaycommon.ChannelMeta{ChannelType: constant.ChannelTypeMoonshot, UpstreamModelName: "kimi-k3.1-pro", ChannelSetting: dto.ChannelSettings{MoonshotFixUsagePosition: tc.fix}},
+			}
+			billed, apiErr := (&Adaptor{}).DoResponse(c, resp, info)
+			require.Nil(t, apiErr)
+			assert.Equal(t, 12, billed.(*dto.Usage).TotalTokens)
+			var events []string
+			for line := range strings.SplitSeq(recorder.Body.String(), "\n") {
+				if event, ok := strings.CutPrefix(line, "data: "); ok {
+					events = append(events, event)
+				}
+			}
+			require.Len(t, events, len(tc.want)+1)
+			for i, want := range tc.want {
+				assert.JSONEq(t, want, events[i])
+			}
+			assert.Equal(t, "[DONE]", events[len(tc.want)])
+		})
+	}
+}

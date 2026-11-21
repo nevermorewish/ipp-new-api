@@ -272,7 +272,7 @@ export const channelFormSchema = z
     moonshot_disable_thinking: z.boolean().optional(),
     moonshot_hoist_dynamic_tools: z.boolean().optional(),
     moonshot_split_cache_text: z.boolean().optional(),
-    moonshot_cache_ttl_compat: z.boolean().optional(),
+    moonshot_fix_usage_position: z.boolean().optional(),
     moonshot_media_url_to_base64: z.boolean().optional(),
     proxy: z
       .string()
@@ -481,7 +481,7 @@ export const CHANNEL_FORM_DEFAULT_VALUES: ChannelFormValues = {
   moonshot_disable_thinking: false,
   moonshot_hoist_dynamic_tools: false,
   moonshot_split_cache_text: false,
-  moonshot_cache_ttl_compat: false,
+  moonshot_fix_usage_position: true,
   moonshot_media_url_to_base64: false,
   proxy: '',
   http_protocol: HTTP_PROTOCOL_AUTO,
@@ -540,7 +540,7 @@ export function transformChannelToFormDefaults(
     moonshot_disable_thinking: false,
     moonshot_hoist_dynamic_tools: false,
     moonshot_split_cache_text: false,
-    moonshot_cache_ttl_compat: false,
+    moonshot_fix_usage_position: true,
     moonshot_media_url_to_base64: false,
     proxy: '',
     http_protocol: HTTP_PROTOCOL_AUTO as 'auto' | 'http1',
@@ -572,7 +572,8 @@ export function transformChannelToFormDefaults(
         moonshot_hoist_dynamic_tools:
           parsed.moonshot_hoist_dynamic_tools === true,
         moonshot_split_cache_text: parsed.moonshot_split_cache_text === true,
-        moonshot_cache_ttl_compat: parsed.moonshot_cache_ttl_compat === true,
+        moonshot_fix_usage_position:
+          parsed.moonshot_fix_usage_position !== false,
         moonshot_media_url_to_base64:
           parsed.moonshot_media_url_to_base64 === true,
         proxy: parsed.proxy || '',
@@ -741,9 +742,9 @@ export function buildSettingJSON(formData: ChannelFormValues): string {
       formData.type === 25 && formData.moonshot_split_cache_text === true
         ? true
         : undefined,
-    moonshot_cache_ttl_compat:
-      formData.type === 25 && formData.moonshot_cache_ttl_compat === true
-        ? true
+    moonshot_fix_usage_position:
+      formData.type === 25
+        ? formData.moonshot_fix_usage_position !== false
         : undefined,
     moonshot_media_url_to_base64:
       formData.type === 25 && formData.moonshot_media_url_to_base64 === true

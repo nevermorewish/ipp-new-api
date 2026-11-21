@@ -105,6 +105,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { SecureVerificationDialog } from '@/features/auth/secure-verification'
+import { SettingsSwitchField } from '@/features/system-settings/components/settings-form-layout'
 import { PluginIcon } from '@/features/task-plugins/components/plugin-icon'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useHiddenClickUnlock } from '@/hooks/use-hidden-click-unlock'
@@ -309,7 +310,7 @@ const SENSITIVE_FORM_FIELDS = [
   'moonshot_disable_thinking',
   'moonshot_hoist_dynamic_tools',
   'moonshot_split_cache_text',
-  'moonshot_cache_ttl_compat',
+  'moonshot_fix_usage_position',
   'moonshot_media_url_to_base64',
   'remove_gpt_temperature',
   'remove_azure_gpt_encryption',
@@ -2084,30 +2085,22 @@ export function ChannelMutateDrawer({
     />
   )
 
-  const cacheTTLCompatField = currentType === 25 && (
+  const usagePositionField = currentType === 25 && (
     <FormField
       control={form.control}
-      name='moonshot_cache_ttl_compat'
+      name='moonshot_fix_usage_position'
       render={({ field }) => (
-        <FormItem className='flex items-center justify-between gap-4 px-4 py-3'>
-          <div className='space-y-0.5'>
-            <FormLabel>
-              {t('Cache TTL compatibility')}
-            </FormLabel>
-            <FormDescription>
-              {t(
-                'For Kimi K3 Chat Completions, forward reported cache writes as 5m/1h buckets and report the observed lifetime of an identical prompt. No split is invented without upstream evidence. Does not prove retention or change billing.'
-              )}
-            </FormDescription>
-          </div>
-          <FormControl>
-            <Switch
-              disabled={sensitiveLocked}
-              checked={field.value === true}
-              onCheckedChange={field.onChange}
-            />
-          </FormControl>
-        </FormItem>
+        <SettingsSwitchField
+          className='px-4 py-3'
+          controlId={field.name}
+          checked={field.value !== false}
+          onCheckedChange={field.onChange}
+          disabled={sensitiveLocked}
+          label={t('Fix usage position')}
+          description={t(
+            'In Chat Completions streams, move usage from the finish event into a final event with empty choices when the client requests usage.'
+          )}
+        />
       )}
     />
   )
@@ -5066,7 +5059,7 @@ export function ChannelMutateDrawer({
                 {disableThinkingField}
                 {hoistDynamicToolsField}
                 {splitCacheTextField}
-                {cacheTTLCompatField}
+                {usagePositionField}
                 {mediaURLToBase64Field}
                 <OpenAIGPTSettings
                   control={form.control}

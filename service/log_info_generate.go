@@ -114,15 +114,6 @@ func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, m
 	if relayInfo.ReasoningEffort != "" {
 		other.SetPublic("reasoning_effort", relayInfo.ReasoningEffort)
 	}
-	// The Moonshot TTL compatibility setting only rewrites the response, but the
-	// consume log keeps how the split was obtained so an audit can tell an
-	// upstream report from a request-derived one after the fact.
-	if source := common.GetContextKeyString(ctx, constant.ContextKeyMoonshotCacheTTLSource); source != "" {
-		other.SetPublic("cache_ttl_source", source)
-		if status := common.GetContextKeyString(ctx, constant.ContextKeyMoonshotCacheTTLStatus); status != "" {
-			other.SetPublic("cache_ttl_status", status)
-		}
-	}
 	if relayInfo.IsModelMapped {
 		other.SetPublic("is_model_mapped", true)
 		other.SetPublic("upstream_model_name", relayInfo.UpstreamModelName)
